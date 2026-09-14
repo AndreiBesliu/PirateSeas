@@ -927,7 +927,10 @@ nici setări de import, nici streaming — şi erodarea a pornit imediat. Vina e
 - Surful e un **inel geometric**: nu ştie din ce parte bate vântul, deci sparge
   la fel de tare şi în adăpostul insulei ca pe partea expusă.
 - Ridurile de apă se văd că se repetă în zare, ca un moar.
-- Velele sunt bombate ca o calotă sferică, nu ca o velă cu formă de velă.
+- Velele au acum formă de velă: capul e legat drept de vergă pe toată lungimea
+  lui, poala e LIBERĂ şi acolo se umflă cel mai mult, iar adâncimea e o fracţiune
+  din LĂŢIME (11%), nu un număr fix de metri care făcea o velă de nouă metri şi
+  una de şapte la fel de adânci.
 - Insula n-are vegetaţie, iar roca nu se arată niciodată, fiindcă dealul e prea
   blând ca să treacă de pragul de pantă.
 - Riduri de apă se văd că se repetă în zare, ca o dungă orizontală.

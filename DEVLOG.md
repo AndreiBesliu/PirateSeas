@@ -2521,3 +2521,48 @@ Regresie identică: 56 de linii de tir, 11 lovituri, zero eşuări. Scenariul de
 eşuare: 2 atingeri, neschimbat. Materialul mării: 1037 de expresii.
 
 **Task Completed.**
+
+
+---
+
+## Task Started — 14.09.2026 (forma velei)
+
+**Prompt:** „continua"
+**Model:** Claude Opus 5
+
+### Vela
+
+Forma veche prindea şi capul, şi poala, şi umfla mijlocul: aia e o pernă, nu o
+velă. O velă pătrată e legată de vergă pe toată lungimea capului — drept — şi e
+LIBERĂ la poală, ţinută doar de cele două colţuri de jos, care e exact partea
+care se umflă cel mai mult. Adâncimea e acum o fracţiune din LĂŢIME (11%, o
+croială obişnuită de lucru) în loc de 0,9 m ficşi, care făceau o velă de nouă
+metri şi una de şapte la fel de adânci şi deci de formă diferită. Poala are
+rotunjire.
+
+### Şi defectul pe care îl găsise recenzorul adversarial
+
+`build_cordage` prindea fiecare şcotă la `x + 0.35` — o ghicire despre unde
+ajunsese colţul velei. Un colţ e prin definiţie la adâncime ZERO: o velă e
+ţinută de colţuri. Şcotele erau legate la treizeci şi cinci de centimetri în
+faţa colţului de care trebuiau legate.
+
+Acum există o singură funcţie, `sail_surface()`, folosită şi de mesh şi de
+cordaj, iar cordajul ÎNTREABĂ `sail_clew()` în loc să ghicească. Nu mai pot
+diverge când se schimbă forma.
+
+### Tokenul, prins de CI în prima lui zi de lucru
+
+Ştersul secţiunii AndroidFileServer din `DefaultEngine.ini` nu era de ajuns:
+motorul a rescris-o, cu un token NOU, la următoarea rulare, iar garda de şiruri
+secrete a făcut build-ul roşu. Reparat de data asta la cauză — pluginul e
+dezactivat în `.uproject`, deci nu mai are cine scrie secţiunea. Verificat
+rulând editorul de două ori după aceea şi uitându-mă dacă tokenul revine, nu
+presupunând că n-o să revină.
+
+### Măsurat
+
+Neschimbat faţă de linia de bază: vela e geometrie, iar coca se loveşte pe o
+cutie.
+
+**Task Completed.**
