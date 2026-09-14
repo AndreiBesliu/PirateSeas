@@ -1,0 +1,48 @@
+# The checks that do not need Unreal.
+#
+# A GitHub-hosted runner has no engine: UE 5.7 is a hundred-odd gigabytes behind
+# a licence, so nothing here builds the game or runs a measurement. This
+# workflow is honest about that - it proves what can be proved without the
+# engine, and the measuring is left to measure.yml on the machine that has one.
+name: checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # numpy only. If it were missing the texture checks would SKIP, and
+      # ci_checks.py prints a skip as a skip rather than folding it into a pass.
+      - run: pip install --quiet numpy
+
+      - name: checks that do not need Unreal
+        run: python tools/ci_checks.py
+
+      # Proof the gate can come out red. A guard nobody has ever seen fail is a
+      # guard nobody has any reason to trust; this breaks one on purpose and
+      # requires the checks to notice.
+      - name: prove the tiling guard can fail
+        run: |
+          cp Scripts/textures.py /tmp/textures.py.bak
+          sed -i 's/    STRIPS = 8/    STRIPS = 7/' Scripts/textures.py
+          if python tools/ci_checks.py > /tmp/neg.log 2>&1; then
+            echo "The guard PASSED a deliberately non-tiling texture. It is blind."
+            cp /tmp/textures.py.bak Scripts/textures.py
+            exit 1
+          fi
+          grep -q "does not divide" /tmp/neg.log \
+            || { echo "It failed, but not for the right reason:"; cat /tmp/neg.log; \
+                 cp /tmp/textures.py.bak Scripts/textures.py; exit 1; }
+          echo "Caught it:"; grep "does not divide" /tmp/neg.log
+          cp /tmp/textures.py.bak Scripts/textures.py

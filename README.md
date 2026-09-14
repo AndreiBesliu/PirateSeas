@@ -376,6 +376,41 @@ secunde primești o navă nouă la punctul de start. Dacă e a inamicului:
 În editor, consola (`~`) acceptă `Scuttle`: îți scufundă nava pe loc, ca să
 vezi secvența fără să aștepți 17 lovituri.
 
+## Verificare automată
+
+Două fluxuri, fiindcă unul singur ar minți.
+
+**`checks`** rulează pe un runner GitHub obișnuit, la fiecare push. Acolo NU
+există Unreal — motorul e peste o sută de gigaocteți în spatele unei licenţe —
+deci fluxul ăsta nu compilează nimic şi nu măsoară nimic din joc. Verifică ce se
+poate verifica fără el: că fiecare script se parsează, că niciun fişier de care
+depinde Unreal n-are BOM, că nimic care seamănă a secret n-a intrat în arbore,
+că nimic regenerat de motor nu e urmărit de git, şi că texturile se construiesc,
+ies identice bit cu bit la două rulări, şi au perioade care divid latura.
+
+Şi mai face un lucru: **îşi demonstrează că poate ieşi roşu.** Un pas strică
+intenţionat o textură şi cere verificărilor s-o prindă. O poartă pe care nimeni
+n-a văzut-o vreodată picând e o poartă în care nimeni n-are motiv să aibă
+încredere.
+
+**`measure`** rulează jocul pe bune, fără interfaţă, şi compară numerele cu o
+linie de bază din `tools/measurement_baseline.json`. Are nevoie de motor, deci
+merge doar pe un runner propriu, pe o maşină care îl are. Trei scenarii, toate
+cu hazardul fixat: o salvă la distanţă cunoscută, o navă mânată pe plajă, şi una
+care navighează sub cârmă.
+
+Rulabile şi local, fără GitHub:
+
+```
+python tools/ci_checks.py
+python tools/ci_measure.py            compară cu linia de bază
+python tools/ci_measure.py --record   o rescrie, deliberat
+```
+
+**O linie de bază lipsă nu e o diferenţă.** Scriptul spune „NEW, not broken" şi
+iese roşu fiindcă n-a putut compara, nu fiindcă ceva s-a stricat — distincţia pe
+care un `diff` care eşuează pe absenţă a ratat-o deja o dată în proiectul ăsta.
+
 ## Diagnostice din linia de comandă
 
 Toate rulările de măsurare merg fără interfață:

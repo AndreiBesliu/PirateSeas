@@ -24,3 +24,11 @@ Scripts/Textures/
 
 # Blender's own backup copy of the scene.
 *.blend1
+
+# Per-run measurement output. The BASELINE next to it is committed; this is
+# just what the last run produced.
+tools/last_measurement.json
+
+# ci_checks.py imports Scripts/textures.py, which leaves one of these behind.
+__pycache__/
+*.pyc

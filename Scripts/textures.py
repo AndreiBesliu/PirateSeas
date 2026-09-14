@@ -108,6 +108,20 @@ def normal_from_height(height, strength):
     return np.clip(n * 0.5 + 0.5, 0, 1)
 
 
+def must_divide(period, n, what):
+    """A structured pattern tiles only if its period divides the tile exactly.
+
+    That is arithmetic, not a matter of degree, so it is asserted here rather
+    than measured in the output. Three different statistical seam tests were
+    tried on the images and each was wrong in its own direction - one accused
+    correct plank textures, one passed a deliberately broken canvas, one
+    accused nearly everything. The property is exact; check it exactly."""
+    if n % period != 0:
+        raise AssertionError(
+            "%s: period %s does not divide the %s-pixel tile, so the pattern "
+            "cannot wrap" % (what, period, n))
+
+
 def u8(a):
     return np.clip(a * 255.0 + 0.5, 0, 255).astype(np.uint8)
 
@@ -147,6 +161,7 @@ def timber(n=1024):
     x = np.ones((n, 1)) * np.arange(n)[None, :]
 
     PLANKS = 16
+    must_divide(PLANKS, n, "timber planks")
     pw = n / PLANKS
     plank_i = np.floor(y / pw)
     edge = np.minimum(y % pw, pw - (y % pw))
@@ -162,9 +177,16 @@ def timber(n=1024):
     # Every plank a slightly different timber, and staggered butt joints, so
     # sixteen strakes do not read as one striped sheet.
     shade = (rng.uniform(0.78, 1.18, PLANKS))[plank_i.astype(int) % PLANKS]
+    # BUTTS must be an integer number of joints across the tile, or the pattern
+    # does not close: `(x/n + phase) % 0.5` walks 0 -> 0.999 across the image
+    # and lands half a period away from where it started, which puts a hard
+    # line down the seam. The CI tiling check measured it at 8.5 times an
+    # ordinary pixel step on the albedo and 13 on the normal - a visible stripe
+    # repeating every tile along a thirty-metre hull.
+    BUTTS = 2
     butt_phase = rng.uniform(0, 1, PLANKS)[plank_i.astype(int) % PLANKS]
-    butt_at = ((x / n + butt_phase) % 0.5) * 2.0
-    butt = np.clip(np.abs(butt_at - 1.0) * 60.0, 0, 1) * 0.4 + 0.6
+    butt_at = ((x / n) * BUTTS + butt_phase) % 1.0
+    butt = np.clip(np.abs(butt_at - 0.5) * 120.0, 0, 1) * 0.4 + 0.6
 
     tone = (0.55 + 0.45 * grain) * shade * seam_soft
     tone = np.clip(tone, 0, 1.6)
@@ -196,16 +218,24 @@ def canvas(n=1024):
     x = np.ones((n, 1)) * np.arange(n)[None, :]
 
     # The weave, fine enough to be felt rather than seen.
-    weave = (np.sin(x * math.pi * 2 * 128 / n) * np.sin(y * math.pi * 2 * 128 / n))
+    WEAVE = 128
+    must_divide(WEAVE, n, "canvas weave")
+    weave = (np.sin(x * math.pi * 2 * WEAVE / n) * np.sin(y * math.pi * 2 * WEAVE / n))
     weave = 0.5 + 0.5 * weave
 
     # Cloths are sewn from strips about a yard wide; the seam is a raised
     # double-stitched band, and it is the detail that says "sail" fastest.
-    STRIPS = 7
+    # Eight, not seven: the strip width has to divide the tile exactly or the
+    # seams do not meet across the wrap. 1024/7 is 146.28..., and the CI check
+    # caught the 4.4x step it left down the edge.
+    STRIPS = 8
+    must_divide(STRIPS, n, "canvas strips")
     sw = n / STRIPS
     d = np.minimum(x % sw, sw - (x % sw))
     seam = np.clip(d / 6.0, 0, 1)
-    stitch = (np.abs(np.sin(y * math.pi * 2 * 90 / n)) > 0.55) & (d < 9)
+    STITCH = 64          # was 90, which does not divide 1024
+    must_divide(STITCH, n, "canvas stitching")
+    stitch = (np.abs(np.sin(y * math.pi * 2 * STITCH / n)) > 0.55) & (d < 9)
 
     # Weather, but fine-grained. The first pass used low frequencies and put a
     # single dark bruise the size of a cloth on every sail; in the capture it
@@ -283,7 +313,9 @@ def rope(n=512):
 
     # The lay: three strands, wound so the pattern repeats an integer number of
     # times across the tile in BOTH axes, or the seam shows as a kink.
-    STRANDS, TURNS = 3, 6
+    STRANDS, TURNS = 4, 8
+    must_divide(STRANDS, n, "rope strands")
+    must_divide(TURNS, n, "rope lay")
     phase = (x / n) * STRANDS + (y / n) * TURNS
     lay = np.abs(((phase % 1.0) - 0.5) * 2.0)          # 0 at strand centre
     round_off = np.cos(lay * math.pi * 0.5) ** 0.6      # each strand rounded

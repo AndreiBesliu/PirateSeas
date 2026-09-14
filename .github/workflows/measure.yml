@@ -1,0 +1,73 @@
+# The real thing: build the game and MEASURE it, headlessly.
+#
+# This needs Unreal Engine 5.7, so it only runs on a self-hosted runner on a
+# machine that has one. Until such a runner is registered the workflow simply
+# never picks up a job - it does not fail, and it does not pretend to pass.
+#
+# To give it a runner (this needs the repository owner's own GitHub account, so
+# it is the one step that cannot be automated from here):
+#   Settings -> Actions -> Runners -> New self-hosted runner -> Windows
+# then label it `unreal` when the installer asks.
+#
+# WHY THESE NUMBERS. Every run below pins -UseFixedTimeStep -FPS=60 -ShipSeed=1
+# and the wind. Without all four this project's runs do not repeat: two runs
+# with identical flags and identical code once gave 5 and then 8 hits in the
+# rigging, because gun scatter was the one unpinned hazard. A CI that compares
+# unpinned runs reads scatter and calls it a regression.
+name: measure
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  measure:
+    runs-on: [self-hosted, windows, unreal]
+    timeout-minutes: 45
+    env:
+      UE: 'C:\Program Files\Epic Games\UE_5.7'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: build the editor target
+        shell: pwsh
+        run: |
+          & "$env:UE\Engine\Build\BatchFiles\Build.bat" PirateSeasEditor Win64 Development `
+             -Project="$PWD\PirateSeas.uproject" -WaitMutex
+          if ($LASTEXITCODE -ne 0) { throw "build failed" }
+
+      # The art is generated, not committed, so it has to be made and imported
+      # before anything is measured. import_textures.py is idempotent and is run
+      # twice on purpose: import_asset_tasks takes the commandlet down when it
+      # tries to sync the Content Browser with no Slate - AFTER the asset is
+      # written - so the second pass finds everything present and applies the
+      # settings.
+      - name: generate and import the textures
+        shell: pwsh
+        run: |
+          python Scripts/textures.py
+          .\Scripts\run_py.ps1 -Script import_textures.py -Tag "TEXIMP DONE"
+          .\Scripts\run_py.ps1 -Script import_textures.py -Tag "TEXIMP DONE"
+
+      - name: rebuild the materials
+        shell: pwsh
+        run: |
+          foreach ($s in 'sea_material.py','island_material.py','ship_materials.py',
+                         'gunsmoke_material.py','lighting.py') {
+            .\Scripts\run_py.ps1 -Script $s
+            if ($LASTEXITCODE -ne 0) { throw "$s failed" }
+          }
+
+      - name: measure - gunnery, sailing, grounding
+        shell: pwsh
+        run: python tools/ci_measure.py
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: measurement-log
+          path: |
+            Saved/Logs/PirateSeas.log
+            tools/last_measurement.json
+          retention-days: 14

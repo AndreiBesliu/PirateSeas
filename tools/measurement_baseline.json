@@ -1,0 +1,30 @@
+{
+  "grounding": {
+    "broadsides": 1,
+    "groundings": 2,
+    "islands_built": 1,
+    "lift_mean": 1.004,
+    "ships_sunk": 0,
+    "splashes": 2,
+    "struck": 2,
+    "wake_live_max": 24
+  },
+  "gunnery": {
+    "broadsides": 4,
+    "groundings": 0,
+    "lift_mean": 1.001,
+    "ships_sunk": 0,
+    "splashes": 5,
+    "struck": 11,
+    "wake_live_max": 16
+  },
+  "sailing": {
+    "broadsides": 0,
+    "groundings": 0,
+    "lift_mean": 1.005,
+    "ships_sunk": 0,
+    "splashes": 0,
+    "struck": 0,
+    "wake_live_max": 24
+  }
+}
