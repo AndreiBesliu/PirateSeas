@@ -595,7 +595,21 @@ def build():
         # Fade out over the ball's whole life, so it does not simply switch off.
         fade = sat(sub(const(1.0, -1250, y0 + 140), sp_v, -1100, y0 + 140,
                        bo="B"), -950, y0 + 140)
-        seg = mul(ring, "", fade, "", -800, y0)
+        # IS THIS SLOT IN USE? An unused slot is pushed as all zeros, and all
+        # zeros is not "nothing": it is a splash at world (0, 0) with radius
+        # zero, whose ring is a disc a couple of metres across sitting on the
+        # water at the origin for the whole game - eight of them stacked, from
+        # the first frame, before a shot is fired. Every other effect on this
+        # sheet guards its dead slots (the wake takes liveness off the "B" pin,
+        # the collar off strength); the splash was the one that did not.
+        #
+        # No new parameter for it: the "A" pin already IS the liveness bit. It
+        # carries the radius in centimetres, which is hundreds while the slot is
+        # in use and exactly zero when it is not, so saturating it gives 1 or 0
+        # and nothing in between.
+        live = sat(mul(sp_v, "A", const(1.0, -1000, y0 + 320), "",
+                       -900, y0 + 300), -820, y0 + 300)
+        seg = mul(mul(ring, "", fade, "", -800, y0), "", live, "", -720, y0)
         splash = seg if splash is None else maxn(splash, seg, -650, y0)
 
     # Broken by the RAW bubble texture, not by `broken`. `broken` carries a

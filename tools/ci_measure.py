@@ -20,6 +20,12 @@ THREE RULES, each of which this project learned the hard way:
 3. SAY THE NUMBERS. A red light that does not print what moved sends whoever
    reads it back to reproduce the run by hand.
 
+4. A MEASUREMENT THAT STOPPED BEING TAKEN IS NOT A MATCH. Several of the numbers
+   below are recorded only when the log carries them, so a measurement can
+   vanish rather than move - and a comparison that walks only the keys it just
+   collected would never reach the missing one. This one walks the UNION of both
+   sides, and absence is its own verdict, separate from MOVED and from NEW.
+
     python tools/ci_measure.py            compare against the baseline
     python tools/ci_measure.py --record   write the current numbers as the
                                           baseline (do this deliberately, and
@@ -55,6 +61,12 @@ SCENARIOS = {
     # Sailing free, under helm: buoyancy, the polar, and the wake.
     "sailing": ["-WindBearing=120", "-WindSpeed=12", "-ShipRudderTest=2",
                 "-ShipQuitAfter=40"],
+    # A ship is scuttled on purpose. This scenario buys nothing about gunnery;
+    # it exists so that ships_sunk is non-zero SOMEWHERE. A counter that reads
+    # zero on every scenario is indistinguishable from a counter that is broken,
+    # and this one was broken for three commits without a light going red.
+    "sinking": ["-WindBearing=120", "-WindSpeed=11", "-EnemyX=9000",
+                "-EnemyY=1500", "-EnemySinkTest=6", "-ShipQuitAfter=40"],
 }
 
 
@@ -75,7 +87,13 @@ def measure(name, text):
     m["struck"] = len(re.findall(r"SHOTLOG (?:hit |rig )", text))
     m["splashes"] = len(re.findall(r"SHOTLOG splash", text))
     m["groundings"] = len(re.findall(r"GROUNDLOG", text))
-    m["ships_sunk"] = len(re.findall(r"sink=sinking", text))
+    # The terminal event, not a phase word. This counted "sink=sinking" for
+    # three commits. The only line that prints sink= prints one of afloat,
+    # flooding, foundering, plunging or wreck - never "sinking" - so the number
+    # was nailed to zero and the gate could not come out non-zero whatever the
+    # game did. The `sinking` scenario below exists to keep it honest: if this
+    # pattern ever stops matching, that scenario falls from 1 to 0 and says so.
+    m["ships_sunk"] = len(re.findall(r"SHIPLOG \S+ SUNK ", text))
 
     # Buoyancy: what the hull actually floats on. A number near 1.00 means
     # buoyancy carries the weight; well under means something else is.
@@ -93,6 +111,41 @@ def measure(name, text):
     if isles:
         m["islands_built"] = int(isles.group(1))
     return m
+
+
+def compare(results, base):
+    """(results, baseline) -> (moved, new, gone), each a list of sentences.
+
+    Kept out of main() and free of files, the engine and the clock so that
+    ci_checks.py can feed it fixtures on a machine with no Unreal on it. A
+    comparison nobody can test is the thing this project keeps being bitten by:
+    the bug that made this function necessary was a loop that could not report a
+    missing measurement, and it sat in a green pipeline for three commits.
+    """
+    moved, new, gone = [], [], []
+    for name, got in results.items():
+        if name not in base:
+            new.append(name)
+            continue
+        # The UNION of both sides. Walking only the keys just collected is how a
+        # measurement disappears quietly: lift_mean, wake_live_max and
+        # islands_built are each recorded only when the log carries the line
+        # they are read from, so a run that stopped printing lift= would offer
+        # no lift_mean at all, the loop would never reach it, and the comparison
+        # would report a clean match for a game that had stopped floating.
+        for key in sorted(set(got) | set(base[name])):
+            if key not in base[name]:
+                new.append("%s.%s" % (name, key))
+                continue
+            if key not in got:
+                gone.append("%s.%s (was %s)" % (name, key, base[name][key]))
+                continue
+            value, was = got[key], base[name][key]
+            same = (abs(value - was) <= 0.02) if isinstance(value, float) \
+                else (value == was)
+            if not same:
+                moved.append("%s.%s: %s -> %s" % (name, key, was, value))
+    return moved, new, gone
 
 
 def main():
@@ -128,22 +181,16 @@ def main():
     # json.loads refused the file with a decode error that looks nothing like
     # "the baseline moved".
     base = json.loads(io.open(BASELINE, encoding="utf-8-sig").read())
-    moved, new = [], []
-    for name, got in results.items():
-        if name not in base:
-            new.append(name)
-            continue
-        for key, value in sorted(got.items()):
-            if key not in base[name]:
-                new.append("%s.%s" % (name, key))
-                continue
-            was = base[name][key]
-            same = (abs(value - was) <= 0.02) if isinstance(value, float) \
-                else (value == was)
-            if not same:
-                moved.append("%s.%s: %s -> %s" % (name, key, was, value))
+    moved, new, gone = compare(results, base)
 
     print("")
+    if gone:
+        # Distinct from MOVED deliberately: this is not a number that changed,
+        # it is a number nobody took. Different cause, different fix.
+        print("%d measurement(s) STOPPED BEING MEASURED - the log no longer "
+              "carries the line they are read from:" % len(gone))
+        for g in gone:
+            print("  " + g)
     if new:
         print("%d measurement(s) have no baseline (NEW, not broken): %s"
               % (len(new), ", ".join(new)))
@@ -154,7 +201,7 @@ def main():
         print("\nIf the change was intended, re-record the baseline in the same "
               "commit that causes it, so the diff shows both.")
         return 1
-    if new:
+    if new or gone:
         return 1
     print("every measurement matches the baseline")
     return 0

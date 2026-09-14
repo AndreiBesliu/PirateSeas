@@ -395,9 +395,16 @@ n-a văzut-o vreodată picând e o poartă în care nimeni n-are motiv să aibă
 
 **`measure`** rulează jocul pe bune, fără interfaţă, şi compară numerele cu o
 linie de bază din `tools/measurement_baseline.json`. Are nevoie de motor, deci
-merge doar pe un runner propriu, pe o maşină care îl are. Trei scenarii, toate
-cu hazardul fixat: o salvă la distanţă cunoscută, o navă mânată pe plajă, şi una
-care navighează sub cârmă.
+merge doar pe un runner propriu, pe o maşină care îl are. Patru scenarii, toate
+cu hazardul fixat: o salvă la distanţă cunoscută, o navă mânată pe plajă, una
+care navighează sub cârmă, şi una în care o navă e sabordată dinadins.
+
+Ultimul nu spune nimic despre tunuri. Există ca `ships_sunk` să fie **diferit de
+zero undeva**: numărătoarea aia citea un şir pe care jocul nu-l scrie niciodată
+(`sink=sinking`, când fazele se numesc `afloat|flooding|foundering|plunging|
+wreck`), deci era pironită la zero şi poarta nu putea ieşi roşie orice s-ar fi
+întâmplat în joc. Un contor care dă zero pe toate scenariile nu se deosebeşte cu
+nimic de un contor stricat.
 
 Rulabile şi local, fără GitHub:
 
@@ -410,6 +417,17 @@ python tools/ci_measure.py --record   o rescrie, deliberat
 **O linie de bază lipsă nu e o diferenţă.** Scriptul spune „NEW, not broken" şi
 iese roşu fiindcă n-a putut compara, nu fiindcă ceva s-a stricat — distincţia pe
 care un `diff` care eşuează pe absenţă a ratat-o deja o dată în proiectul ăsta.
+
+**Şi un număr care nu mai e măsurat nu e o potrivire.** Comparaţia merge pe
+REUNIUNEA cheilor, nu doar pe cele culese acum: `lift_mean`, `wake_live_max` şi
+`islands_built` se scriu doar dacă logul le poartă, deci o rulare care nu mai
+tipăreşte `lift=` nu oferă `lift_mean` deloc — iar o buclă care umblă doar prin
+ce-a cules tocmai acum n-ar ajunge niciodată la el şi ar raporta potrivire
+curată pentru un joc care nu mai pluteşte. Se raportează separat de MOVED:
+cauza şi remediul sunt altele. Comparaţia stă acum într-o funcţie proprie,
+`compare()`, şi `ci_checks.py` o hrăneşte cu fixturi pe o maşină fără motor —
+cele două defecte de mai sus n-ar fi putut fi prinse RULÂND poarta, fiindcă
+rularea ei era exact ce producea lumina verde.
 
 ## Diagnostice din linia de comandă
 

@@ -178,6 +178,22 @@ def build_master():
         link(src, so, n, IN1)
         return n
 
+    def crossn(a, b, x, y, ao="", bo=""):
+        n = expr(unreal.MaterialExpressionCrossProduct, x, y)
+        link(a, ao, n, A_IN)
+        link(b, bo, n, B_IN)
+        return n
+
+    def normalizen(src, x, y, so=""):
+        n = expr(unreal.MaterialExpressionNormalize, x, y)
+        link(src, so, n, IN1)
+        return n
+
+    def vec3(c, x, y):
+        n = expr(unreal.MaterialExpressionConstant3Vector, x, y)
+        sp(n, "constant", c)
+        return n
+
     def tex(name, asset, x, y, normal=False, grey=False):
         n = expr(unreal.MaterialExpressionTextureSampleParameter2D, x, y)
         sp(n, "parameter_name", name)
@@ -277,12 +293,66 @@ def build_master():
     MEL.connect_material_property(base, "", unreal.MaterialProperty.MP_BASE_COLOR)
 
     # ------------------------------------------------------------- normal
+    #
+    # THE FRAME. A tangent-space normal map is a promise that the mesh has a
+    # tangent frame, and a tangent frame is derived from UVs. NOT ONE MESH IN
+    # THIS PROJECT HAS UVs - that is the whole reason this material projects.
+    # So every bump on the hull, the deck, the sails, the cordage and the
+    # island's plants was being tilted in a basis nobody ever defined. It looked
+    # like lighting, which is why it went three sessions without being noticed.
+    #
+    # The obvious repair is to rebuild the sample in the frame of the projection
+    # PLANE and hand the engine a world-space normal. It is also wrong, and it
+    # was tried first: a plane-frame normal always points along that plane's
+    # axis, so it is right only where the surface happens to face the way the
+    # plane assumes. The two planes here cover +-Y and +-Z. A MAST FACES +X.
+    # The masts came out black, which is what the old capture next to the new
+    # one showed, and what no amount of reading the graph had shown.
+    #
+    # So: keep the geometric normal and TILT it. A frame is built here, per
+    # pixel, from the normal itself - which is exactly what the tangent-space
+    # path was doing, minus the part where its frame did not exist. The bump
+    # detail still comes from the projected sample; only the basis changed.
+    sp(mat, "tangent_space_normal", False)
+    if mat.get_editor_property("tangent_space_normal"):
+        raise RuntimeError("M_ShipMaster: tangent_space_normal did not stick, so "
+                           "the engine would read a local-space normal as though "
+                           "it were tangent-space")
+
     nrm = biplanar("NormalTex", "T_Timber_N", -1500, 1100, normal=True)
     nstr = scalar("NormalStrength", 1.0, -1500, 1460)
-    flat = expr(unreal.MaterialExpressionConstant3Vector, -900, 1500)
-    sp(flat, "constant", unreal.LinearColor(0.0, 0.0, 1.0, 1.0))
-    nfinal = lerp(flat, nrm, nstr, -700, 1200)
-    MEL.connect_material_property(nfinal, "", unreal.MaterialProperty.MP_NORMAL)
+
+    # A helper that is deliberately NOT an axis. Crossing the normal with it
+    # gives a tangent everywhere except where the surface faces exactly along
+    # it, and nothing on this ship - hull, deck, mast, sail, rope, frond - faces
+    # (0.31, 0.57, 0.76). Crossing with an axis instead would have gone
+    # degenerate on the hull sides or the decks, which is to say on the ship.
+    helper = vec3(unreal.LinearColor(0.31, 0.57, 0.76, 1.0), -1150, 1560)
+    tang = normalizen(crossn(ln, helper, -950, 1500), -820, 1500)
+    bitan = crossn(ln, tang, -680, 1500)
+
+    # Only the map's X and Y tilt the normal; its Z is the part that says "and
+    # this much along the surface's own normal", which is already the thing
+    # being tilted.
+    n_u = mask(nrm, -950, 1180, True, False, False)
+    n_v = mask(nrm, -950, 1260, False, True, False)
+    tilt = add(mul(tang, "", n_u, "", -560, 1180),
+               mul(bitan, "", n_v, "", -560, 1280), -420, 1200)
+    # Strength zero is then EXACTLY the geometric normal, with no special case.
+    n_local = normalizen(add(ln, mul(tilt, "", nstr, "", -280, 1240),
+                             -160, 1200), -60, 1200)
+
+    nworld = expr(unreal.MaterialExpressionTransform, 60, 1200)
+    sp(nworld, "transform_source_type",
+       unreal.MaterialVectorCoordTransformSource.TRANSFORMSOURCE_LOCAL)
+    sp(nworld, "transform_type",
+       unreal.MaterialVectorCoordTransform.TRANSFORM_WORLD)
+    link(n_local, "", nworld, IN1)
+    if nworld.get_editor_property("transform_type") != \
+            unreal.MaterialVectorCoordTransform.TRANSFORM_WORLD:
+        raise RuntimeError("M_ShipMaster: the normal's local-to-world transform "
+                           "did not take, and its default is local-to-TANGENT")
+    MEL.connect_material_property(nworld, "", unreal.MaterialProperty.MP_NORMAL)
 
     # ---------------------------------------------------------- roughness
     rtex = biplanar("RoughTex", "T_Timber_R", -1500, 1800, grey=True)

@@ -2639,3 +2639,114 @@ o observaţie din lista de limitări, acum cu o cifră în spate.
 Măsurători neschimbate.
 
 **Task Completed.**
+
+---
+
+## Task Started — 14.09.2026 (cele opt constatări ale recenziei)
+
+**Prompt:** continuarea arcului — de reparat constatările confirmate de recenzia
+adversarială (12 agenţi, patru lentile: materiale, C++, instrumente, depozit).
+Din 36 raportate, primele două de pe fiecare lentilă au fost verificate
+adversarial şi toate opt au supravieţuit.
+**Model:** Claude Opus 5
+
+### Poarta care nu putea ieşi roşie
+
+`ships_sunk` număra `sink=sinking`. Jocul nu scrie niciodată şirul ăsta:
+`SinkPhaseName()` întoarce `afloat|flooding|foundering|plunging|wreck`. Numărul
+era pironit la zero de trei commit-uri, pe trei scenarii, într-un pipeline verde.
+
+Numără acum evenimentul terminal, `SHIPLOG <navă> SUNK `. Şi fiindcă un contor
+care dă zero peste tot nu se deosebeşte de unul stricat, a intrat **un al
+patrulea scenariu în care chiar se scufundă ceva** (`-EnemySinkTest=6`): dă
+`ships_sunk=2`, aceleaşi două nave la fiecare rulare. Dacă tiparul se strică
+vreodată, scenariul ăla cade de la 2 la 0 şi o spune.
+
+### Comparaţia care umbla doar prin ce tocmai culesese
+
+`lift_mean`, `wake_live_max` şi `islands_built` se scriu doar dacă logul le
+poartă. Bucla mergea prin cheile rezultatului NOU, deci un număr care înceta să
+mai fie măsurat nu era atins niciodată şi ieşea „potrivire curată". Merge acum
+prin reuniunea celor două părţi, şi „a încetat să mai fie măsurat" e un verdict
+separat de MOVED şi de NEW — altă cauză, alt remediu.
+
+### Şi fixtura, fiindcă niciuna dintre cele două n-ar fi fost prinsă RULÂND
+
+Comparaţia a ieşit din `main()` într-o funcţie proprie, fără fişiere, fără motor
+şi fără ceas. `ci_checks.py` o hrăneşte acum cu fixturi — identic, mutat, nou,
+dispărut, plus toleranţa de virgulă în ambele sensuri, plus contorul de
+scufundări pe textul exact pe care-l scrie `ShipPawn.cpp`.
+
+Verificat prin mutaţie, nu prin încredere: am pus la loc bucla veche şi apoi
+tiparul vechi, pe rând, şi verificările au ieşit roşii de fiecare dată, cu
+mesajul corect. O fixtură care n-a fost văzută niciodată picând e exact tipul de
+instrument pe care proiectul ăsta l-a crezut de trei ori.
+
+### Siajele erau legate de RANG, nu de navă
+
+Comentariul spunea „keyed to the ship". Codul folosea `Trails[i]` pentru a i-a
+navă din sortarea după distanţă. Două defecte dintr-o singură cauză:
+
+- două nave care-şi schimbă rangul îşi găsesc fiecare siajul altcuiva în slot şi
+  **amândouă siajele sunt aruncate** — în larg, din senin;
+- mai rău: o navă scufundată din MIJLOCUL listei le mută pe cele din spate cu un
+  slot mai jos, aşa că ultima se re-leagă mai jos în timp ce vechiul ei slot
+  rămâne cu firimiturile şi cu o navă vie în el. Pasul de curăţenie îl păstrează
+  (nava lui e urmărită), pasul de actualizare nu ajunge la el (e peste
+  `Ships.Num()`), deci vârstele îngheaţă în timp ce slotul se împachetează şi se
+  trimite în fiecare cadru: **un siaj îngheţat în apă, la putere maximă, până la
+  sfârşitul partidei.**
+
+Acum fiecare navă îşi păstrează slotul cât timp e urmărită, iar o navă fără slot
+ia primul liber. Şi două numere care trebuie să fie zero se numără, nu se cred:
+`stranded=` (slot cu firimituri şi fără navă) şi `doubled=` (o navă cu două
+sloturi). Defectul de mai sus era invizibil în orice alt număr pe care-l scrie
+siajul — firimiturile erau vii, bine formate şi de lungimea potrivită.
+
+### Stropul care nu-şi păzea sloturile goale
+
+Un slot nefolosit se trimite ca zerouri. Zero nu e „nimic": e un strop la
+(0, 0) cu rază zero, adică un disc de spumă de vreo doi metri stând pe apă la
+origine, de la primul cadru, opt unul peste altul. Toate celelalte efecte de pe
+foaia aia îşi păzesc sloturile moarte; ăsta nu. Un singur nod: pinul „A" e deja
+bitul de viaţă — poartă raza în centimetri, sute când slotul e în uz, exact zero
+când nu.
+
+### Normala: o bază care nu există — şi o primă reparaţie mai proastă decât boala
+
+O hartă tangenţială e o promisiune că meshul are cadru tangent, iar cadrul
+tangent vine din UV-uri. **Niciun mesh din proiect n-are UV-uri** — ăsta e chiar
+motivul pentru care materialul proiectează. Deci fiecare denivelare de pe cocă,
+punte, vele, parâme şi plante era înclinată într-o bază pe care n-o definise
+nimeni.
+
+Prima reparaţie: reconstruieşte proba în cadrul PLANULUI de proiecţie şi dă
+motorului o normală în spaţiul lumii. Corectă pe o suprafaţă care priveşte cum
+presupune planul, greşită pe oricare alta — cele două plane acoperă ±Y şi ±Z,
+iar **un catarg priveşte +X**. Catargele au ieşit negre. N-am văzut-o citind
+graful; am văzut-o punând captura veche lângă cea nouă, acelaşi cadru fixat.
+
+A doua, cea livrată: ţine normala geometrică şi o ÎNCLINĂ, într-un cadru
+construit pe loc din ea (produs vectorial cu un vector fix, dinadins nealiniat
+cu axele — alinierea la axe se degenerează exact pe cocă şi pe punţi). Exact ce
+făcea calea tangenţială, minus partea în care cadrul ei nu exista. Puterea zero
+dă acum fix normala geometrică, fără caz special. Catargele sunt iar luminate,
+pânzele identice cu înainte.
+
+### Şi căile absolute din `run_py.ps1`
+
+Fişierul purta căile maşinii mele. `measure.yml` îl cheamă de pe un runner care
+face checkout în `C:\actions-runner\_work\...`, deci jobul ar fi condus proiectul
+din `C:\Users\besli\...` şi ar fi raportat rezultatul ca măsurătoare a
+commit-ului testat. Rădăcina se deduce din `$PSScriptRoot`, motorul din `$env:UE`,
+şi dacă vreunul dintre cele trei drumuri nu există refuză zgomotos — altfel
+verdictul s-ar citi de pe un log rămas de la rularea dinainte, adică exact
+minciuna pentru care a fost scris fişierul.
+
+### Măsurători
+
+Cele trei scenarii vechi: identice cu linia de bază, până la ultima cifră.
+Scenariul nou, rulat de trei ori cu aceleaşi flag-uri, a dat de fiecare dată
+aceleaşi numere. Linia de bază a fost rescrisă deliberat, în acelaşi commit.
+
+**Task Completed.**

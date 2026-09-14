@@ -252,12 +252,80 @@ def check_docs():
         ok("OWNER_VERIFY.md has %d consecutive items" % len(nums))
 
 
+# ------------------------------------------------------------------ 9
+def check_comparison():
+    """Does the measurement gate actually report each of its three verdicts?
+
+    Written after a review found that the comparison walked only the keys it had
+    just collected, so a measurement that STOPPED BEING TAKEN read as a match -
+    and after finding, in the same pass, that ships_sunk counted a string the
+    game never prints, which nailed that number to zero for three commits. Both
+    are the same failure: a gate that cannot come out red is not a gate, and
+    neither of them could be caught by running it, because running it is exactly
+    what produced the green light.
+
+    So the comparison is fed fixtures here instead, on a runner with no Unreal
+    on it, where the answer is known in advance.
+    """
+    sys.path.insert(0, os.path.join(ROOT, "tools"))
+    try:
+        import ci_measure
+    except Exception as e:
+        fail("cannot import ci_measure: %s" % e)
+        return
+
+    before = len(FAILS)
+    base = {"s": {"hits": 3, "lift_mean": 1.0}}
+
+    moved, new, gone = ci_measure.compare({"s": {"hits": 3, "lift_mean": 1.0}}, base)
+    if moved or new or gone:
+        fail("comparison reports a difference between identical numbers: %s"
+             % (moved + new + gone))
+
+    moved, new, gone = ci_measure.compare({"s": {"hits": 5, "lift_mean": 1.0}}, base)
+    if len(moved) != 1 or gone or new:
+        fail("a number that changed was not reported as MOVED: %s"
+             % (moved + new + gone))
+
+    # The one the review found: the key is simply absent from the new result.
+    moved, new, gone = ci_measure.compare({"s": {"hits": 3}}, base)
+    if len(gone) != 1 or moved or new:
+        fail("a measurement that STOPPED BEING TAKEN was not reported: "
+             "moved=%s new=%s gone=%s" % (moved, new, gone))
+
+    moved, new, gone = ci_measure.compare({"s": {"hits": 3, "lift_mean": 1.0,
+                                                 "extra": 1}}, base)
+    if len(new) != 1 or moved or gone:
+        fail("a brand new measurement was not reported as NEW: %s"
+             % (moved + new + gone))
+
+    # A float that moved by less than the tolerance is not a difference; one
+    # that moved by more is. Both directions, because a tolerance that swallows
+    # everything is the same bug wearing a different hat.
+    if ci_measure.compare({"s": {"hits": 3, "lift_mean": 1.01}}, base)[0]:
+        fail("the float tolerance rejects a change smaller than itself")
+    if not ci_measure.compare({"s": {"hits": 3, "lift_mean": 1.4}}, base)[0]:
+        fail("the float tolerance swallows a change four hundred times its size")
+
+    # And the counter the review caught: it must match the line the game really
+    # prints. This is the text from ShipPawn.cpp, not a paraphrase of it.
+    sunk = ci_measure.measure("fixture", """
+LogTemp: Display: SHIPLOG EnemyShipPawn_0 SUNK by=SeaGameMode_0 breach=(900,520)
+LogTemp: Display: SHIPLOG ShipPawn_0 sink=foundering draught=120
+""")["ships_sunk"]
+    if sunk != 1:
+        fail("ships_sunk read %d from a log holding exactly one SUNK line" % sunk)
+    if len(FAILS) == before:
+        ok("the measurement gate reports matches, moves, new and missing numbers")
+
+
 def main():
     print("PirateSeas checks - the ones that do not need Unreal\n")
     files = tracked_files()
     check_tree(files)
     check_textures()
     check_docs()
+    check_comparison()
     print("")
     if NOTES:
         print("%d check(s) SKIPPED - a skip is not a pass:" % len(NOTES))

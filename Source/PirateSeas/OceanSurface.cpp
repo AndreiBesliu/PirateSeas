@@ -275,8 +275,24 @@ void AOceanSurface::UpdateWake(float DeltaSeconds)
 		Ships.Add(S);
 	}
 
-	// Trails are keyed to the ship, so a ship that drops out of the top three
-	// and comes back does not inherit somebody else's wake.
+	// A trail belongs to a SHIP, by identity, and keeps its slot for as long as
+	// that ship is followed. It used to belong to a place in the list instead -
+	// Trails[i] for the i-th nearest ship - and the comment above it claimed
+	// otherwise, which is how it survived a reading. Two failures came out of
+	// that, and neither would have shown up in any count:
+	//
+	//   Two ships swapping distance rank swapped slots, each found a stranger's
+	//   trail in its place, and both wakes were thrown away and started again -
+	//   in open water, from nothing, for no reason a viewer could see.
+	//
+	//   Worse: a ship that sank out of the middle of the list left the ships
+	//   behind it shifted DOWN one slot, so the last one was re-bound lower
+	//   while its old slot still held its crumbs and still had a live ship in
+	//   it. The cleanup pass keeps that slot (its ship is followed), the update
+	//   pass never reaches it (it is past Ships.Num()), so its ages stop
+	//   advancing while it is still packed and pushed every frame: a wake
+	//   frozen in the water, at full strength, for the rest of the game.
+	Trails.SetNum(MaxWakeShips);
 	for (FWakeTrail& T : Trails)
 	{
 		if (!T.Ship.IsValid() || !Ships.Contains(Cast<AShipPawn>(T.Ship.Get())))
@@ -287,18 +303,29 @@ void AOceanSurface::UpdateWake(float DeltaSeconds)
 			T.Ship = nullptr;
 		}
 	}
-	Trails.SetNum(MaxWakeShips);
 
-	for (int32 i = 0; i < Ships.Num(); ++i)
+	for (AShipPawn* S : Ships)
 	{
-		FWakeTrail& T = Trails[i];
-		if (T.Ship.Get() != Ships[i])
+		// The slot this ship already owns, or else the first free one. Ships is
+		// capped at MaxWakeShips and every slot not owned by a ship in it was
+		// just freed above, so a free one always exists; the guard is there
+		// because "always" is what the last version of this said too.
+		FWakeTrail* Found = Trails.FindByPredicate(
+			[S](const FWakeTrail& C) { return C.Ship.Get() == S; });
+		if (!Found)
 		{
-			T.Ship = Ships[i];
-			T.Crumbs.Reset();
-			T.Ages.Reset();
-			T.bHasDropped = false;
+			Found = Trails.FindByPredicate(
+				[](const FWakeTrail& C) { return C.Ship.Get() == nullptr; });
+			if (!Found)
+			{
+				continue;
+			}
+			Found->Ship = S;
+			Found->Crumbs.Reset();
+			Found->Ages.Reset();
+			Found->bHasDropped = false;
 		}
+		FWakeTrail& T = *Found;
 
 		for (float& A : T.Ages)
 		{
@@ -310,18 +337,18 @@ void AOceanSurface::UpdateWake(float DeltaSeconds)
 			T.Crumbs.Pop();
 		}
 
-		const FVector Here = Ships[i]->GetActorLocation();
-		const float SpeedCmS = Ships[i]->GetVelocity().Size2D();
+		const FVector Here = S->GetActorLocation();
+		const float SpeedCmS = S->GetVelocity().Size2D();
 		const bool bFarEnough = !T.bHasDropped
 			|| FVector::Dist2D(Here, T.LastDrop) >= WakeSpacingCm;
 		if (SpeedCmS >= WakeMinSpeedCmS && bFarEnough)
 		{
 			// Dropped at the STERN, not at the centre of mass: a wake that
-			// starts amidships is drawn through the hull.
-			// Just clear of the transom. Fourteen metres left a visible gap between
-		// the ship and the head of her own wake; nine puts the first crumb
-		// where the water actually closes behind her.
-		const FVector Astern = Here - Ships[i]->GetActorForwardVector() * 900.f;
+			// starts amidships is drawn through the hull. Just clear of the
+			// transom - fourteen metres left a visible gap between the ship and
+			// the head of her own wake; nine puts the first crumb where the
+			// water actually closes behind her.
+			const FVector Astern = Here - S->GetActorForwardVector() * 900.f;
 			T.Crumbs.Insert(FVector(Astern.X, Astern.Y, 0.f), 0);
 			T.Ages.Insert(0.f, 0);
 			T.LastDrop = Here;
@@ -330,6 +357,27 @@ void AOceanSurface::UpdateWake(float DeltaSeconds)
 			{
 				T.Crumbs.Pop();
 				T.Ages.Pop();
+			}
+		}
+	}
+
+	// Two things that must be zero, counted rather than trusted, because the
+	// bug they describe is invisible in every other number the wake prints:
+	// the frozen trail was live, well-formed and the right length. A stranded
+	// slot holds crumbs nobody is updating; a doubled ship owns two slots.
+	int32 Stranded = 0, Doubled = 0;
+	for (int32 a = 0; a < Trails.Num(); ++a)
+	{
+		if (Trails[a].Ship.Get() == nullptr && Trails[a].Crumbs.Num() > 0)
+		{
+			++Stranded;
+		}
+		for (int32 b = a + 1; b < Trails.Num(); ++b)
+		{
+			if (Trails[a].Ship.Get() != nullptr
+				&& Trails[a].Ship.Get() == Trails[b].Ship.Get())
+			{
+				++Doubled;
 			}
 		}
 	}
@@ -435,9 +483,10 @@ void AOceanSurface::UpdateWake(float DeltaSeconds)
 			}
 		}
 		UE_LOG(LogTemp, Display,
-			TEXT("WAKELOG live=%d of %d tracked=%s ignored=%d splashes=%d live=%d seen=%d lost=%d"),
-			Live, WakePointCount, *Names, Ignored, MaxSplashes, LiveSplashes,
-			SplashesSeen, SplashesOverwritten);
+			TEXT("WAKELOG live=%d of %d tracked=%s ignored=%d stranded=%d doubled=%d "
+				 "splashes=%d live=%d seen=%d lost=%d"),
+			Live, WakePointCount, *Names, Ignored, Stranded, Doubled,
+			MaxSplashes, LiveSplashes, SplashesSeen, SplashesOverwritten);
 	}
 }
 

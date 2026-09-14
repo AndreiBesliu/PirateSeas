@@ -26,5 +26,14 @@
     "splashes": 0,
     "struck": 0,
     "wake_live_max": 24
+  },
+  "sinking": {
+    "broadsides": 0,
+    "groundings": 0,
+    "lift_mean": 0.851,
+    "ships_sunk": 2,
+    "splashes": 0,
+    "struck": 0,
+    "wake_live_max": 3
   }
 }

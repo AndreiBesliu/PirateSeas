@@ -472,3 +472,31 @@ retastate, şi câte au fost respinse şi de ce. Dacă dealul arată *locuit* sa
 geometrie solidă, nu cartonaşe cu decupaj, şi nimic nu se mişcă în vânt. Şi
 `too steep=0`: dealul ăsta nu are nicăieri o pantă destul de mare cât să fie
 stâncă, deci nici piatra din material nu se arată vreodată pe el.
+
+## 22. Relieful lemnului: iese în afară sau e desen pe pânză?
+
+**Ce te uiți:** Apropie-te de navă şi uită-te pe rând la cocă, la punte, la
+catarge şi la o parâmă, cu soarele o dată în faţă şi o dată în spate. Apoi la
+pânze, tot aşa.
+
+**Cum arată bine:** Scândurile au umbră între ele, şi umbra se mută când se mută
+nava faţă de soare. Catargul pare rotund, nu un tub plat. Nimic nu pare luminat
+dintr-o direcţie în care nu bate soarele, şi nicio suprafaţă nu e neagră când
+vecina ei, întoarsă la fel, e luminată.
+
+**Cum arată prost:** Lemn plat, ca o poză lipită. Sau invers: o faţă neagră
+lângă una luminată, pe aceeaşi piesă. Catarge negre pe partea dinspre soare.
+
+**De ce nu pot eu:** Am schimbat BAZA în care se aplică harta de relief. Niciun
+mesh din proiect n-are UV-uri, deci nava n-avea cadru tangent — motorul primea o
+hartă tangenţială şi o aplica într-o bază pe care n-o definise nimeni. Acum
+relieful înclină normala geometrică într-un cadru construit pe loc din ea. Pot
+dovedi cu capturi că prima încercare (normala înlocuită cu una luată din planul
+proiecţiei) înnegrea catargele şi că asta nu se mai întâmplă; dar dacă lemnul
+*arată* a lemn cu relief sau a tapet e o judecată de ochi.
+
+**Ce știu deja și n-am ascuns:** direcţia fibrei din relief nu e aliniată cu
+direcţia scândurilor din culoare — cadrul se construieşte dintr-un vector fix,
+nu din axele proiecţiei, fiindcă alinierea la axe se degenerează exact pe cocă
+şi pe punte. La zgomotul fin al texturilor astea nu se vede; pe o textură cu
+dungi clare s-ar vedea.

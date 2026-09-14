@@ -15,10 +15,28 @@ param(
   [Parameter(Mandatory=$true)][string]$Script,
   [string]$Tag = ""
 )
-$ue   = "C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe"
-$proj = "C:\Users\besli\Documents\Unreal Projects\PirateSeas\PirateSeas.uproject"
-$log  = "C:\Users\besli\Documents\Unreal Projects\PirateSeas\Saved\Logs\PirateSeas.log"
-$path = "C:/Users/besli/Documents/Unreal Projects/PirateSeas/Scripts/$Script"
+# Where things are is DERIVED, never typed. This file used to carry the author's
+# own absolute paths, which worked perfectly on the machine it was written on and
+# would have driven the wrong copy of the project on any other: measure.yml calls
+# it from a self-hosted runner that checks out to C:\actions-runner\_work\..., so
+# the CI job would have measured whatever happened to be in the author's home
+# directory - and reported it as a measurement of the commit under test.
+$root = Split-Path -Parent $PSScriptRoot
+$engine = if ($env:UE) { $env:UE } else { "C:\Program Files\Epic Games\UE_5.7" }
+$ue   = Join-Path $engine "Engine\Binaries\Win64\UnrealEditor-Cmd.exe"
+$proj = Join-Path $root "PirateSeas.uproject"
+$log  = Join-Path $root "Saved\Logs\PirateSeas.log"
+$path = (Join-Path $PSScriptRoot $Script) -replace '\\', '/'
+
+# A missing prerequisite is a failure, said out loud. Silence here would send the
+# editor a path it cannot open and leave the verdict to be read off a stale log
+# from a previous run - which is the same lie this file was written to stop.
+foreach ($p in @($ue, $proj, $path)) {
+  if (-not (Test-Path $p)) {
+    Write-Host "=== $Script CANNOT RUN: nothing at $p ===" -ForegroundColor Red
+    exit 2
+  }
+}
 
 & $ue $proj -run=pythonscript -script="$path" -unattended -nosound | Out-Null
 
