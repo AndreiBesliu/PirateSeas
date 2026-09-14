@@ -197,8 +197,55 @@ def box(name, mat, size, location, rotation=(0, 0, 0)):
     return o
 
 
-def sail(name, mat, width, height, location, belly=0.9, nx=10, nz=8):
-    """A square sail bellied out by wind, modelled as a curved grid."""
+# How full a square sail is cut, as a FRACTION OF ITS WIDTH rather than as a
+# number of metres. Eleven per cent is an ordinary working draft; the old code
+# used a flat 0.9 m, which made a nine-metre course and a seven-metre topsail
+# equally deep and therefore differently shaped.
+SAIL_CAMBER = 0.11
+
+# The foot is cut with a roach - a convex curve that hangs lower amidships than
+# at the clews - again as a fraction of the width.
+SAIL_ROACH = 0.055
+
+
+def sail_surface(u, w, width, height):
+    """Where a point of the sail sits, for u across (-0.5 to 0.5) and w down
+    (0 at the head, 1 at the foot).
+
+    ONE function, used both by the mesh and by the rigging, because they
+    disagreed: build_cordage seized each sheet at `x + 0.35`, a guess at where
+    the clew had ended up, while the clew is in fact at zero camber - a sail is
+    held at its corners. The sheets were tied thirty-five centimetres in front
+    of the corner they were supposed to be tied to.
+
+    The shape itself:
+      HEAD    laced to the yard along its whole length, so camber is zero there
+              and the head is dead straight.
+      FOOT    FREE, held only at the two clews. The old shape pinned it flat,
+              which is why the sails read as pillows rather than as canvas: a
+              square sail's foot is the part that bellies most.
+      LEECHES held by their bolt ropes, so camber goes to zero at both sides.
+    """
+    # Across the sail: full in the middle, nothing at the leeches.
+    across = math.cos(u * math.pi) ** 0.85
+    # Down the sail: nothing at the head, full at the foot, and staying full
+    # rather than closing again.
+    down = math.sin(w * math.pi * 0.5) ** 0.8
+    bulge = SAIL_CAMBER * width * across * down
+    # The roach: the foot hangs lower in the middle, and nothing happens at the
+    # head because it scales with w squared.
+    drop = w * height + (w ** 2) * SAIL_ROACH * width * math.cos(u * math.pi)
+    return (bulge, u * width, -drop)
+
+
+def sail_clew(width, height, side):
+    """The lower corner on one side, in the sail's own space. The rigging asks
+    this instead of guessing, which is the whole point of it existing."""
+    return sail_surface(0.5 * side, 1.0, width, height)
+
+
+def sail(name, mat, width, height, location, nx=12, nz=10):
+    """A square sail: head laced straight to the yard, foot free and full."""
     bm = bmesh.new()
     verts = []
     for k in range(nz + 1):
@@ -206,8 +253,7 @@ def sail(name, mat, width, height, location, belly=0.9, nx=10, nz=8):
         for i in range(nx + 1):
             u = i / nx - 0.5
             w = k / nz
-            bulge = belly * math.cos(u * math.pi) * math.sin(w * math.pi) ** 0.7
-            row.append(bm.verts.new((bulge, u * width, -w * height)))
+            row.append(bm.verts.new(sail_surface(u, w, width, height)))
         verts.append(row)
     bm.verts.ensure_lookup_table()
     for k in range(nz):
@@ -353,8 +399,12 @@ def build_cordage(m_rope):
                 y, zz = section_point(t, 1.0)
                 add_tube(bm, arm, Vector((station_x(t), side * (y + 0.2), zz + 0.6)),
                          R_RUN, segments=4)
-                # sheet, from the sail's lower corner down to the deck
-                clew = Vector((x + 0.35, side * sail_w * 0.5, z - 0.15 - sail_h))
+                # sheet, from the sail's lower corner down to the deck. The
+                # corner is ASKED FOR, not guessed: sail_clew() returns the same
+                # point the mesh is built from, so the two cannot drift apart
+                # when the shape changes.
+                cx, cy, cz = sail_clew(sail_w, sail_h, side)
+                clew = Vector((x + cx, cy, z - 0.15 + cz))
                 t2 = min(0.92, max(0.08, (x - 2.4) / LENGTH + 0.5))
                 y2, z2 = section_point(t2, 1.0)
                 add_tube(bm, clew,

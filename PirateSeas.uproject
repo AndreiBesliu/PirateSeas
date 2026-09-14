@@ -31,6 +31,10 @@
 		{
 			"Name": "InterchangeEditor",
 			"Enabled": true
+		},
+		{
+			"Name": "AndroidFileServer",
+			"Enabled": false
 		}
 	],
 	"Modules": [
