@@ -47,6 +47,17 @@ B_IN = ["B"]
 
 
 def build_material():
+    # SUPERSEDED by Scripts/island_material.py, which rebuilds M_Island with the
+    # height-and-slope blend. This one still built the old vertical colour ramp,
+    # it still ran standalone under run_py.ps1, and running it would have
+    # silently thrown away the island material without any error - so it refuses
+    # rather than sits there waiting to be run by mistake.
+    raise RuntimeError(
+        "island_assets.build_material() is superseded by island_material.py; "
+        "run that instead. Running this would replace M_Island with the old "
+        "colour ramp and nothing would report it.")
+
+
     if EAL.does_asset_exist(ISLE_MAT):
         EAL.delete_asset(ISLE_MAT)
     mat = AT.create_asset("M_Island", MAT_DIR, unreal.Material,

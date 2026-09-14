@@ -89,6 +89,17 @@ def build_master():
     mat = AT.create_asset("M_ShipMaster", MAT_DIR, unreal.Material,
                           unreal.MaterialFactoryNew())
 
+    # The island's foliage is drawn with this same master on HIERARCHICAL
+    # INSTANCED meshes, and a material must DECLARE that it may be. Without the
+    # flag the engine silently substitutes the default material and says so once
+    # in a log line that does not contain the words "failed to compile" - which
+    # cost most of a session on the gun smoke before it was found. Set, and read
+    # BACK, because sp() swallows a failure into a WARN.
+    sp(mat, "used_with_instanced_static_meshes", True)
+    if not mat.get_editor_property("used_with_instanced_static_meshes"):
+        raise RuntimeError("M_ShipMaster: used_with_instanced_static_meshes did "
+                           "not stick; the foliage would draw in default grey")
+
     def expr(cls, x, y):
         return MEL.create_material_expression(mat, cls, x, y)
 
@@ -388,6 +399,49 @@ def assign(instances):
     L("assigned %d/%d" % (changed, len(slots)))
 
 
+def build_foliage(master):
+    """One instance for both plants, reusing the ship's timber-and-canvas
+    master. No new material: the master already projects biplanar in LOCAL
+    space, which is exactly what a mesh with no UV layer needs, and the palms
+    have none for the same reason the ship has none."""
+    name = "MI_Foliage"
+    path = MAT_DIR + "/" + name
+    if EAL.does_asset_exist(path):
+        EAL.delete_asset(path)
+    mi = AT.create_asset(name, MAT_DIR, unreal.MaterialInstanceConstant,
+                         unreal.MaterialInstanceConstantFactoryNew())
+    MEL.set_material_instance_parent(mi, master)
+    for pname, asset in (("BaseTex", "T_Turf_C"), ("BaseTexTop", "T_Turf_C"),
+                         ("NormalTex", "T_Turf_N"), ("NormalTexTop", "T_Turf_N")):
+        t = EAL.load_asset(TEX_DIR + "/" + asset)
+        if t is None:
+            L("MISSING %s" % asset)
+            continue
+        MEL.set_material_instance_texture_parameter_value(mi, pname, t)
+    MEL.set_material_instance_vector_parameter_value(
+        mi, "Tint", unreal.LinearColor(0.85, 1.0, 0.70, 1.0))
+    for k, v in (("TexScaleCm", 260.0), ("RoughMin", 0.72), ("RoughMax", 0.95),
+                 ("Metallic", 0.0), ("NormalStrength", 1.0),
+                 # A palm frond is curved in every direction; a biplanar seam on
+                 # it would draw the same ring the sails grew. One plane only.
+                 ("TopWeight", 0.0), ("SideSwap", 0.0), ("RopeCollapse", 0.0)):
+        MEL.set_material_instance_scalar_parameter_value(mi, k, v)
+    EAL.save_asset(path)
+
+    for mesh_path in ("/Game/Meshes/SM_Palm", "/Game/Meshes/SM_Scrub"):
+        mesh = EAL.load_asset(mesh_path)
+        if mesh is None:
+            L("foliage mesh missing: %s" % mesh_path)
+            continue
+        mesh.set_material(0, mi)
+        EAL.save_asset(mesh_path)
+        fresh = EAL.load_asset(mesh_path)
+        got = fresh.get_editor_property("static_materials")[0]             .get_editor_property("material_interface")
+        L("verify %s -> %s" % (mesh_path.split("/")[-1],
+                               got.get_name() if got else "NONE"))
+
+
 master = build_master()
 assign(build_instances(master))
+build_foliage(master)
 L("DONE")

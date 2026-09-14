@@ -28,6 +28,22 @@ JOBS = [
         "complex": True,
     },
     {
+        "asset": "/Game/Meshes/SM_Palm",
+        "name": "SM_Palm",
+        "fbx": SCRIPTS + r"\SM_Palm.fbx",
+        # Assigned by ship_materials.py, which builds MI_Foliage from the same
+        # master the hull uses. Nothing to attach here.
+        "material": None,
+        "complex": False,
+    },
+    {
+        "asset": "/Game/Meshes/SM_Scrub",
+        "name": "SM_Scrub",
+        "fbx": SCRIPTS + r"\SM_Scrub.fbx",
+        "material": None,
+        "complex": False,
+    },
+    {
         "asset": "/Game/Meshes/SM_SeaSurface",
         "name": "SM_SeaSurface",
         "fbx": SCRIPTS + r"\SM_SeaSurface.fbx",
@@ -90,7 +106,7 @@ for job in JOBS:
             sp(body, "collision_trace_flag",
                unreal.CollisionTraceFlag.CTF_USE_COMPLEX_AS_SIMPLE)
 
-    mat = EAL.load_asset(job["material"])
+    mat = EAL.load_asset(job["material"]) if job["material"] else None
     if mat:
         mesh.set_material(0, mat)
     EAL.save_asset(job["asset"])

@@ -774,6 +774,36 @@ se face punct. Se vede în log: o rulare în care jucătorul stă pe loc scrie
 `ShipPawn_0:0` lângă inamici cu 8 firimituri fiecare. Aşa se deosebeşte „n-are
 siaj fiindcă nu s-a mişcat" de „n-are siaj fiindcă e stricat".
 
+### Vegetaţia
+
+Doi arbuşti din Blender — un palmier înclinat şi o tufă bolovănoasă —
+împrăştiaţi pe insulă la pornire prin trasare de rază, ţinuţi în două meshuri
+instanţiate ierarhic: o sută patruzeci de plante sunt două apeluri de desenare.
+
+Geometrie **opacă**, deliberat. Palmierul evident se face din câteva cartonaşe
+cu alfa, dar proiectul n-a livrat niciodată un material mascat sau translucid şi
+cele două încercări de a introduce unul au costat câte o sesiune fiecare. Frunze
+solide sunt mai butucănoase decât cartonaşele, iar ce-i trebuia insulei era o
+**siluetă ruptă** pe linia cerului — şi unei siluete nu-i pasă dacă frunza are
+marginea decupată.
+
+**Pragurile sunt CITITE din material, nu retastate.** `M_Island` decide
+nisip-contra-iarbă din `SandTopCm`/`SandFadeCm` şi pământ-contra-rocă din
+`RockSlopeStart`/`RockSlopeFade`; împrăştierea cere activului livrat exact cele
+patru numere. O a doua copie a lor în C++ ar fi fost corectă exact până la prima
+reglare a oricăruia, iar defectul ar fi fost un palmier stând pe nisip pictat —
+vizibil doar într-o captură pe care nimeni n-o face. Logul scrie `4 of 4 numbers
+read from the material`, deci o cădere tăcută pe valorile implicite s-ar vedea ca
+`0 of 4`.
+
+Respingerile se numără separat (`missed=`, `wrong height=`, `too steep=`),
+fiindcă „n-a crescut nimic" are patru cauze şi trebuie deosebite fără o a doua
+rulare.
+
+Niciun material nou: plantele se desenează cu masterul navei, care proiectează
+biplanar în spaţiu LOCAL — exact ce-i trebuie unui mesh fără UV-uri, şi ele n-au,
+din acelaşi motiv pentru care nava n-are.
+
 ### Stropii
 
 Ghiuleaua îi spune mării unde a lovit; marea ţine minte o secundă şi jumătate;
@@ -948,8 +978,9 @@ nici setări de import, nici streaming — şi erodarea a pornit imediat. Vina e
   lui, poala e LIBERĂ şi acolo se umflă cel mai mult, iar adâncimea e o fracţiune
   din LĂŢIME (11%), nu un număr fix de metri care făcea o velă de nouă metri şi
   una de şapte la fel de adânci.
-- Insula n-are vegetaţie, iar roca nu se arată niciodată, fiindcă dealul e prea
-  blând ca să treacă de pragul de pantă.
+- Roca nu se arată niciodată pe insulă, fiindcă dealul e prea blând ca să treacă
+  de pragul de pantă — măsurat, nu bănuit: împrăştierea vegetaţiei raportează
+  `too steep=0`, adică niciun punct din toată insula nu e destul de abrupt.
 - Riduri de apă se văd că se repetă în zare, ca o dungă orizontală.
 - Navele se lovesc doar cu ghiulele, nu una de alta.
 - Cutia de coliziune a oceanului e un corp fizic real (WorldDynamic, blochează

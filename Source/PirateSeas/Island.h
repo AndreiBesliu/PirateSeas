@@ -5,6 +5,7 @@
 #include "Island.generated.h"
 
 class UStaticMeshComponent;
+class UHierarchicalInstancedStaticMeshComponent;
 
 /**
  * Land, and the shallow water round it.
@@ -73,8 +74,41 @@ public:
 	 *  water; inside it, there is beach. */
 	float GetShoreRadiusCm() const { return ShoreRadiusCm; }
 
+	/** Plants the island. Called once, after the size is known.
+	 *
+	 *  The bands it plants between are READ OFF THE MATERIAL, not retyped here:
+	 *  M_Island decides sand-versus-turf from SandTopCm/SandFadeCm and
+	 *  ground-versus-rock from RockSlopeStart/RockSlopeFade, and a palm standing
+	 *  on painted sand or halfway up painted rock is the exact failure a second
+	 *  copy of those numbers would produce the first time either was tuned.
+	 *  Asking the shipped asset means the two cannot disagree. */
+	void ScatterVegetation();
+
 protected:
 	/** The land itself: seen, and solid to round shot. */
 	UPROPERTY(VisibleAnywhere, Category = "Island")
 	TObjectPtr<UStaticMeshComponent> Rock;
+
+	UPROPERTY(VisibleAnywhere, Category = "Island")
+	TObjectPtr<UHierarchicalInstancedStaticMeshComponent> Palms;
+
+	UPROPERTY(VisibleAnywhere, Category = "Island")
+	TObjectPtr<UHierarchicalInstancedStaticMeshComponent> Scrub;
+
+	/** Candidate points are laid on a jittered lattice over the island disc.
+	 *  Spacing in centimetres at the AUTHORED size; it scales with the island,
+	 *  so a bigger island gets proportionally more plants rather than the same
+	 *  number spread thinner. */
+	UPROPERTY(EditAnywhere, Category = "Island")
+	float PalmSpacingCm = 2600.f;
+
+	UPROPERTY(EditAnywhere, Category = "Island")
+	float ScrubSpacingCm = 1500.f;
+
+	/** Palms keep to the lower slopes near the strand; scrub climbs higher. */
+	UPROPERTY(EditAnywhere, Category = "Island")
+	float PalmMaxHeightCm = 1900.f;
+
+	UPROPERTY(EditAnywhere, Category = "Island")
+	float ScrubMaxHeightCm = 3400.f;
 };

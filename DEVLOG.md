@@ -2597,3 +2597,45 @@ cadru de două ori. Numele poartă acum zecimi.
 Măsurători neschimbate.
 
 **Task Completed.**
+
+
+---
+
+## Task Started — 14.09.2026 (vegetaţia)
+
+**Prompt:** „Continua"
+**Model:** Claude Opus 5
+
+Ultima temă din arc. Am luat tier-ul 1 al recenzorului adversarial — acelaşi
+contur, jumătate din plan, niciunul din nodurile pe care proiectul nu le-a
+compilat vreodată.
+
+Doi arbuşti din Blender, împrăştiaţi prin trasare de rază în două meshuri
+instanţiate ierarhic. Geometrie opacă: cartonaşele cu alfa ar fi cerut un
+material mascat, iar cele două încercări de material nou de săptămâna asta au
+costat câte o sesiune.
+
+### Corecţia care contează
+
+Pragurile de înălţime şi de pantă se CITESC din `M_Island` la pornire. O a doua
+copie în C++ ar fi fost corectă exact până la prima reglare, şi defectul ar fi
+fost un palmier pe nisip pictat. Logul spune `4 of 4 numbers read from the
+material` — o cădere tăcută pe implicite s-ar citi `0 of 4`.
+
+Acelaşi principiu ca la colţul velei, ieri: **întreabă lucrul care ştie.**
+
+### Şi o măsurătoare pe care n-o căutam
+
+`too steep=0`: niciun punct din toată insula nu e destul de abrupt cât să treacă
+pragul de rocă. Asta explică de ce roca nu s-a arătat niciodată pe dealul ăsta —
+o observaţie din lista de limitări, acum cu o cifră în spate.
+
+### Curăţenie
+
+`island_assets.build_material()` refuză acum să ruleze. Era înlocuită de
+`island_material.py`, dar stătea pe disc, mergea de una singură, şi ar fi
+înlocuit M_Island cu rampa de culoare veche fără să raporteze nimic.
+
+Măsurători neschimbate.
+
+**Task Completed.**

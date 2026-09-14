@@ -1,5 +1,9 @@
 #include "Island.h"
 
+#include "Components/HierarchicalInstancedStaticMeshComponent.h"
+#include "Engine/StaticMesh.h"
+#include "Materials/MaterialInterface.h"
+
 #include "Components/StaticMeshComponent.h"
 #include "Engine/StaticMesh.h"
 #include "UObject/ConstructorHelpers.h"
@@ -35,6 +39,162 @@ AIsland::AIsland()
 	Rock->SetMobility(EComponentMobility::Movable);
 	Rock->SetSimulatePhysics(false);
 	Rock->SetGenerateOverlapEvents(false);
+
+	// The plants. Hierarchical, so a hundred palms are one draw call and the
+	// engine culls them per instance; no collision, because nothing is ever
+	// going to walk into a tree in a game played from a quarterdeck, and a
+	// hundred collision bodies on a hillside would be paid for nothing.
+	Palms = CreateDefaultSubobject<UHierarchicalInstancedStaticMeshComponent>(
+		TEXT("Palms"));
+	Palms->SetupAttachment(Rock);
+	Scrub = CreateDefaultSubobject<UHierarchicalInstancedStaticMeshComponent>(
+		TEXT("Scrub"));
+	Scrub->SetupAttachment(Rock);
+	for (UHierarchicalInstancedStaticMeshComponent* C : { Palms.Get(), Scrub.Get() })
+	{
+		C->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		C->SetGenerateOverlapEvents(false);
+		C->SetMobility(EComponentMobility::Movable);
+		// The instances are given world-scaled transforms already; the
+		// component must not scale them again with the island's own scale.
+		C->SetUsingAbsoluteScale(true);
+	}
+
+	static ConstructorHelpers::FObjectFinder<UStaticMesh> PalmMesh(
+		TEXT("/Game/Meshes/SM_Palm.SM_Palm"));
+	if (PalmMesh.Succeeded())
+	{
+		Palms->SetStaticMesh(PalmMesh.Object);
+	}
+	static ConstructorHelpers::FObjectFinder<UStaticMesh> ScrubMesh(
+		TEXT("/Game/Meshes/SM_Scrub.SM_Scrub"));
+	if (ScrubMesh.Succeeded())
+	{
+		Scrub->SetStaticMesh(ScrubMesh.Object);
+	}
+}
+
+void AIsland::ScatterVegetation()
+{
+	if (!Palms || !Scrub || !Rock || !GetWorld())
+	{
+		return;
+	}
+
+	// The bands, asked for rather than retyped. If the material has no such
+	// parameter the fallback is used AND SAID, because a silent fallback here
+	// means the plants and the paint are keyed to different numbers and only a
+	// screenshot would ever show it.
+	float SandTop = 320.f, SandFade = 260.f, RockStart = 0.80f, RockFade = 0.22f;
+	int32 Asked = 0, Got = 0;
+	if (const UMaterialInterface* M = Rock->GetMaterial(0))
+	{
+		struct { const TCHAR* Name; float* Out; } Wanted[] = {
+			{ TEXT("SandTopCm"), &SandTop }, { TEXT("SandFadeCm"), &SandFade },
+			{ TEXT("RockSlopeStart"), &RockStart },
+			{ TEXT("RockSlopeFade"), &RockFade } };
+		for (auto& W : Wanted)
+		{
+			++Asked;
+			float V = 0.f;
+			if (M->GetScalarParameterValue(
+					FHashedMaterialParameterInfo(FName(W.Name)), V))
+			{
+				*W.Out = V;
+				++Got;
+			}
+		}
+	}
+
+	// Where turf wins over sand, and ground wins over rock: the half-way point
+	// of each of the material's own ramps.
+	const float Scale = GetScale();
+	const float TurfFromCm = (SandTop + 0.5f * SandFade) * Scale;
+	const float MinFlatness = RockStart - 0.5f * RockFade;
+
+	const float R = ShoreRadiusCm;
+	const FVector Centre = GetActorLocation();
+	// Seeded from the island's own placement, so two runs of the same scenario
+	// plant the same trees - this project compares runs, and scenery that moved
+	// between them would be one more thing to rule out.
+	FRandomStream Stream(FMath::RoundToInt(Centre.X + Centre.Y * 7.f) | 1);
+
+	FCollisionQueryParams Q(SCENE_QUERY_STAT(IslandScatter), false, this);
+	Q.bTraceComplex = true;
+	Q.AddIgnoredActor(this);
+	// ...except the island itself, which is what we WANT to hit.
+	Q.ClearIgnoredActors();
+
+	int32 Tried = 0, Planted[2] = { 0, 0 }, TooSteep = 0, TooLow = 0, NoHit = 0;
+	for (int32 Kind = 0; Kind < 2; ++Kind)
+	{
+		const float Spacing = (Kind == 0 ? PalmSpacingCm : ScrubSpacingCm) * Scale;
+		const float MaxZ = (Kind == 0 ? PalmMaxHeightCm : ScrubMaxHeightCm) * Scale;
+		UHierarchicalInstancedStaticMeshComponent* Into = (Kind == 0) ? Palms : Scrub;
+		if (!Into->GetStaticMesh())
+		{
+			continue;
+		}
+		const int32 Steps = FMath::Clamp(FMath::CeilToInt(2.f * R / Spacing), 1, 200);
+		for (int32 iy = -Steps; iy <= Steps; ++iy)
+		{
+			for (int32 ix = -Steps; ix <= Steps; ++ix)
+			{
+				// A hexagonal lattice: rows offset by half a step. A square one
+				// plants in visible lines the moment the camera is square to it.
+				const float X = (ix + ((iy & 1) ? 0.5f : 0.f)) * Spacing
+					+ Stream.FRandRange(-0.35f, 0.35f) * Spacing;
+				const float Y = iy * Spacing * 0.866f
+					+ Stream.FRandRange(-0.35f, 0.35f) * Spacing;
+				if (FMath::Square(X) + FMath::Square(Y) > FMath::Square(R))
+				{
+					continue;
+				}
+				++Tried;
+
+				const FVector From(Centre.X + X, Centre.Y + Y, Centre.Z + 12000.f);
+				const FVector To(From.X, From.Y, Centre.Z - 2000.f);
+				FHitResult Hit;
+				if (!GetWorld()->LineTraceSingleByChannel(
+						Hit, From, To, ECC_Visibility, Q) || Hit.GetActor() != this)
+				{
+					++NoHit;
+					continue;
+				}
+				const float HeightCm = Hit.ImpactPoint.Z - Centre.Z;
+				if (HeightCm < TurfFromCm || HeightCm > MaxZ)
+				{
+					++TooLow;
+					continue;
+				}
+				if (Hit.ImpactNormal.Z < MinFlatness)
+				{
+					++TooSteep;
+					continue;
+				}
+
+				// Stand it up, not normal to the slope: a palm grows towards the
+				// light, not square to the hill. A little lean, and a random
+				// heading so eight fronds do not point the same way twice.
+				const float Lean = Stream.FRandRange(-7.f, 7.f);
+				const FRotator Rot(Lean, Stream.FRandRange(0.f, 360.f),
+					Stream.FRandRange(-5.f, 5.f));
+				const float S = Stream.FRandRange(0.78f, 1.35f) * Scale;
+				FTransform T(Rot, Hit.ImpactPoint - Centre, FVector(S, S, S));
+				Into->AddInstance(T, /*bWorldSpace=*/false);
+				++Planted[Kind];
+			}
+		}
+	}
+
+	// Counted, and every rejection counted separately: "no plants" has four
+	// different causes and they need telling apart without a second run.
+	UE_LOG(LogTemp, Display,
+		TEXT("ISLELOG %s planted palms=%d scrub=%d of %d tried "
+			 "(missed=%d, wrong height=%d, too steep=%d); "
+			 "turf from %.0f cm, flatness >= %.2f, %d of %d numbers read from the material"),
+		*GetName(), Planted[0], Planted[1], Tried, NoHit, TooLow, TooSteep,
+		TurfFromCm, MinFlatness, Got, Asked);
 }
 
 void AIsland::BeginPlay()
@@ -42,6 +202,8 @@ void AIsland::BeginPlay()
 	Super::BeginPlay();
 
 	Rock->SetWorldScale3D(FVector(GetScale()));
+	Rock->UpdateBounds();
+	ScatterVegetation();
 
 	// What the scene holds, not what was asked for. Asking is what lied the
 	// first two times.
