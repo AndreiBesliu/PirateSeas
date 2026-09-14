@@ -16,9 +16,14 @@
 # unpinned runs reads scatter and calls it a regression.
 name: measure
 
+# MANUAL ONLY, until a runner exists.
+#
+# With `push` here, every commit queues a job that no runner will ever pick up,
+# and it sits pending for ever. A permanently pending light is the same hazard
+# as a permanently red one: people stop reading it, and then it cannot tell them
+# anything. Add the push trigger back in the same commit that registers the
+# runner.
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 jobs:
