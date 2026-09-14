@@ -2566,3 +2566,34 @@ Neschimbat faţă de linia de bază: vela e geometrie, iar coca se loveşte pe o
 cutie.
 
 **Task Completed.**
+
+
+---
+
+## Task Started — 14.09.2026 (stropii)
+
+**Prompt:** „Continua"
+**Model:** Claude Opus 5
+
+„Ghiulelele plesnesc fără stropi vizibili" era în lista de limitări din prima
+sesiune. Acum nu mai e.
+
+Ghiuleaua raportează impactul — ea ştie deja punctul exact, marea nu trebuie să-l
+caute — iar `AOceanSurface` îl ţine minte o secundă şi jumătate. Al treilea efect
+pe acelaşi mecanism, după surf şi siaj.
+
+Inelul se rupe cu textura de bule BRUTĂ. Prima variantă folosea `broken`, care
+are un prag de 0,45 ca linia de surf să rămână continuă — corect pentru surf,
+greşit aici: cu prag inelul nu poate fi găurit, şi patru cercuri perfecte pe apă
+se citesc ca geometrie.
+
+### Şi un defect al instrumentului, găsit din întâmplare
+
+Încercam să prind stropii la momentul potrivit şi două capturi la timpi diferiţi
+ieşeau identice. `-ShipShots=10.6,11.4` se rotunjeau amândouă la `t011` şi a doua
+o suprascria pe prima. O galerie făcută ca să arate ceva schimbându-se arăta un
+cadru de două ori. Numele poartă acum zecimi.
+
+Măsurători neschimbate.
+
+**Task Completed.**

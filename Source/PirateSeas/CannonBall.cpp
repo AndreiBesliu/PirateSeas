@@ -8,6 +8,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "UObject/ConstructorHelpers.h"
 #include "WaterBodyComponent.h"
+#include "OceanSurface.h"
 
 ACannonBall::ACannonBall()
 {
@@ -240,6 +241,14 @@ void ACannonBall::OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor,
 void ACannonBall::ReportAndDie(const TCHAR* Reason, const FVector& Where)
 {
 	bSpent = true;
+
+	// Tell the sea, but only when the sea is what was hit. A ball that went
+	// through a hull or into a hillside has no business throwing up water, and
+	// the reason string is already the thing that knows which happened.
+	if (FCString::Strcmp(Reason, TEXT("splash")) == 0)
+	{
+		AOceanSurface::ReportSplash(GetWorld(), Where);
+	}
 
 	const float RangeM = FVector::Dist2D(LaunchLocation, Where) * 0.01f;
 

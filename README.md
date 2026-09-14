@@ -774,6 +774,23 @@ se face punct. Se vede în log: o rulare în care jucătorul stă pe loc scrie
 `ShipPawn_0:0` lângă inamici cu 8 firimituri fiecare. Aşa se deosebeşte „n-are
 siaj fiindcă nu s-a mişcat" de „n-are siaj fiindcă e stricat".
 
+### Stropii
+
+Ghiuleaua îi spune mării unde a lovit; marea ţine minte o secundă şi jumătate;
+materialul desenează un inel de apă albă care se deschide şi se subţiază.
+
+Al treilea efect pe acelaşi mecanism, după surful de la insule şi siaj: starea
+în C++, împinsă ca parametri, desenată în material. Motivul e acelaşi de fiecare
+dată — fiecare număr rămâne pe procesor, unde o rulare fără interfaţă îl poate
+tipări. Logul scrie `splashes=8 live=N seen=N lost=N`, deci o salvă care pierde
+jumătate din stropi pe inelul de opt sloturi **o spune**, în loc să pară doar
+subţire.
+
+Inelul e rupt de textura de bule BRUTĂ, nu de cea cu prag: pragul de 0,45 există
+ca linia de surf să rămână continuă, şi e greşit aici — cu el inelul nu poate fi
+găurit, iar patru cercuri perfecte pe apă se citesc ca geometrie, nu ca ghiulele
+care cad.
+
 ### Gulerul şi braţele
 
 Firimiturile sunt ISTORIE. Alte două lucruri au nevoie de unde e nava chiar în
@@ -922,8 +939,8 @@ nici setări de import, nici streaming — şi erodarea a pornit imediat. Vina e
   `r.Water.WaterMesh.EnableRendering` pornit și oprit e identică. Plutirea
   folosește în continuare plugin-ul; doar imaginea e a noastră, din aceleași
   șase unde.
-- Marea **nu are siaj** în spatele cocii şi ghiulelele plesnesc fără stropi:
-  spuma există acum, dar numai pe creste, nu şi acolo unde ceva atinge apa.
+- Stropii sunt un inel de apă albă pe suprafaţă, nu o coloană care sare în sus:
+  marea se desfăşoară, nu se ridică.
 - Surful e un **inel geometric**: nu ştie din ce parte bate vântul, deci sparge
   la fel de tare şi în adăpostul insulei ca pe partea expusă.
 - Ridurile de apă se văd că se repetă în zare, ca un moar.

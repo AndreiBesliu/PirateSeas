@@ -1772,8 +1772,11 @@ void AShipPawn::Tick(float DeltaSeconds)
 		if (!ShotTaken[i] && PlayTime >= ShotTimes[i])
 		{
 			ShotTaken[i] = true;
-			const FString File = FString::Printf(TEXT("%s_t%03d"),
-				*ShotName, FMath::RoundToInt(ShotTimes[i]));
+			// TENTHS, not whole seconds. -ShipShots=10.6,11.4 both rounded to
+			// "t011" and the second capture silently overwrote the first, so a
+			// gallery meant to show a thing changing showed one frame twice.
+			const FString File = FString::Printf(TEXT("%s_t%04d"),
+				*ShotName, FMath::RoundToInt(ShotTimes[i] * 10.f));
 			FScreenshotRequest::RequestScreenshot(File, false, false);
 			UE_LOG(LogTemp, Display,
 				TEXT("SHOTCAM wrote %s at t=%.1f (cam=%s)"),

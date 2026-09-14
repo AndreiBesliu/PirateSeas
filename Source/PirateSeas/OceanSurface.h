@@ -66,6 +66,18 @@ public:
 	 *  Three ships, because the parameter budget is real and the wake you
 	 *  actually watch is your own and your nearest opponent's. Ships beyond the
 	 *  third are COUNTED and logged, not dropped in silence. */
+	/** Splashes the material can draw at once. A broadside is four balls and
+	 *  two ships can fire together, so eight covers the worst honest case; a
+	 *  ninth overwrites the oldest and is COUNTED. */
+	static constexpr int32 MaxSplashes = 8;
+	/** A round shot has hit the water here. Called by the ball itself, which
+	 *  already knows the point exactly - the sea does not have to guess, and
+	 *  nothing has to be traced for.
+	 *
+	 *  Static, and it finds the surface itself, so ACannonBall does not have to
+	 *  carry a pointer to something it otherwise knows nothing about. */
+	static void ReportSplash(UWorld* World, const FVector& Where);
+
 	static constexpr int32 MaxWakeShips = 3;
 	static constexpr int32 CrumbsPerShip = 8;
 	static constexpr int32 WakePointCount = MaxWakeShips * CrumbsPerShip;
@@ -99,6 +111,7 @@ private:
 	/** Drops breadcrumbs behind whichever ships are being tracked, ages the
 	 *  ones already down, and pushes the lot into the material. */
 	void UpdateWake(float DeltaSeconds);
+
 
 	/** Whoever the sea should be centred on. */
 	AActor* GetFocus() const;
@@ -191,5 +204,32 @@ private:
 
 	TArray<FWakeTrail> Trails;
 	bool bWakeReported = false;
+
+	/** --- splashes ---------------------------------------------------------
+	 *
+	 *  A ring of white water that opens out and fades. The ball tells the sea
+	 *  where it hit; the sea remembers it for a second and a half.
+	 *
+	 *  Same shape as the wake and the surf before it: state in C++, pushed as
+	 *  parameters, drawn in the material. That is now three effects on one
+	 *  mechanism, and the reason is the same each time - every number stays on
+	 *  the processor where a headless run can print it. */
+	UPROPERTY(EditAnywhere, Category = "Splash")
+	float SplashLifeSeconds = 1.6f;
+
+	UPROPERTY(EditAnywhere, Category = "Splash")
+	float SplashRadiusCm = 900.f;
+
+	struct FSplash
+	{
+		FVector Where = FVector::ZeroVector;
+		float Age = 0.f;
+		bool bAlive = false;
+	};
+
+	TArray<FSplash> Splashes;
+	int32 NextSplash = 0;
+	int32 SplashesSeen = 0;
+	int32 SplashesOverwritten = 0;
 	float RetryTimer = 0.f;
 };

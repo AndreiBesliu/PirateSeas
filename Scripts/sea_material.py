@@ -562,13 +562,59 @@ def build():
                     mul(mul(live, "", strength, "B", -400, y0 + 200), "",
                         near, "", -250, y0 + 200), -100, y0 + 200)
 
+    # ------------------------------------------------------------ splashes
+    # A ring of white water that opens out from where a ball hit and fades.
+    # Packed by C++ as (x, y, age 0..1, radius in cm).
+    #
+    # The ring EXPANDS and THINS - that pair is what reads as a splash rather
+    # than as a white dot appearing and vanishing. A disc that merely fades is
+    # a muzzle flash; a ring that travels outward is water being pushed aside.
+    SPLASHES = 8
+    splash_thick = scalar("SplashThicknessCm", 200.0, -3000, 9600)
+    splash_gain = scalar("SplashGain", 1.6, -3000, 9680)
+    splash = None
+    for i in range(SPLASHES):
+        y0 = 9800 + i * 280
+        sp_v = vector("Splash%d" % i, unreal.LinearColor(0, 0, 0, 0), -3000, y0)
+        sp_xy = mask(sp_v, -2800, y0)
+        d = expr_dist(world_xy, sp_xy, -2600, y0)
+
+        # Where the ring has got to: the full radius (A pin) times its age
+        # (B pin). Both off NAMED pins - a VectorParameter's default output is
+        # a float3 and the fourth component cannot be masked.
+        want = mul(sp_v, "A", sp_v, "B", -2600, y0 + 120)
+        # ...and it thins as it grows, so the rim stays a rim.
+        thick = maxn(mul(splash_thick, "",
+                         sat(sub(const(1.15, -2450, y0 + 200), sp_v,
+                                 -2300, y0 + 200, bo="B"), -2150, y0 + 200),
+                         "", -2000, y0 + 200),
+                     const(40.0, -2000, y0 + 260), -1850, y0 + 200)
+        ring = sat(sub(const(1.0, -1700, y0 + 60),
+                       div(absn(sub(d, want, -1700, y0), -1550, y0), thick,
+                           -1400, y0), -1250, y0), -1100, y0)
+        # Fade out over the ball's whole life, so it does not simply switch off.
+        fade = sat(sub(const(1.0, -1250, y0 + 140), sp_v, -1100, y0 + 140,
+                       bo="B"), -950, y0 + 140)
+        seg = mul(ring, "", fade, "", -800, y0)
+        splash = seg if splash is None else maxn(splash, seg, -650, y0)
+
+    # Broken by the RAW bubble texture, not by `broken`. `broken` carries a
+    # floor of 0.45 so the surf line stays continuous - which is right for surf
+    # and wrong here: with a floor the ring cannot be punched through, and four
+    # perfect circles on the water read as geometry rather than as shot falling.
+    splash_final = sat(mul(mul(splash, "", splash_gain, "", -500, 9800),
+                           "", sat(mul(ftex, "", const(1.5, -500, 9880), "",
+                                       -400, 9880), -300, 9880), "", -200, 9800),
+                       -60, 9800)
+
     wake_gain = scalar("WakeGain", 1.9, -3000, 4480)
     wake_final = sat(mul(mul(wake, "", wake_gain, "", -400, 4600),
                          "", broken, "", -250, 4600), -100, 4600)
 
     # The three whites do not add - they take the largest, so a wake crossing
     # the surf does not stack into a blown-out patch.
-    foam = maxn(maxn(crest_foam, surf_final, 380, 950), wake_final, 520, 950)
+    foam = maxn(maxn(maxn(crest_foam, surf_final, 380, 950), wake_final, 520, 950),
+                splash_final, 660, 950)
 
     # ------------------------------------------------------------ colour
     deep = vector("DeepColor", unreal.LinearColor(0.0055, 0.0180, 0.0330, 1.0), -900, 200)

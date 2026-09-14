@@ -200,6 +200,36 @@ void AOceanSurface::PushIslands()
 		Found, Dropped, Found > 0 ? Radii[0] : 0.f);
 }
 
+void AOceanSurface::ReportSplash(UWorld* World, const FVector& Where)
+{
+	if (!World)
+	{
+		return;
+	}
+	for (TActorIterator<AOceanSurface> It(World); It; ++It)
+	{
+		AOceanSurface* Sea = *It;
+		if (!IsValid(Sea))
+		{
+			continue;
+		}
+		Sea->Splashes.SetNum(MaxSplashes);
+		FSplash& S = Sea->Splashes[Sea->NextSplash % MaxSplashes];
+		if (S.bAlive)
+		{
+			// The oldest slot was still in use. Counted rather than quietly
+			// reused: a broadside that loses half its splashes should say so.
+			++Sea->SplashesOverwritten;
+		}
+		S.Where = Where;
+		S.Age = 0.f;
+		S.bAlive = true;
+		Sea->NextSplash = (Sea->NextSplash + 1) % MaxSplashes;
+		++Sea->SplashesSeen;
+		return;
+	}
+}
+
 void AOceanSurface::UpdateWake(float DeltaSeconds)
 {
 	if (!SeaMaterial || !GetWorld())
@@ -332,6 +362,31 @@ void AOceanSurface::UpdateWake(float DeltaSeconds)
 		}
 	}
 
+	// Splashes: age them, retire them, push them.
+	Splashes.SetNum(MaxSplashes);
+	int32 LiveSplashes = 0;
+	for (int32 i = 0; i < MaxSplashes; ++i)
+	{
+		FSplash& S = Splashes[i];
+		FLinearColor Packed(0.f, 0.f, 0.f, 0.f);
+		if (S.bAlive)
+		{
+			S.Age += DeltaSeconds;
+			if (S.Age >= SplashLifeSeconds)
+			{
+				S.bAlive = false;
+			}
+			else
+			{
+				const float Age01 = S.Age / FMath::Max(0.01f, SplashLifeSeconds);
+				Packed = FLinearColor(S.Where.X, S.Where.Y, Age01, SplashRadiusCm);
+				++LiveSplashes;
+			}
+		}
+		SeaMaterial->SetVectorParameterValue(
+			FName(*FString::Printf(TEXT("Splash%d"), i)), Packed);
+	}
+
 	// The live part: collar and bow arms, from where each ship is THIS frame.
 	// Packed A = (x, y, trackX, trackY), B = (half-length, half-beam, strength,
 	// tan of the Kelvin half-angle).
@@ -380,8 +435,9 @@ void AOceanSurface::UpdateWake(float DeltaSeconds)
 			}
 		}
 		UE_LOG(LogTemp, Display,
-			TEXT("WAKELOG live=%d of %d tracked=%s ignored=%d"),
-			Live, WakePointCount, *Names, Ignored);
+			TEXT("WAKELOG live=%d of %d tracked=%s ignored=%d splashes=%d live=%d seen=%d lost=%d"),
+			Live, WakePointCount, *Names, Ignored, MaxSplashes, LiveSplashes,
+			SplashesSeen, SplashesOverwritten);
 	}
 }
 
