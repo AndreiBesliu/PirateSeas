@@ -1,0 +1,43 @@
+{
+	"FileVersion": 3,
+	"EngineAssociation": "5.7",
+	"Category": "Game",
+	"Description": "Pirate ship sailing and naval combat prototype",
+	"Plugins": [
+		{
+			"Name": "Water",
+			"Enabled": true
+		},
+		{
+			"Name": "WaterAdvanced",
+			"Enabled": true
+		},
+		{
+			"Name": "Buoyancy",
+			"Enabled": true
+		},
+		{
+			"Name": "PythonScriptPlugin",
+			"Enabled": true
+		},
+		{
+			"Name": "EditorScriptingUtilities",
+			"Enabled": true
+		},
+		{
+			"Name": "EnhancedInput",
+			"Enabled": true
+		},
+		{
+			"Name": "InterchangeEditor",
+			"Enabled": true
+		}
+	],
+	"Modules": [
+		{
+			"Name": "PirateSeas",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		}
+	]
+}

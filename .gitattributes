@@ -1,0 +1,14 @@
+# core.autocrlf is on for this machine, which means git and the scripts write
+# different line endings into the same files - and a pattern written with a
+# literal newline then matches nothing. Pin it here instead of relying on the
+# global setting.
+* text=auto eol=lf
+
+# Unreal assets and art are binary: never let git touch their bytes, and never
+# try to merge them.
+*.uasset binary
+*.umap   binary
+*.fbx    binary
+*.glb    binary
+*.blend  binary
+*.png    binary

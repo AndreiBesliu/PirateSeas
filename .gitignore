@@ -1,0 +1,26 @@
+# ---------------------------------------------------------------- Unreal
+# Everything the engine regenerates. Intermediate alone is 2.5 GB here.
+Binaries/
+Intermediate/
+DerivedDataCache/
+Saved/
+*.VC.db
+*.opensdf
+*.sdf
+*.sln
+*.suo
+*.xcodeproj
+*.xcworkspace
+.vs/
+.vscode/
+
+# ------------------------------------------------------------ generated art
+# Scripts/textures.py synthesises every one of these from numpy in a second,
+# and they are 14 MB of binary that git would store forever. The IMPORTED
+# copies under Content/Textures are committed, so a clone opens and runs; the
+# PNGs are only needed to re-import after changing the generator.
+#     python Scripts/textures.py
+Scripts/Textures/
+
+# Blender's own backup copy of the scene.
+*.blend1

@@ -1,0 +1,499 @@
+"""
+Procedural stylised pirate brig for Blender 4.3 (headless).
+Modelled in metres, ~30 m long, origin at the waterline centre.
+
+  blender --background --python ship.py -- <out_dir>
+"""
+import bpy
+import bmesh
+import math
+import os
+import sys
+from mathutils import Vector
+
+argv = sys.argv
+OUT = argv[argv.index("--") + 1] if "--" in argv else os.getcwd()
+os.makedirs(OUT, exist_ok=True)
+
+LENGTH = 30.0        # stern to bow
+BEAM = 8.4           # max width
+DRAFT = 2.6          # keel below waterline
+FREEBOARD = 2.1      # deck above waterline amidships
+SHEER = 1.5          # extra deck rise towards bow/stern
+BULWARK = 1.15       # rail height above deck
+
+NS = 46              # stations along the hull
+NR = 12              # points per half section
+
+
+# ------------------------------------------------------------------ helpers
+def smoothstep(e0, e1, x):
+    t = min(1.0, max(0.0, (x - e0) / (e1 - e0)))
+    return t * t * (3.0 - 2.0 * t)
+
+
+def half_beam(t):
+    """t: 0 = stern, 1 = bow."""
+    if t < 0.45:
+        f = 0.55 + 0.45 * smoothstep(0.0, 1.0, t / 0.45)
+    else:
+        f = 1.0 - 0.945 * smoothstep(0.0, 1.0, (t - 0.45) / 0.55) ** 1.35
+    return 0.5 * BEAM * f
+
+
+def draft(t):
+    if t <= 0.58:
+        return DRAFT * (0.86 + 0.14 * (t / 0.58))
+    return DRAFT * (1.0 - 0.72 * smoothstep(0.0, 1.0, (t - 0.58) / 0.42) ** 1.2)
+
+
+def deck_z(t):
+    """Sheer line: deck rises towards both ends, more at the bow."""
+    s = (2.0 * t - 1.0) ** 2
+    bow_extra = 0.55 * smoothstep(0.55, 1.0, t)
+    return FREEBOARD + SHEER * s + bow_extra
+
+
+def station_x(t):
+    return (t - 0.5) * LENGTH
+
+
+def section_point(t, v):
+    """v: 0 = keel, 1 = gunwale. Returns (y, z) for the starboard side."""
+    a = v * (math.pi * 0.5)
+    d = draft(t)
+    fz = deck_z(t)
+    y = half_beam(t) * math.sin(a) ** 1.12
+    z = fz - (d + fz) * math.cos(a) ** 1.25
+    return y, z
+
+
+def new_mat(name, color, rough=0.75, metallic=0.0):
+    m = bpy.data.materials.new(name)
+    m.use_nodes = True
+    b = m.node_tree.nodes["Principled BSDF"]
+    b.inputs["Base Color"].default_value = color
+    b.inputs["Roughness"].default_value = rough
+    b.inputs["Metallic"].default_value = metallic
+    return m
+
+
+def obj_from_bm(bm, name, mat, smooth=True):
+    me = bpy.data.meshes.new(name + "Mesh")
+    bm.to_mesh(me)
+    bm.free()
+    if smooth:
+        for p in me.polygons:
+            p.use_smooth = True
+    me.materials.append(mat)
+    o = bpy.data.objects.new(name, me)
+    bpy.context.collection.objects.link(o)
+    return o
+
+
+# ------------------------------------------------------------------ hull
+def build_hull(mat_hull, mat_deck):
+    bm = bmesh.new()
+
+    # grid of verts: [station][ring] for starboard, mirrored to port
+    grid_s, grid_p = [], []
+    for i in range(NS + 1):
+        t = i / NS
+        x = station_x(t)
+        col_s, col_p = [], []
+        for j in range(NR + 1):
+            v = j / NR
+            y, z = section_point(t, v)
+            col_s.append(bm.verts.new((x, y, z)))
+            col_p.append(bm.verts.new((x, -y, z)))
+        grid_s.append(col_s)
+        grid_p.append(col_p)
+    bm.verts.ensure_lookup_table()
+
+    for i in range(NS):
+        for j in range(NR):
+            bm.faces.new((grid_s[i][j], grid_s[i + 1][j],
+                          grid_s[i + 1][j + 1], grid_s[i][j + 1]))
+            bm.faces.new((grid_p[i][j], grid_p[i][j + 1],
+                          grid_p[i + 1][j + 1], grid_p[i + 1][j]))
+
+    # keel seam: stitch the two halves along the centreline (j = 0)
+    for i in range(NS):
+        bm.faces.new((grid_s[i][0], grid_p[i][0],
+                      grid_p[i + 1][0], grid_s[i + 1][0]))
+
+    # transom at the stern
+    stern_ring = [grid_s[0][j] for j in range(NR + 1)] + \
+                 [grid_p[0][j] for j in range(NR, -1, -1)]
+    bm.faces.new(stern_ring[::-1])
+
+    # bow cap
+    bow_ring = [grid_s[NS][j] for j in range(NR + 1)] + \
+               [grid_p[NS][j] for j in range(NR, -1, -1)]
+    bm.faces.new(bow_ring)
+
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    hull = obj_from_bm(bm, "Hull", mat_hull)
+
+    # ---- deck: inset planking surface just below the gunwale ----------
+    bm = bmesh.new()
+    ds, dp = [], []
+    for i in range(NS + 1):
+        t = i / NS
+        x = station_x(t)
+        y, z = section_point(t, 0.965)
+        ds.append(bm.verts.new((x, y * 0.94, z - 0.12)))
+        dp.append(bm.verts.new((x, -y * 0.94, z - 0.12)))
+    bm.verts.ensure_lookup_table()
+    for i in range(NS):
+        bm.faces.new((ds[i], dp[i], dp[i + 1], ds[i + 1]))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    deck = obj_from_bm(bm, "Deck", mat_deck, smooth=False)
+
+    # ---- bulwark: rail wall standing on the deck edge ------------------
+    bm = bmesh.new()
+    for sign in (1, -1):
+        lo, hi = [], []
+        for i in range(NS + 1):
+            t = i / NS
+            x = station_x(t)
+            y, z = section_point(t, 1.0)
+            lo.append(bm.verts.new((x, sign * y, z - 0.15)))
+            hi.append(bm.verts.new((x, sign * y * 0.985, z + BULWARK)))
+        bm.verts.ensure_lookup_table()
+        for i in range(NS):
+            if sign > 0:
+                bm.faces.new((lo[i], lo[i + 1], hi[i + 1], hi[i]))
+            else:
+                bm.faces.new((lo[i], hi[i], hi[i + 1], lo[i + 1]))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    rail = obj_from_bm(bm, "Bulwark", mat_hull, smooth=False)
+
+    return hull, deck, rail
+
+
+# ------------------------------------------------------------------ parts
+def cylinder(name, mat, radius, height, location, rotation=(0, 0, 0), verts=12,
+             taper=1.0):
+    bm = bmesh.new()
+    bmesh.ops.create_cone(bm, cap_ends=True, cap_tris=False, segments=verts,
+                          radius1=radius, radius2=radius * taper, depth=height)
+    o = obj_from_bm(bm, name, mat)
+    o.location = location
+    o.rotation_euler = rotation
+    return o
+
+
+def box(name, mat, size, location, rotation=(0, 0, 0)):
+    bm = bmesh.new()
+    bmesh.ops.create_cube(bm, size=1.0)
+    for v in bm.verts:
+        v.co.x *= size[0]
+        v.co.y *= size[1]
+        v.co.z *= size[2]
+    o = obj_from_bm(bm, name, mat, smooth=False)
+    o.location = location
+    o.rotation_euler = rotation
+    return o
+
+
+def sail(name, mat, width, height, location, belly=0.9, nx=10, nz=8):
+    """A square sail bellied out by wind, modelled as a curved grid."""
+    bm = bmesh.new()
+    verts = []
+    for k in range(nz + 1):
+        row = []
+        for i in range(nx + 1):
+            u = i / nx - 0.5
+            w = k / nz
+            bulge = belly * math.cos(u * math.pi) * math.sin(w * math.pi) ** 0.7
+            row.append(bm.verts.new((bulge, u * width, -w * height)))
+        verts.append(row)
+    bm.verts.ensure_lookup_table()
+    for k in range(nz):
+        for i in range(nx):
+            bm.faces.new((verts[k][i], verts[k][i + 1],
+                          verts[k + 1][i + 1], verts[k + 1][i]))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    solid = bmesh.ops.solidify(bm, geom=bm.faces[:] + bm.edges[:] + bm.verts[:],
+                               thickness=0.04)
+    o = obj_from_bm(bm, name, mat)
+    o.location = location
+    return o
+
+
+# ------------------------------------------------------------------ cordage
+MAST_RAKE_DEG = -3.0
+MASTS = (("Fore", 5.6, 20.0, 0.34), ("Main", -3.2, 24.0, 0.40))
+
+
+def mast_line(x, h):
+    """Where a mast actually is, given that cylinder() centres on its location
+    and then rakes it. Computed rather than eyeballed, because a shroud that
+    misses the masthead by twenty centimetres is a shroud that is visibly
+    tied to nothing."""
+    th = math.radians(MAST_RAKE_DEG)
+    axis = Vector((math.sin(th), 0.0, math.cos(th)))
+    centre = Vector((x, 0.0, deck_z(0.5) + h * 0.5 - 1.0))
+    return centre - axis * (h * 0.5), axis
+
+
+def add_tube(bm, p0, p1, radius, segments=4):
+    """One rope, as an untapered tube between two points. No end caps: at three
+    centimetres across, a cap is a triangle nobody will ever see, and there are
+    several hundred of these."""
+    p0, p1 = Vector(p0), Vector(p1)
+    d = p1 - p0
+    if d.length < 1e-5:
+        return
+    z = d.normalized()
+    ref = Vector((0, 0, 1)) if abs(z.z) < 0.9 else Vector((1, 0, 0))
+    ex = z.cross(ref).normalized()
+    ey = z.cross(ex).normalized()
+    rings = []
+    for p in (p0, p1):
+        ring = []
+        for i in range(segments):
+            a = 2.0 * math.pi * i / segments
+            ring.append(bm.verts.new(
+                p + ex * (radius * math.cos(a)) + ey * (radius * math.sin(a))))
+        rings.append(ring)
+    for i in range(segments):
+        j = (i + 1) % segments
+        bm.faces.new((rings[0][i], rings[0][j], rings[1][j], rings[1][i]))
+
+
+def build_cordage(m_rope):
+    """Shrouds, ratlines, stays, braces and sheets - all in ONE mesh.
+
+    This is the single loudest thing missing from the ship. A square-rigged
+    hull with bare masts does not read as under-detailed, it reads as a TOY:
+    the eye knows that masts that size cannot stand up without standing
+    rigging, even when it could not name what it is looking for.
+
+    Built as one object because there are some three hundred separate ropes
+    here and three hundred draw calls for eight hundred grams of hemp would be
+    absurd."""
+    bm = bmesh.new()
+    R_SHROUD, R_RAT, R_STAY, R_RUN = 0.036, 0.022, 0.038, 0.026
+
+    # ---- shrouds and ratlines ------------------------------------------
+    for tag, x, h, r in MASTS:
+        base, axis = mast_line(x, h)
+        # The hounds: where the shrouds are seized to the mast, just under the
+        # masthead.
+        hound = base + axis * (h * 0.80)
+        spread = (-1.9, -0.6, 0.7, 2.0)      # deck ends, fore-and-aft of the mast
+        for side in (1, -1):
+            feet = []
+            for k, dx in enumerate(spread):
+                t = min(0.94, max(0.06, (x + dx) / LENGTH + 0.5))
+                y, z = section_point(t, 1.0)
+                # Outboard of the rail, the way a channel puts them, so the
+                # shrouds clear the gunwale instead of grazing it.
+                foot = Vector((station_x(t), side * (y + 0.30), z + 0.10))
+                # Fanned at the mast too, or all four meet in one point and the
+                # whole thing looks like a tent.
+                top = hound + Vector((0.0, side * (0.16 + 0.05 * k), -0.10 * k))
+                add_tube(bm, foot, top, R_SHROUD, segments=5)
+                feet.append((foot, top))
+
+            # Ratlines: rungs between neighbouring shrouds, every sixteen
+            # inches or so, stopping short of the hounds the way real ones do.
+            # Ratlines stop at the top, which on a real ship is the platform
+            # under the topmast - about where the lower yard is. Run to the
+            # hounds instead and they climb straight across the upper sail and
+            # the whole rig turns into a thicket.
+            rung = 0.46
+            climb_to = 0.56
+            n_rungs = int((feet[0][1] - feet[0][0]).length * climb_to / rung)
+            for i in range(1, n_rungs):
+                f = i * rung / (feet[0][1] - feet[0][0]).length
+                for a, b in zip(feet, feet[1:]):
+                    pa = a[0].lerp(a[1], f)
+                    pb = b[0].lerp(b[1], f)
+                    add_tube(bm, pa, pb, R_RAT, segments=3)
+
+    # ---- standing rigging fore and aft ----------------------------------
+    fore_base, fore_axis = mast_line(MASTS[0][1], MASTS[0][2])
+    main_base, main_axis = mast_line(MASTS[1][1], MASTS[1][2])
+    fore_head = fore_base + fore_axis * (MASTS[0][2] * 0.84)
+    main_head = main_base + main_axis * (MASTS[1][2] * 0.84)
+
+    # forestay, from the fore masthead down to the bowsprit end
+    bows_end = Vector((LENGTH * 0.5 + 2.6, 0.0, deck_z(1.0) + 0.9)) + \
+        Vector((math.sin(math.radians(74)), 0.0, math.cos(math.radians(74)))) * 4.75
+    add_tube(bm, fore_head, bows_end, R_STAY, segments=5)
+    # mainstay: main masthead forward to the foot of the fore mast
+    add_tube(bm, main_head, fore_base + fore_axis * 1.2, R_STAY, segments=5)
+
+    # backstays: each masthead to the quarters
+    for head in (fore_head, main_head):
+        for side in (1, -1):
+            t = 0.12
+            y, z = section_point(t, 1.0)
+            add_tube(bm, head, Vector((station_x(t), side * (y + 0.25), z + 0.10)),
+                     R_STAY * 0.85, segments=5)
+
+    # ---- running rigging: braces and sheets ------------------------------
+    # Braces lead aft from the yard-arms; sheets lead down from the clews. They
+    # do nothing and they are the reason the rig looks WORKED rather than
+    # assembled.
+    for tag, x, h, r in MASTS:
+        base, axis = mast_line(x, h)
+        for k, (frac, wf) in enumerate(((0.42, 1.0), (0.70, 0.78))):
+            z = deck_z(0.5) + h * frac
+            yard_len = (10.5 if tag == "Main" else 9.0) * wf
+            sail_w = yard_len * 0.94
+            sail_h = h * (0.26 if k == 0 else 0.22)
+            for side in (1, -1):
+                arm = Vector((x, side * yard_len * 0.5, z))
+                # brace, aft and down to the rail
+                t = 0.16 if tag == "Main" else 0.34
+                y, zz = section_point(t, 1.0)
+                add_tube(bm, arm, Vector((station_x(t), side * (y + 0.2), zz + 0.6)),
+                         R_RUN, segments=4)
+                # sheet, from the sail's lower corner down to the deck
+                clew = Vector((x + 0.35, side * sail_w * 0.5, z - 0.15 - sail_h))
+                t2 = min(0.92, max(0.08, (x - 2.4) / LENGTH + 0.5))
+                y2, z2 = section_point(t2, 1.0)
+                add_tube(bm, clew,
+                         Vector((station_x(t2), side * (y2 + 0.1), z2 + 0.3)),
+                         R_RUN * 0.85, segments=4)
+
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    ropes = len(bm.faces)
+    o = obj_from_bm(bm, "Cordage", m_rope)
+    print("SHIP cordage quads=%d" % ropes)
+    return o
+
+
+def build_rig(m_wood, m_dark, m_sail, m_metal):
+    parts = []
+    # masts: fore and main, raked slightly aft
+    for tag, x, h, r in MASTS:
+        parts.append(cylinder("Mast" + tag, m_wood, r, h,
+                              (x, 0, deck_z(0.5) + h * 0.5 - 1.0),
+                              rotation=(0, math.radians(MAST_RAKE_DEG), 0),
+                              taper=0.75))
+        # yards + sails
+        for k, (frac, wf) in enumerate(((0.42, 1.0), (0.70, 0.78))):
+            z = deck_z(0.5) + h * frac
+            yard_len = (10.5 if tag == "Main" else 9.0) * wf
+            parts.append(cylinder("Yard%s%d" % (tag, k), m_wood, 0.17, yard_len,
+                                  (x, 0, z), rotation=(math.radians(90), 0, 0),
+                                  verts=8, taper=0.6))
+            parts.append(sail("Sail%s%d" % (tag, k), m_sail,
+                              yard_len * 0.94, h * (0.26 if k == 0 else 0.22),
+                              (x, 0, z - 0.15)))
+    # bowsprit
+    parts.append(cylinder("Bowsprit", m_wood, 0.26, 9.5,
+                          (LENGTH * 0.5 + 2.6, 0, deck_z(1.0) + 0.9),
+                          rotation=(0, math.radians(74), 0), taper=0.5))
+    # stern cabin
+    parts.append(box("SternCabin", m_dark, (5.0, 4.2, 2.0),
+                     (-LENGTH * 0.5 + 3.4, 0, deck_z(0.05) + 1.05)))
+    # rudder
+    parts.append(box("Rudder", m_dark, (0.35, 0.22, 3.6),
+                     (-LENGTH * 0.5 - 0.15, 0, -0.9)))
+    # cannons poking through the gunports
+    for side in (1, -1):
+        for k in range(4):
+            x = -6.0 + k * 3.6
+            t = (x / LENGTH) + 0.5
+            y, z = section_point(t, 0.62)
+            parts.append(cylinder("Cannon%s%d" % ("S" if side > 0 else "P", k),
+                                  m_metal, 0.19, 2.3,
+                                  (x, side * (y + 0.35), z + 0.55),
+                                  rotation=(math.radians(90), 0, 0),
+                                  verts=10, taper=0.8))
+    return parts
+
+
+# ------------------------------------------------------------------ main
+def main():
+    bpy.ops.wm.read_factory_settings(use_empty=True)
+
+    m_hull = new_mat("M_Hull", (0.055, 0.030, 0.018, 1), 0.72)
+    m_deck = new_mat("M_Deck", (0.28, 0.185, 0.105, 1), 0.85)
+    m_wood = new_mat("M_Wood", (0.115, 0.068, 0.035, 1), 0.80)
+    m_dark = new_mat("M_DarkWood", (0.040, 0.022, 0.013, 1), 0.70)
+    m_sail = new_mat("M_Sail", (0.72, 0.66, 0.52, 1), 0.92)
+    m_metal = new_mat("M_Iron", (0.045, 0.045, 0.050, 1), 0.42, metallic=0.9)
+    m_rope = new_mat("M_Rope", (0.038, 0.030, 0.022, 1), 0.86)
+
+    hull, deck, rail = build_hull(m_hull, m_deck)
+    parts = build_rig(m_wood, m_dark, m_sail, m_metal)
+    parts.append(build_cordage(m_rope))
+
+    everything = [hull, deck, rail] + parts
+    for o in everything:
+        o.select_set(True)
+    bpy.context.view_layer.objects.active = hull
+    bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+    bpy.ops.object.join()
+    ship = bpy.context.object
+    ship.name = "SM_PirateShip"
+
+    faces = len(ship.data.polygons)
+    dims = ship.dimensions
+    print("SHIP faces=%d dims=%.1f x %.1f x %.1f m" % (faces, dims.x, dims.y, dims.z))
+
+    # ---- preview render -------------------------------------------------
+    w = bpy.data.worlds.new("W")
+    bpy.context.scene.world = w
+    w.use_nodes = True
+    sky = w.node_tree.nodes.new("ShaderNodeTexSky")
+    sky.sky_type = "NISHITA"
+    sky.sun_elevation = math.radians(32)
+    sky.altitude = 60.0
+    sky.dust_density = 0.4
+    w.node_tree.links.new(sky.outputs["Color"],
+                          w.node_tree.nodes["Background"].inputs["Color"])
+
+    bpy.ops.object.light_add(type="SUN", location=(0, 0, 40))
+    sun = bpy.context.object
+    sun.data.energy = 3.2
+    sun.rotation_euler = (math.radians(58), 0, math.radians(35))
+
+    tgt = bpy.data.objects.new("T", None)
+    tgt.location = (0, 0, 9.0)
+    bpy.context.collection.objects.link(tgt)
+    cd = bpy.data.cameras.new("C")
+    cd.lens = 55
+    cam = bpy.data.objects.new("Camera", cd)
+    cam.location = (50, -58, 24)
+    bpy.context.collection.objects.link(cam)
+    c = cam.constraints.new("TRACK_TO")
+    c.target = tgt
+    c.track_axis = "TRACK_NEGATIVE_Z"
+    c.up_axis = "UP_Y"
+    bpy.context.scene.camera = cam
+
+    sc = bpy.context.scene
+    sc.render.engine = "BLENDER_EEVEE_NEXT"
+    sc.render.resolution_x = 1280
+    sc.render.resolution_y = 720
+    sc.eevee.taa_render_samples = 64
+    sc.view_settings.view_transform = "AgX"
+    sc.view_settings.look = "AgX - Punchy"
+    sc.render.filepath = os.path.join(OUT, "ship_preview.png")
+    bpy.ops.render.render(write_still=True)
+
+    # ---- export ---------------------------------------------------------
+    ship.select_set(True)
+    bpy.context.view_layer.objects.active = ship
+    fbx = os.path.join(OUT, "SM_PirateShip.fbx")
+    bpy.ops.export_scene.fbx(filepath=fbx, use_selection=True,
+                             apply_unit_scale=True, global_scale=1.0,
+                             apply_scale_options="FBX_SCALE_NONE",
+                             object_types={"MESH"}, mesh_smooth_type="FACE",
+                             add_leaf_bones=False, bake_space_transform=False)
+    glb = os.path.join(OUT, "SM_PirateShip.glb")
+    bpy.ops.export_scene.gltf(filepath=glb, export_format="GLB",
+                              use_selection=True, export_apply=True)
+    bpy.ops.wm.save_as_mainfile(filepath=os.path.join(OUT, "ship.blend"))
+    print("SHIP_DONE fbx=%s" % fbx)
+
+
+main()
