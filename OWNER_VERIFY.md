@@ -445,3 +445,30 @@ privind.
 alb-cenuşiu din tablouri — pentru că e privit contra cerului, ceea ce chiar îl
 face întunecat, dar poate părea prea funinginos. E stins implicit ca să nu
 schimbe baza măsurătorilor; dacă îţi place, se poate face implicit.
+
+
+---
+
+## 21. Insula: arată locuită sau decorată?
+
+**Ce te uiți:** Treci pe lângă insulă de la vreo două sute de metri, apoi apropie-te
+până la plajă. Uită-te la linia cerului şi la unde se opreşte verdele.
+
+**Cum arată bine:** Silueta dealului e ruptă de palmieri, nu netedă. Palmierii se
+apleacă, şi se apleacă mai mult sau mai puţin, nu toţi la fel. Nimic nu creşte pe
+nisip şi nimic nu atârnă pe o faţă prea abruptă. De aproape se văd tufe între ei,
+nu doar palmieri.
+
+**Cum arată prost:** Copaci în rânduri sau într-un caroiaj. Ceva care creşte în
+apă sau pe plajă. Toţi palmierii identici, sau toţi verticali. Sau atât de deşi
+încât dealul dispare sub ei.
+
+**De ce nu pot eu:** Pot verifica din log că fiecare plantă a fost aşezată pe un
+punct trasat de pe mesh, că pragurile vin din material şi nu din constante
+retastate, şi câte au fost respinse şi de ce. Dacă dealul arată *locuit* sau doar
+*decorat* e o judecată de ochi.
+
+**Ce știu deja și n-am ascuns:** e prima treaptă, deliberat — frunzele sunt
+geometrie solidă, nu cartonaşe cu decupaj, şi nimic nu se mişcă în vânt. Şi
+`too steep=0`: dealul ăsta nu are nicăieri o pantă destul de mare cât să fie
+stâncă, deci nici piatra din material nu se arată vreodată pe el.
