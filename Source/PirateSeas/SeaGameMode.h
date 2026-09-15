@@ -52,6 +52,12 @@ public:
 	bool IsMissionOver() const { return bMissionOver; }
 	const FString& GetMissionResult() const { return MissionResult; }
 
+	/** The purse, for the panel. It is banked at the moment a merchant
+	 *  strikes and it buys nothing yet: this slice is what a prize is WORTH,
+	 *  not what you do with her. */
+	int32 GetPurse() const { return Purse; }
+	int32 GetPrizesTaken() const { return PrizesTaken; }
+
 protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Sea")
 	TSubclassOf<APawn> EnemyShipClass;
@@ -156,6 +162,12 @@ protected:
 	/** Formed abeam, this far apart. */
 	UPROPERTY(EditDefaultsOnly, Category = "Convoy")
 	float ConvoySpacingCm = 15000.f;
+
+	/** What each merchant's hold is worth whole. -ConvoyCargo=N. An integer
+	 *  on purpose: an unquoted decimal flag arrives as 0 under PowerShell and
+	 *  the run "works" with different numbers. */
+	UPROPERTY(EditDefaultsOnly, Category = "Convoy")
+	int32 ConvoyCargo = 1200;
 
 	/** How far off the convoy -RaiderSide= puts the raider, in metres, along
 	 *  the wind. -RaiderOffingM=. */
@@ -345,6 +357,12 @@ private:
 	TArray<TWeakObjectPtr<AShipPawn>> Convoy;
 	/** "weather", "lee", or empty when nobody was placed. */
 	FString RaiderSide;
+	/** The money, all latched. Purse is the sum of the prize values banked;
+	 *  PrizeValueMax is the best single prize, which is the key the pair
+	 *  turns on. */
+	int32 Purse = 0;
+	int32 PrizesTaken = 0;
+	int32 PrizeValueMax = 0;
 	/** Latched, never sampled. */
 	int32 ConvoyStopped = 0;
 	int32 ConvoyThrough = 0;

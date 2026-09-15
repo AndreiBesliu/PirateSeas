@@ -246,7 +246,15 @@ protected:
 	/** Cripple her, then sink her. The guns are pointed at the target's rig
 	 *  while she still has more than this much of it drawing, and at her hull
 	 *  once she does not. A ship that cannot make way cannot escape, and
-	 *  cannot choose her range either. */
+	 *  cannot choose her range either.
+	 *
+	 *  -AIAimHigh=1 sets this to -1 (a rig fraction is never below that, so
+	 *  she always fires high) and -AIAimHigh=0 to 2 (never). Nothing else in
+	 *  the captain changes: the knob is load-bearing already - a run's log
+	 *  shows aim=high to t=287.6 and aim=low from t=299.6, when the target's
+	 *  rig fell through 0.5 - so the prize pair flips a switch the game has
+	 *  been flipping for itself all along, and the same switch a player holds
+	 *  under left Shift. */
 	UPROPERTY(EditAnywhere, Category = "Tactics")
 	float FireHighAboveRig = 0.5f;
 

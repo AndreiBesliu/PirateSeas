@@ -64,6 +64,15 @@ vânt în plante şi greement, `-Hour=` pentru ora din zi.
 8. **Aceeaşi polară nu poate prinde aceeaşi polară.** O vânătoare se
    dimensionează măsurând-o (viteză, timp până în radă, timp până la prima
    salvă), nu alegând numere care sună bine.
+9. **Un minim peste toate cocile citeşte coca greşită.** `gun_crew_min` e 0,25
+   în ambele scenarii de convoi fiindcă negustorul are 14 oameni şi stă pe
+   `MinGunCrewFactor` — raider-ul, care e la 1,00, nu poate fi raportat
+   niciodată de cheia aia. Citeşte DUPĂ NUME de pe linia coçii care te
+   interesează (`enemy_rig_quit`, `enemy_gun_crew_quit`).
+10. **Un număr derivat se scrie cu ingredientele pe aceeaşi linie**
+   (`value=1200 cargo=1200 hull=1.00`), şi suma lui se re-derivă într-o
+   fixtură (`purse_balances`): altfel o greşeală de transcriere în bani e o
+   cifră pe care trebuie s-o vadă cineva cu ochiul.
 
 ## Arcul de MECANICĂ (în curs)
 
@@ -93,8 +102,19 @@ Livrat:
    difere (prima salvă 224,6 vs 255,9). Şi a treia reparaţie la căpitan:
    unghiul de apropiere în AFARA distanţei de menţinere (înăuntru neschimbat).
 
-Următorul: economie + progresie (valoarea mărfii, prăzi, un port), sau felia 2
-de echipaj (velele ca staţie, recrutare) — de ales cu owner-ul.
+4. **Prăzile, felia 1 de economie**: `CargoValue` pe negustor, valoarea
+   încasată ÎN CLIPA coborârii pavilionului (`valoare = marfă × cocă rămasă`),
+   `Purse`/`PrizesTaken`/`PrizeValueMax` zăvorâte pe game mode, o linie
+   `PRIZELOG` per pradă cu ingredientele lângă rezultat, o linie `PURSE` la
+   fiecare quit (zero numărat), rândul PURSE în panou, `-ConvoyCargo=`,
+   `-AIAimHigh=1|0` (mută knob-ul EXISTENT `FireHighAboveRig`, fără ramură
+   nouă). Perechea `prize_rig`/`prize_hull`: 1200 contra 696.
+   Patru designuri, doi judecători; ambii au ales „prada" şi ambii au tăiat
+   felia la VALOARE, fără stăpânire, fără echipaj de pradă, fără stare de AI.
+
+Următorul: stăpânirea prăzii (echipaj de pradă din oamenii tăi — `HandsMax 60`
+şi `FullGunCrew 48` lasă exact doisprezece de dat), apoi magazia (muniţie
+finită) şi abia apoi un port. **Abordajul rămâne AMÂNAT.**
 
 ## Ce aşteaptă ochiul owner-ului
 

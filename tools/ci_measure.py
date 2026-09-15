@@ -161,6 +161,27 @@ SCENARIOS = {
     "crew_fight": ["-WindBearing=120", "-WindSpeed=12", "-EnemyCount=1",
                    "-EnemyX=150000", "-EnemyY=0", "-EnemyRigDamage=0.4",
                    "-AIRepair=0", "-ShipQuitAfter=360"],
+    # The money, and the third pair that must come out DIFFERENT in one flag -
+    # this time a flag that flips a switch the game already flips for itself,
+    # and that a player holds under left Shift. Two laden merchants, a raider
+    # to windward, and the only difference is where she aims: into the rigging
+    # or into the hull. A prize is worth her cargo scaled by how much of her
+    # hull is still sound, so the same merchant, stopped two ways, pays two
+    # different sums. prize_value_max must differ AND in the stated direction -
+    # a formula wired to the rig by mistake would also make them differ, the
+    # other way round - and prize_rig_at_take is the decoy that must move
+    # opposite. GUARD: prizes_taken must read 1 in BOTH halves; if either is 0
+    # the comparison is void, the way fire_velfwd_max guards carried/loose.
+    "prize_rig": ["-WindBearing=0", "-WindSpeed=12", "-Convoy=2",
+                  "-ConvoyX=120000", "-ConvoyY=150000", "-ConvoyWindAngle=90",
+                  "-ConvoyRangeM=1200", "-EnemyCount=1", "-RaiderSide=weather",
+                  "-RaiderOffingM=600", "-ConvoyCargo=1200", "-AIAimHigh=1",
+                  "-ShipQuitAfter=400"],
+    "prize_hull": ["-WindBearing=0", "-WindSpeed=12", "-Convoy=2",
+                   "-ConvoyX=120000", "-ConvoyY=150000", "-ConvoyWindAngle=90",
+                   "-ConvoyRangeM=1200", "-EnemyCount=1", "-RaiderSide=weather",
+                   "-RaiderOffingM=600", "-ConvoyCargo=1200", "-AIAimHigh=0",
+                   "-ShipQuitAfter=400"],
 }
 
 
@@ -391,14 +412,41 @@ def measure(name, text):
         m["casualties_max"] = max(int(c[2]) for c in crew)
         m["gun_crew_min"] = min(float(c[5]) for c in crew)
         m["repaired_max"] = round(max(float(c[4]) for c in crew), 3)
-    # The ENEMY's rig at quit, not the minimum over hulls: the player's rig is
-    # what the enemy has been firing at, so a minimum would read the damage she
-    # dealt and call it the state she arrived in.
-    enemy_rig = re.search(r"CREWLOG EnemyShipPawn_\d+ hands=\d+/\d+ casualties=\d+ "
-                          r"repairShare=[0-9.]+ repaired=[0-9.]+ gunCrew=[0-9.]+ "
-                          r"rig=([0-9.]+)", text)
-    if enemy_rig:
-        m["enemy_rig_quit"] = float(enemy_rig.group(1))
+    # The ENEMY's rig and gun crew at quit, read BY NAME off her own line.
+    # Not a minimum over hulls: the player's rig is what the enemy has been
+    # firing at, so a minimum would read the damage she dealt and call it the
+    # state she arrived in - and gun_crew_min is worse than useless in a convoy
+    # run, where it reads 0.25 in both halves because a merchant carries 14
+    # hands and sits on MinGunCrewFactor from the first tick. A key that is
+    # pinned to a floor by a hull nobody is asking about cannot report the one
+    # that matters.
+    enemy_crew = re.search(r"CREWLOG EnemyShipPawn_\d+ hands=\d+/\d+ casualties=\d+ "
+                           r"repairShare=[0-9.]+ repaired=[0-9.]+ gunCrew=([0-9.]+) "
+                           r"rig=([0-9.]+)", text)
+    if enemy_crew:
+        m["enemy_gun_crew_quit"] = float(enemy_crew.group(1))
+        m["enemy_rig_quit"] = float(enemy_crew.group(2))
+
+    # The money. purse_end/prizes_taken/prize_value_max come off the PURSE line
+    # printed at quit in EVERY run, convoy or not, so they are counted zeros
+    # rather than absences. The per-prize line carries the ingredients of the
+    # value beside the value, and purse_balances re-derives the sum: a
+    # transcription bug in money then reads as a boolean that MOVED rather than
+    # as a number somebody has to eyeball.
+    purse = re.search(r"PRIZELOG PURSE purse=(\d+) prizes=(\d+) valueMax=(\d+) "
+                      r"cargo=(\d+)", text)
+    if purse:
+        m["purse_end"] = int(purse.group(1))
+        m["prizes_taken"] = int(purse.group(2))
+        m["prize_value_max"] = int(purse.group(3))
+    taken = re.findall(r"PRIZELOG \S+ taken value=(\d+) cargo=(\d+) hull=([0-9.]+) "
+                       r"rig=([0-9.]+) zone=(\w+) t=[0-9.]+ purse=(\d+) prizes=(\d+)", text)
+    if taken:
+        m["prize_hull_at_take"] = float(taken[0][2])
+        m["prize_rig_at_take"] = float(taken[0][3])
+        m["prize_strike_zone"] = 1 if taken[0][4] == "rig" else 0
+        if purse:
+            m["purse_balances"] = 1 if sum(int(t[0]) for t in taken) == int(purse.group(1)) else 0
     # When the first broadside of the run was fired, whoever fired it. The
     # broadside line carries t= at its end since the crew slice.
     times = [float(v) for v in re.findall(r"SHOTLOG broadside .*? t=([0-9.]+)", text)]

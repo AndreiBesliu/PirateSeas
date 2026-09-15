@@ -386,6 +386,14 @@ void AShipHUD::DrawGuns(AShipPawn* Ship)
 					Sea->GetConvoyStopped(), Sea->GetConvoySize(),
 					Sea->GetConvoyThrough(), Sea->GetConvoyNeed());
 			DrawText(Text, Sea->IsMissionOver() ? Good : Warn, X, Y, Small, Scale);
+			Y += Line * 0.95f;
+			// What the prizes are worth. It buys nothing yet and the README
+			// says so; a number on the panel that implied a shop would be
+			// the panel telling a lie the game cannot keep.
+			DrawText(FString::Printf(TEXT("PURSE  %d  from %d prize%s"),
+				Sea->GetPurse(), Sea->GetPrizesTaken(),
+				Sea->GetPrizesTaken() == 1 ? TEXT("") : TEXT("s")),
+				Sea->GetPurse() > 0 ? Good : Faint, X, Y, Small, Scale);
 		}
 	}
 }

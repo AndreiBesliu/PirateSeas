@@ -435,6 +435,65 @@ def check_comparison():
     if got != want:
         fail("the crew lines read %s, wanted %s" % (got, want))
 
+    # The money, off two real runs. The rig half and the hull half of the
+    # prize pair, copied from their logs: the same merchant and the same cargo
+    # pay 1200 and 696 because the hull fraction differs, and prize_rig_at_take
+    # moves the OTHER way - which is what tells a correct formula from one
+    # wired to the rig by mistake. purse_balances re-derives the sum from the
+    # per-prize lines, so a transcription bug in money reads as a boolean that
+    # moved rather than a number somebody has to eyeball.
+    pr = ci_measure.measure("fixture",
+        "LogTemp: Display: PRIZELOG MerchantShipPawn_0 taken value=1200 cargo=1200 "
+        "hull=1.00 rig=0.55 zone=rig t=70.9 purse=1200 prizes=1" + chr(10) +
+        "LogTemp: Display: PRIZELOG PURSE purse=1200 prizes=1 valueMax=1200 "
+        "cargo=1200" + chr(10))
+    want = {"purse_end": 1200, "prizes_taken": 1, "prize_value_max": 1200,
+            "prize_hull_at_take": 1.0, "prize_rig_at_take": 0.55,
+            "prize_strike_zone": 1, "purse_balances": 1}
+    got = {k: pr.get(k) for k in want}
+    if got != want:
+        fail("the rig prize read %s, wanted %s" % (got, want))
+
+    ph = ci_measure.measure("fixture",
+        "LogTemp: Display: PRIZELOG MerchantShipPawn_0 taken value=696 cargo=1200 "
+        "hull=0.58 rig=1.00 zone=hull t=83.1 purse=696 prizes=1" + chr(10) +
+        "LogTemp: Display: PRIZELOG PURSE purse=696 prizes=1 valueMax=696 "
+        "cargo=1200" + chr(10))
+    want = {"purse_end": 696, "prize_hull_at_take": 0.58,
+            "prize_rig_at_take": 1.0, "prize_strike_zone": 0, "purse_balances": 1}
+    got = {k: ph.get(k) for k in want}
+    if got != want:
+        fail("the hull prize read %s, wanted %s" % (got, want))
+
+    # And a purse that does NOT balance must say so. Two prizes of 600 with a
+    # purse of 1000 is a money bug, and this is the only assertion in the
+    # project that re-derives a logged number from its own parts.
+    bad = ci_measure.measure("fixture",
+        "LogTemp: Display: PRIZELOG MerchantShipPawn_0 taken value=600 cargo=1200 "
+        "hull=0.50 rig=1.00 zone=hull t=50.0 purse=600 prizes=1" + chr(10) +
+        "LogTemp: Display: PRIZELOG MerchantShipPawn_1 taken value=600 cargo=1200 "
+        "hull=0.50 rig=1.00 zone=hull t=90.0 purse=1200 prizes=2" + chr(10) +
+        "LogTemp: Display: PRIZELOG PURSE purse=1000 prizes=2 valueMax=600 "
+        "cargo=1200" + chr(10))
+    if bad.get("purse_balances") != 0:
+        fail("a purse that does not add up read purse_balances=%s"
+             % bad.get("purse_balances"))
+
+    # The enemy's gun crew, read BY NAME off her own line. The convoy runs
+    # prove why: gun_crew_min is 0.25 in both halves because a merchant
+    # carries 14 hands and sits on MinGunCrewFactor, so a min over hulls can
+    # never report the raider - who is at 1.00 on the very same log.
+    eg = ci_measure.measure("fixture",
+        "LogTemp: Display: CREWLOG MerchantShipPawn_0 hands=14/14 casualties=0 "
+        "repairShare=0.00 repaired=0.000 gunCrew=0.25 rig=0.55 rudder=1.00" + chr(10) +
+        "LogTemp: Display: CREWLOG EnemyShipPawn_0 hands=60/60 casualties=0 "
+        "repairShare=0.00 repaired=0.000 gunCrew=1.00 rig=1.00 rudder=1.00" + chr(10))
+    if (eg.get("enemy_gun_crew_quit"), eg.get("gun_crew_min"), eg.get("enemy_rig_quit")) != (1.0, 0.25, 1.0):
+        fail("the enemy crew keys read %s from a log whose merchant is pinned at "
+             "0.25 and whose raider is at 1.00"
+             % ((eg.get("enemy_gun_crew_quit"), eg.get("gun_crew_min"),
+                 eg.get("enemy_rig_quit")),))
+
     # And the captain's pursuit counter, off the quit-time line it rides on.
     pt = ci_measure.measure("fixture",
         "LogTemp: Display: SEALOG EnemyShipPawn_0 landTicks=0 clawOffs=0 "
@@ -453,7 +512,7 @@ LogTemp: Display: SHIPLOG ShipPawn_0 sink=foundering draught=120
         fail("ships_sunk read %d from a log holding exactly one SUNK line" % sunk)
     if len(FAILS) == before:
         ok("the measurement gate reports matches, moves, new and missing numbers, "
-           "and reads the convoy, crew and pursuit lines")
+           "and reads the convoy, crew, prize and pursuit lines")
 
 
 def main():

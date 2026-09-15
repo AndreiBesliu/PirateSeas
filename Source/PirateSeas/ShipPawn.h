@@ -176,6 +176,11 @@ public:
 	/** In under the guns of the fort, where nobody can follow her. */
 	bool HasMadePort() const { return bMadePort; }
 
+	/** The rig threshold that brings a merchant to strike. Read by the game
+	 *  mode so the prize log can say WHICH of the two thresholds did it,
+	 *  rather than the log guessing at a number the pawn owns. */
+	float GetStrikeBelowRig() const { return StrikeBelowRig; }
+
 	/** The one test the hunters make. Sunk, struck or safe in port, she is
 	 *  neither a target nor a threat. */
 	bool IsOutOfTheFight() const { return IsSunk() || bStruck || bMadePort; }

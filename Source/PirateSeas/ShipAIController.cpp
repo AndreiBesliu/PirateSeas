@@ -54,6 +54,17 @@ void AShipAIController::OnPossess(APawn* InPawn)
 		UE_LOG(LogTemp, Display,
 			TEXT("AILOG tacks through the wind above %.1f m/s, wears below"), TackAbove);
 	}
+	int32 AimHigh = -1;
+	if (FParse::Value(FCommandLine::Get(), TEXT("AIAimHigh="), AimHigh) && AimHigh >= 0)
+	{
+		// The EXISTING knob, moved out of reach in one direction or the
+		// other. No new branch at the point of fire: a branch there would be
+		// a second way of deciding the same thing.
+		FireHighAboveRig = (AimHigh != 0) ? -1.f : 2.f;
+		UE_LOG(LogTemp, Display, TEXT("AILOG fires %s, always"),
+			(AimHigh != 0) ? TEXT("HIGH") : TEXT("LOW"));
+	}
+
 	int32 Repair = -1;
 	if (FParse::Value(FCommandLine::Get(), TEXT("AIRepair="), Repair) && Repair >= 0)
 	{

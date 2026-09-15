@@ -19,7 +19,18 @@ class PIRATESEAS_API AMerchantShipPawn : public AShipPawn
 public:
 	AMerchantShipPawn();
 
+	/** What her hold is worth whole, before any of it is spoiled. Read by the
+	 *  game mode at the moment she strikes. */
+	int32 GetCargoValue() const { return CargoValue; }
+	void SetCargoValue(int32 Value) { CargoValue = FMath::Max(0, Value); }
+
 protected:
+	/** The cargo, whole. A prize pays this scaled by how much of her hull is
+	 *  still sound, so how you shot her decides what she pays: aloft costs
+	 *  her nothing in the hold, into the hull lets the sea at it. */
+	UPROPERTY(EditDefaultsOnly, Category = "Prize")
+	int32 CargoValue = 1200;
+
 	/** What a hold full of cargo does to the same hull: her top speed is
 	 *  this fraction of a fighting ship's. Measured before it existed, with
 	 *  the merchant under HALF canvas instead: she still made 5.2 m/s against

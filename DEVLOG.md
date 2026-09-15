@@ -3309,3 +3309,99 @@ face cercuri. Chei noi peste tot: `casualties_max`, `gun_crew_min`,
 reînregistrată în acelaşi commit; ce a mutat e scris aici, nu doar în diff.
 
 **Task Completed.**
+
+---
+
+## Task Started — 15.09.2026 (mecanica, commit 4: prăzile)
+
+**Prompt:** „continua"
+**Model:** Claude Opus 5
+
+Economia începe aici, şi începe cu un preţ pus pe o alegere care exista deja şi
+nu costa nimic.
+
+### Designul: trei propuneri, doi judecători
+
+Ca la arcul de obiective: trei designuri independente pentru economie
+(**prăzi**, **negoţ cu magazie şi socoteală**, **progresie între misiuni**),
+fiecare scris contra codului real, apoi judecate de două ori — o dată pe
+fezabilitate, o dată pe cum s-ar juca. **Ambii judecători au clasat primul
+acelaşi design (prăzile) şi ambii au spus că prima lui felie e prea mare, tăind-o
+în acelaşi loc:** valoarea se încasează în clipa coborârii pavilionului, fără
+stăpânire, fără echipaj de pradă, fără timp de acostare, fără stare nouă de AI.
+
+Argumentele care au decis, amândouă verificabile în arbore:
+- **E singura al cărei levier e deja în mâna jucătorului.** Shift e legat de
+  tirul înalt din prima zi şi până acum nu însemna nimic: sus o dezarborezi
+  lent, jos o scufunzi repede, ambele se termină în acelaşi jeton.
+- **Celelalte două măsurau plafonul, nu mecanica.** La „negoţ", socoteala e
+  dominată de două constante fixate în linia de comandă, iar cheia perechii
+  („a rămas fără ghiulele") e `mission_result` cu perucă. La „progresie",
+  `purse_end` e identic `240 × convoy_stopped` — o redenumire afină a unei chei
+  care există deja.
+
+### Ce s-a construit
+
+`valoare = marfă × (cocă rămasă / cocă întreagă)`, încasată în
+`HandleShipStruck`, care deja doar numără şi scrie (constrângerea de callback
+fizic e respectată). Marfa e 1200 (`-ConvoyCargo=N`). `Purse`, `PrizesTaken`,
+`PrizeValueMax` zăvorâte pe game mode. O linie `PRIZELOG` per pradă cu
+**ingredientele lângă rezultat** (`value=1200 cargo=1200 hull=1.00 rig=0.55
+zone=rig`) şi o linie `PURSE` la fiecare quit, inclusiv în rulările fără convoi
+— un zero numărat. Rândul PURSE în panou.
+
+Singurul flag nou pe căpitan, `-AIAimHigh=1|0`, **mută knob-ul existent**
+`FireHighAboveRig` la -1 sau 2, fără nicio ramură nouă la punctul de tragere: o
+a doua cale de a decide acelaşi lucru ar fi fost o a doua sursă de adevăr.
+
+### Perechea
+
+`prize_rig` / `prize_hull` diferă într-un singur flag:
+
+| | pavilion la | cocă la încasare | greement | plăteşte |
+|---|---|---|---|---|
+| tir înalt | 70,9 s | 1,00 | 0,55 | **1200** |
+| tir în cocă | 83,1 s | 0,58 | 1,00 | **696** |
+
+Cifrele NU sunt alese: judecătorul de fezabilitate le-a derivat înainte de
+rulare din constantele din arbore (`ImpactDamage = 60`, `StrikeBelowFraction =
+0.6` → ~7 ghiulele → cocă ~0,58), şi măsurătoarea a dat 0,58 şi 696.
+`prize_rig_at_take` e **momeala**: se mişcă invers (0,55 contra 1,00), fiindcă o
+formulă legată din greşeală de greement ar fi făcut perechea să difere tot — dar
+în ordinea cealaltă.
+
+### Instrumentul care citea coca greşită
+
+Grefat din designul care a pierdut, fiindcă avea dreptate: `gun_crew_min` citeşte
+**0,25 în ambele scenarii de convoi** — nu raider-ul, ci negustorul cu 14 oameni
+care stă pe `MinGunCrewFactor` din primul tick. Un minim peste toate cocile nu
+poate raporta niciodată coca despre care întrebi. Adăugat `enemy_gun_crew_quit`,
+citit DUPĂ NUME de pe linia ei, exact lecţia care a produs `enemy_rig_quit`.
+
+Şi `purse_balances`: fixtura re-derivă suma din liniile per-pradă, deci o
+greşeală de transcriere în bani iese ca un boolean care s-a MIŞCAT, nu ca o cifră
+pe care trebuie s-o vadă cineva cu ochiul.
+
+### Mutaţii şi suită
+
+Mutaţii, restaurate din copie pristină şi comparate bit cu bit (arborele e
+necomitat, git nu putea): (A) valoarea ignoră coca — perechea se prăbuşeşte,
+ambele plătesc 1200; (B) flag-ul nu e citit — ambele jumătăţi cad pe doctrina
+căpitanului şi devin identice până şi la secundă (70,9 = 70,9), ceea ce
+dovedeşte că FLAG-UL le separă, nu altceva din cele două linii de comandă; (C)
+pristin — 1200 contra 696 din nou.
+
+Detaliu care merită spus: la (A), cheia banilor se aplatizează, dar
+`prize_hull_at_take` (1,00 / 0,58) şi `first_strike_t` (70,9 / 83,1) rămân
+diferite. Adică instrumentele spun „mecanica s-a rupt", nu „scenariul a
+degenerat" — exact distincţia pe care o pierde o pereche cu o singură cheie.
+
+**Suita: NICIUN număr mutat** în cele 14 scenarii existente. Numai chei noi
+(`purse_end`, `prizes_taken`, `prize_value_max` peste tot ca zerouri numărate;
+`prize_hull_at_take`, `prize_rig_at_take`, `prize_strike_zone`,
+`purse_balances` unde există o pradă; `enemy_gun_crew_quit` peste tot) şi cele
+două scenarii noi. Asta e aceeaşi afirmaţie pe care a făcut-o commit-ul
+apartenenţei, şi e cea mai puternică dovadă pe care o poate purta o felie
+tăiată: nimic din ce mergea nu s-a clintit.
+
+**Task Completed.**

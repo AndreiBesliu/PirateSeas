@@ -650,3 +650,28 @@ reparații nu încetinesc întinsul pânzei). Cifrele de pierderi sunt alese, nu
 măsurate din nimic real: două pe cocă, trei pe tun, unul sus. Negustorul nu
 repară deloc. Și rata de reparație e aleasă ca un catarg să-și revină într-o
 sută de secunde — un număr de joc, nu de istorie.
+
+## 27. Prada: se simte că merită să tragi în greement?
+
+**Ce te uiți:** `-Convoy=2 -EnemyCount=0`. Prinzi un negustor de două ori, cu
+aceleaşi flag-uri: o dată ţinând Shift (tir înalt) tot timpul, o dată fără el
+deloc. Uită-te la rândul PURSE din panou şi la cât ţi-a luat.
+
+**Cum arată bine:** Cu tirul înalt, pavilionul coboară mai devreme şi punga
+arată 1200. Cu tirul în cocă durează vizibil mai mult şi punga arată vreo 700.
+Diferenţa se vede fără să numeri: e aproape dublu.
+
+**Cum arată prost:** Cele două feluri de a trage plătesc la fel. Sau tirul înalt
+plăteşte mai puţin. Sau rândul PURSE nu apare. Sau se suprapune peste ce e sub
+el (am mai adăugat un rând sub CONVOY).
+
+**De ce nu pot eu:** Pot măsura că perechea diferă şi cu cât (1200 contra 696,
+70,9 s contra 83,1 s) şi am măsurat-o. Dacă diferenţa se SIMTE ca o alegere în
+timp ce tragi, sau dacă e doar o cifră care se schimbă după, e judecată de joc.
+
+**Ce știu deja și n-am ascuns:** punga nu cumpără nimic — nu există port,
+progresie sau salvare, şi nu trece dintr-o rulare în alta. Prada nu e luată în
+stăpânire: nu trimiţi oameni la bord şi nu o duci nicăieri, doar se contabilizează
+în clipa în care coboară pavilionul. Iar în rulările măsurate cel care ocheşte e
+un căpitan AI cu `-AIAimHigh=`, nu tu: că un om poate trage constant sus e o
+presupunere rezonabilă, nu o măsurătoare.

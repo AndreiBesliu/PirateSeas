@@ -933,6 +933,8 @@ void ASeaGameMode::ReadConvoyFlags()
 	FParse::Value(FCommandLine::Get(), TEXT("ConvoyWindAngle="), ConvoyWindAngleDeg);
 	FParse::Value(FCommandLine::Get(), TEXT("ConvoyRangeM="), ConvoyRangeM);
 	FParse::Value(FCommandLine::Get(), TEXT("RaiderOffingM="), RaiderOffingM);
+	FParse::Value(FCommandLine::Get(), TEXT("ConvoyCargo="), ConvoyCargo);
+	ConvoyCargo = FMath::Max(0, ConvoyCargo);
 
 	// The wind as it stands at BeginPlay: pinned by -WindBearing= a moment
 	// ago, or the subsystem's base bearing. The course is laid ONCE, off this
@@ -1029,6 +1031,10 @@ void ASeaGameMode::SpawnConvoy()
 		if (!Ship->GetController())
 		{
 			Ship->SpawnDefaultController();
+		}
+		if (AMerchantShipPawn* Laden = Cast<AMerchantShipPawn>(Ship))
+		{
+			Laden->SetCargoValue(ConvoyCargo);
 		}
 		if (AShipAIController* AI = Cast<AShipAIController>(Ship->GetController()))
 		{
@@ -1173,6 +1179,37 @@ void ASeaGameMode::HandleShipStruck(AShipPawn* Ship, AActor* Causer)
 		TEXT("CONVOYLOG %s struck by=%s t=%.1f stopped=%d of %d need=%d"),
 		*Ship->GetName(), Causer ? *Causer->GetName() : TEXT("none"), Now,
 		ConvoyStopped, ConvoySize, ConvoyNeed);
+
+	// WHAT SHE IS WORTH, banked here and not at some later possession. A ship
+	// that has hauled down her colours is a prize; sailing her home is the
+	// next slice, and hanging the money on a possession that does not exist
+	// yet would put the whole of the economy behind machinery nobody has
+	// measured. Value = cargo x how much of her hull is still sound, so the
+	// choice the guns already offer - aloft or into the hull - is worth
+	// money for the first time: dismasting her leaves the hold dry, hulling
+	// her lets the sea at it. The purse belongs to the raiding side; in every
+	// scenario there is exactly one hunter, and when there is more than one
+	// this becomes a question worth asking properly.
+	if (const AMerchantShipPawn* Laden = Cast<AMerchantShipPawn>(Ship))
+	{
+		const float Sound = FMath::Clamp(
+			Ship->GetHullIntegrity() / FMath::Max(1.f, Ship->GetMaxHullIntegrity()), 0.f, 1.f);
+		const int32 Value = FMath::RoundToInt(Laden->GetCargoValue() * Sound);
+		Purse += Value;
+		++PrizesTaken;
+		PrizeValueMax = FMath::Max(PrizeValueMax, Value);
+		// hull= and rig= on the same line as the value they produced: a
+		// derived number with its ingredients beside it can be read for a
+		// transcription bug, and the zone says which of the two thresholds
+		// brought her to strike.
+		UE_LOG(LogTemp, Display,
+			TEXT("PRIZELOG %s taken value=%d cargo=%d hull=%.2f rig=%.2f zone=%s t=%.1f purse=%d prizes=%d"),
+			*Ship->GetName(), Value, Laden->GetCargoValue(), Sound,
+			Ship->GetRigEfficiency(),
+			Ship->GetRigEfficiency() <= Ship->GetStrikeBelowRig() ? TEXT("rig") : TEXT("hull"),
+			Now, Purse, PrizesTaken);
+	}
+
 	if (ConvoyStopped >= ConvoyNeed)
 	{
 		FinishMission(TEXT("TAKEN"));
@@ -1252,6 +1289,12 @@ void ASeaGameMode::QuitNow()
 			It->GetRepairShare(), It->GetRepairedTotal(), It->GetGunCrewFactor(),
 			It->GetRigEfficiency(), It->GetRudderIntegrity());
 	}
+	// ALWAYS, even in a run with no convoy in it: a counted zero. A money
+	// counter that is simply absent from thirteen scenarios cannot be told
+	// from one that stopped being written.
+	UE_LOG(LogTemp, Display,
+		TEXT("PRIZELOG PURSE purse=%d prizes=%d valueMax=%d cargo=%d"),
+		Purse, PrizesTaken, PrizeValueMax, ConvoyCargo);
 	UE_LOG(LogTemp, Display, TEXT("SEALOG quitting at t=%.1fs"),
 		GetWorld()->GetTimeSeconds());
 	if (GEngine)

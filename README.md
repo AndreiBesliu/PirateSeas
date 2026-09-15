@@ -413,6 +413,28 @@ Când e în rază, alege bordul cu virajul mai scurt, dacă acel curs e navigabi
 
 Când o scufunzi, la 8 secunde apare alta, la același loc de pornire.
 
+## Prăzile
+
+Un negustor care coboară pavilionul e o **pradă**, şi valorează cât i-a rămas
+uscat în cală: `valoare = marfă × (cocă rămasă / cocă întreagă)`. Marfa întreagă
+e 1200 (`-ConvoyCargo=N`).
+
+Asta pune preţ pe alegerea pe care tunurile o oferă de mult şi care până acum nu
+costa nimic: **unde tragi**. Ţinut pe Shift, echipajele ochesc în greement —
+cinci ghiulele sus îi rup velatura sub 0,6 şi coboară pavilionul cu coca
+neatinsă, deci plăteşte **1200**, tot. Tras în cocă, îi trebuie şapte ghiulele
+ca s-o aduci la 580 din 1000, ia mai mult, şi marfa udată plăteşte **696**.
+Măsurat, nu estimat: perechea `prize_rig` / `prize_hull` diferă într-un singur
+flag (`-AIAimHigh=`) şi dă fix cifrele astea, la 70,9 s şi 83,1 s.
+
+Punga se vede în panou sub rândul CONVOY şi se scrie la sfârşitul fiecărei
+rulări (`PRIZELOG PURSE`), inclusiv într-o rulare fără convoi — un zero numărat.
+
+**Ce NU face încă:** punga nu cumpără nimic şi nu supravieţuieşte rulării, prada
+nu e luată în stăpânire (nu trimiţi oameni la bord, nu o duci nicăieri), iar o
+navă scufundată după ce a coborât pavilionul rămâne numărată ca oprită. Felia
+asta e cât VALOREAZĂ o pradă, nu ce faci cu ea.
+
 ## Echipajul
 
 Nava are **oameni**, nu doar lemn: șaizeci la plecare (un negustor, paisprezece).
@@ -570,6 +592,8 @@ pereche de rulări citea împrăștiere și credea că citește semnal.
 | `-ConvoyStrikeTest=N` | primul negustor coboară pavilionul la N secunde, fără tunuri |
 | `-AIRepair=0` | căpitanul inamic NU mai trimite oameni la reparații (implicit 1) |
 | `-ShipRepairShare=x` | nava jucătorului pornește cu fracția x din oameni la reparații (0 la 0,75) |
+| `-ConvoyCargo=N` | cât valorează marfa fiecărui negustor, întreagă (implicit 1200) |
+| `-AIAimHigh=1\|0` | căpitanul inamic ochește MEREU în greement / MEREU în cocă (fără flag, decide singur) |
 | `-Islands=N` | pune N insule pe mare, 1 la 8 (0 sau lipsă = niciuna) |
 | `-IsleX= -IsleY= -IsleRadius=` | unde e și cât de mare (raza plajei, implicit 11000 cm) |
 | `-ShipRunAground=N` | din secunda N, mână nava în insulă cu toate pânzele sus, apoi strânge pânza la 10 s după atingere |
@@ -832,6 +856,8 @@ toată nava, fiindcă `ObjectBounds` întorcea zero pentru mesh-ul ăla.
 - echipajul e o singură rezervă împărțită între tunuri și reparații: manevra
   velelor nu e încă o stație, coca nu se repară pe mare, nimeni nu se
   recrutează și nimeni nu se plătește
+- punga nu cumpără nimic și nu trece dintr-o rulare în alta; prada nu se ia în
+  stăpânire și nu se duce în port
 - abordajul e AMÂNAT explicit de owner; echipajul + reparaţiile şi economia +
   progresia sunt următoarele ateliere, în ordinea asta
 
