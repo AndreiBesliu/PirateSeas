@@ -123,25 +123,69 @@ void AOceanSurface::PushWaves()
 	}
 
 	// Where the white water starts, in centimetres, derived from THIS sea
-	// rather than fixed in the material. Drawn is the sum of the drawn
-	// amplitudes, which is the highest a crest can heap to, so the threshold
-	// is a FRACTION of what this wind can actually build.
+	// rather than fixed in the material.
 	//
 	// It was a constant first, and a constant cannot be right twice: 34 cm was
-	// a reasonable top-of-the-crest in an 11 m/s breeze and buried the whole
-	// frame in white at 13, which then dragged the auto-exposure down until
-	// the ship herself went black. The defect showed up as "the ship is
-	// unlit", which is not where it was.
-	const float FoamStart = FoamCrestFraction * Drawn;
-	const float FoamRange = FMath::Max(8.f, (1.f - FoamCrestFraction) * Drawn);
+	// a reasonable top-of-the-crest in one breeze and buried the whole frame in
+	// white in another, which then dragged the auto-exposure down until the ship
+	// herself went black. The defect showed up as "the ship is unlit", which is
+	// not where it was.
+	//
+	// Then it was a FRACTION OF THE SUM OF THE AMPLITUDES, which was worse,
+	// because it looked right. That sum - 109 cm for this set - is the height a
+	// crest reaches only if all six waves peak at the same point at the same
+	// instant, which a set of independent phases never does. The crest is a sum
+	// of six cosines: it has a standard deviation, sigma = sqrt(sum A^2 / 2) =
+	// 34 cm, and 0.78 of the sum is 2.5 sigma - three pixels in a thousand - so
+	// the sea had NO WHITECAPS AT ALL, and the top of the ramp (the sum itself,
+	// 3.2 sigma) was not reachable by arithmetic. The log read healthy the whole
+	// time: 85 looks like a sane fraction of 109 until you ask what 109 is.
+	//
+	// So the threshold is keyed to the crest's own spread, and the coverage it
+	// produces is MEASURED below rather than reasoned about.
+	float SumSq = 0.f;
+	for (int32 i = 0; i < Count; ++i)
+	{
+		SumSq += FMath::Square(Waves[i].Amplitude);
+	}
+	const float Sigma = FMath::Sqrt(FMath::Max(SumSq * 0.5f, KINDA_SMALL_NUMBER));
+	const float FoamStart = FoamCrestSigmas * Sigma;
+	const float FoamRange = FMath::Max(8.f, (FoamFullSigmas - FoamCrestSigmas) * Sigma);
 	SeaMaterial->SetScalarParameterValue(TEXT("FoamStartCm"), FoamStart);
 	SeaMaterial->SetScalarParameterValue(TEXT("FoamRangeCm"), FoamRange);
 
+	// HOW MUCH OF THE SEA ACTUALLY BREAKS. The same six waves the material was
+	// just handed, evaluated on a lattice across twenty kilometres of water at
+	// t=0, counted against the threshold. One number, and it is the number that
+	// would have said "0.3%" when the comment said "the top fifth" - which no
+	// amount of reading either of them was ever going to say.
+	int32 Over = 0, Sampled = 0;
+	for (int32 iy = 0; iy < 64; ++iy)
+	{
+		for (int32 ix = 0; ix < 64; ++ix)
+		{
+			// Deliberately not a round lattice step: a grid whose spacing shares
+			// a factor with a wavelength samples the same phase over and over.
+			const FVector2D P(ix * 317.f, iy * 293.f);
+			float H = 0.f;
+			for (int32 i = 0; i < Count; ++i)
+			{
+				H += Waves[i].Amplitude
+					* FMath::Cos(Waves[i].WaveVector.X * P.X
+						+ Waves[i].WaveVector.Y * P.Y);
+			}
+			++Sampled;
+			Over += (H > FoamStart) ? 1 : 0;
+		}
+	}
+	const float BreakingPct = Sampled > 0 ? 100.f * Over / Sampled : 0.f;
+
 	bWavesPushed = true;
 	UE_LOG(LogTemp, Display,
-		TEXT("SEALOG surface waves drawn=%d of %d, amplitude %.0f of %.0f cm (%.0f%%) foam>=%.0f cm over %.0f"),
+		TEXT("SEALOG surface waves drawn=%d of %d, amplitude %.0f of %.0f cm (%.0f%%) "
+			 "sigma=%.0f foam>=%.0f cm over %.0f, breaking on %.1f%% of the sea"),
 		Count, Waves.Num(), Drawn, Total, Total > 0.f ? 100.f * Drawn / Total : 0.f,
-		FoamStart, FoamRange);
+		Sigma, FoamStart, FoamRange, BreakingPct);
 }
 
 void AOceanSurface::PushIslands()

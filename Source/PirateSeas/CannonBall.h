@@ -80,6 +80,14 @@ private:
 	float FlightTime = 0.f;
 	int32 ShotIndex = 0;
 	bool bSpent = false;
+
+	/** The wave-surface height under the ball, from the last query. Logged with
+	 *  every ending, because it is the one field that tells a flat-plane test
+	 *  from a wave-aware one at a glance. */
+	float SurfaceZAtDeath = 0.f;
+
+	/** One muzzle-awash line per ball, not per frame. */
+	bool bReportedAwash = false;
 	/** Said once per ball, not once per frame. */
 	bool bWarnedStepOver = false;
 };

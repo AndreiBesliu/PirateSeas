@@ -141,6 +141,13 @@ private:
 	UPROPERTY(EditDefaultsOnly, Category = "Sea")
 	float SwellMaxAmplitudeCm = 32.f;
 
+	/** How far off the wind the wave train is allowed to fan, in degrees. The
+	 *  engine rotates every wave after the first by a random angle in
+	 *  [-spread, +spread], so anything at or over 180 is a sea with no
+	 *  direction: this was 400. */
+	UPROPERTY(EditDefaultsOnly, Category = "Sea")
+	float SwellSpreadDeg = 45.f;
+
 	void BindShip(AShipPawn* Ship);
 	void HandleShipSunk(AShipPawn* Ship, AActor* Causer);
 	void HandleShipWrecked(AShipPawn* Ship);

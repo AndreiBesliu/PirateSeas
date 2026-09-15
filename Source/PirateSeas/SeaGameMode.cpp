@@ -153,10 +153,32 @@ void ASeaGameMode::SetSeaState()
 		Generator->NumWaves = SwellWaveCount;
 		Generator->MinWavelength = 900.f;
 		Generator->MaxWavelength = 7000.f;
-		Generator->MinAmplitude = SwellMinAmplitudeCm;
-		Generator->MaxAmplitude = SwellMaxAmplitudeCm;
-		Generator->WindAngleDeg = 25.f;
-		Generator->DirectionAngularSpreadDeg = 400.f;
+		// THE WIND. This used to be two constants and a compass bearing of 25
+		// degrees, so the sea was the same sea in a flat calm and a gale, and the
+		// swell rolled from due north-north-east whatever the wind was doing. A
+		// wind sweep changed the sailing and changed nothing about the water -
+		// which meant every "no change across the wind range" reading was not a
+		// fix holding at both extremes, it was an input that never moved.
+		float WindMS = 11.f, WindDeg = 25.f;
+		if (const UWindSubsystem* W = GetWorld()->GetSubsystem<UWindSubsystem>())
+		{
+			WindMS = W->GetWindSpeedMS();
+			WindDeg = W->GetWindBearingDeg();
+		}
+		// One knob, against the eleven metres a second the swell was authored
+		// for. Floored so a calm still has a swell rolling under her - the ocean
+		// does not go flat because the wind dropped this morning - and capped
+		// well short of the five-metre sea the map came with, which is heavy
+		// weather for a thirty-seven metre hull.
+		const float Gain = FMath::Clamp(WindMS / 11.f, 0.45f, 1.8f);
+		Generator->MinAmplitude = SwellMinAmplitudeCm * Gain;
+		Generator->MaxAmplitude = SwellMaxAmplitudeCm * Gain;
+		Generator->WindAngleDeg = WindDeg;
+		// The spread was 400 degrees. The engine rotates every wave after the
+		// first by FRandRange(-spread, +spread), so at 400 the set was uniform
+		// over the whole circle: a sea with no direction at all, which is why
+		// setting the bearing alone would have changed nothing visible.
+		Generator->DirectionAngularSpreadDeg = SwellSpreadDeg;
 		Waves->GerstnerWaveGenerator = Generator;
 		// The waves object computes its wave set ONCE, in its constructor,
 		// with the default generator. Assigning a generator afterwards changes
@@ -165,9 +187,13 @@ void ASeaGameMode::SetSeaState()
 		Waves->RecomputeWaves(false);
 		It->SetWaterWaves(Waves);
 
+		// The INPUT in the line, not just the output: a constant that is printed
+		// beside nothing reads as a confirmation every time it is looked at.
 		UE_LOG(LogTemp, Display,
-			TEXT("SEALOG sea state on %s: %d waves, max height %.0f cm (was %.0f)"),
-			*It->GetName(), Generator->NumWaves, Waves->GetMaxWaveHeight(), Before);
+			TEXT("SEALOG sea state on %s: %d waves, max height %.0f cm (was %.0f) "
+				 "at wind %.1f m/s bearing %.0f (gain %.2f, spread %.0f)"),
+			*It->GetName(), Generator->NumWaves, Waves->GetMaxWaveHeight(), Before,
+			WindMS, WindDeg, Gain, SwellSpreadDeg);
 	}
 }
 

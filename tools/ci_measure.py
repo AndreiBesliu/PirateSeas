@@ -82,6 +82,14 @@ SCENARIOS = {
     # and the slot steal.
     "crowded": ["-WindBearing=120", "-WindSpeed=12", "-EnemyCount=5",
                 "-ShipRudderTest=2", "-ShipQuitAfter=40"],
+    # The gunnery flags at a different wind. The swell is built from the wind
+    # now, and until it was, a sweep of -WindSpeed changed the sailing and left
+    # the water identical - so "no change across the range" read as "the fix
+    # holds at both extremes" when it meant "the input never moved". These two
+    # scenarios differ in exactly one flag, so the sea numbers below have to
+    # differ too; if they ever match again, the coupling is gone.
+    "gale": ["-WindBearing=120", "-WindSpeed=18", "-EnemyX=9000",
+             "-EnemyY=1500", "-ShipFireTest=8", "-ShipQuitAfter=45"],
 }
 
 
@@ -102,6 +110,11 @@ def measure(name, text):
     m["struck"] = len(re.findall(r"SHOTLOG (?:hit |rig )", text))
     m["splashes"] = len(re.findall(r"SHOTLOG splash", text))
     m["groundings"] = len(re.findall(r"GROUNDLOG", text))
+    # Balls destroyed at the muzzle because the gun port was under the local
+    # surface. Zero in every shipped scenario today; it exists because it was
+    # NOT zero before the guard, and the four splashes it produced were counted
+    # as shot falling in the sea.
+    m["awash"] = len(re.findall(r"SHOTLOG awash", text))
     # The terminal event, not a phase word. This counted "sink=sinking" for
     # three commits. The only line that prints sink= prints one of afloat,
     # flooding, foundering, plunging or wreck - never "sinking" - so the number
@@ -115,6 +128,28 @@ def measure(name, text):
     lifts = [float(v) for v in re.findall(r"lift=([0-9.]+)", text)]
     if lifts:
         m["lift_mean"] = round(sum(lifts) / len(lifts), 3)
+
+    # The sea itself. wave_amplitude_cm is the sum of the drawn amplitudes and
+    # moves with the wind; foam_start_cm is where the white water begins, keyed
+    # to the crest's standard deviation; breaking_pct is the share of the sea
+    # that actually breaks - the number that would have said 0.3% while the
+    # comment said "the top fifth".
+    w = re.search(r"SEALOG surface waves drawn=\d+ of \d+, amplitude ([0-9.]+) of", text)
+    if w:
+        m["wave_amplitude_cm"] = float(w.group(1))
+    f = re.search(r"foam>=([0-9.]+) cm over", text)
+    if f:
+        m["foam_start_cm"] = float(f.group(1))
+    b = re.search(r"breaking on ([0-9.]+)% of the sea", text)
+    if b:
+        m["foam_breaking_pct"] = float(b.group(1))
+
+    # Did any shot die against a sea with a wave in it? surfZ is the flat-plane
+    # detector: before the wave-aware query it was ~0 on all 25 splashes ever
+    # logged, on a sea a metre high.
+    surf = [float(v) for v in re.findall(r"SHOTLOG splash .*?surfZ=(-?[0-9.]+)", text)]
+    if surf:
+        m["splash_surfz_max"] = round(max(surf), 1)
 
     # The wake. NOTE which of these is the regression detector and which is not:
     # wake_live_max is bounded by WakePointCount and already SITS on that ceiling

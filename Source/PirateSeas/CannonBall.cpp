@@ -182,20 +182,59 @@ void ACannonBall::Tick(float DeltaSeconds)
 	}
 	LastSweepFrom = Now;
 
-	// The sea has no collision the ball can hit, so compare against the
-	// queried surface height instead.
+	// The sea has no collision the ball can hit, so compare against the queried
+	// surface height instead.
+	//
+	// WITH THE WAVES. The call this used to make was
+	// GetWaterSurfaceInfoAtLocation(..., true), and the comment above it said
+	// "waves included" - but that `true` is bIncludeDepth, and that function
+	// never asks for EWaterBodyQueryFlags::IncludeWaves at all. So the shot was
+	// tested against the flat water PLANE while the hulls float on the Gerstner
+	// surface, two sea levels half a metre apart: 25 splashes in the logs, not
+	// one of them above Z=0, on a sea with a metre of wave height.
 	if (Water)
 	{
-		FVector SurfaceLoc, SurfaceNormal, WaterVel;
-		float Depth = 0.f;
-		// Waves included: the sea the hulls float on is the sea the shot
-		// splashes into.
-		if (Water->GetWaterSurfaceInfoAtLocation(GetActorLocation(), SurfaceLoc,
-			SurfaceNormal, WaterVel, Depth, true))
+		const EWaterBodyQueryFlags Flags = EWaterBodyQueryFlags::ComputeLocation
+			| EWaterBodyQueryFlags::IncludeWaves;
+		const TValueOrError<FWaterBodyQueryResult, EWaterBodyQueryError> Query =
+			Water->TryQueryWaterInfoClosestToWorldLocation(GetActorLocation(), Flags);
+		if (Query.HasValue() && !Query.GetValue().IsInExclusionVolume())
 		{
-			if (GetActorLocation().Z <= SurfaceLoc.Z)
+			SurfaceZAtDeath = Query.GetValue().GetWaterSurfaceLocation().Z;
+
+			// A BALL CANNOT SPLASH BEFORE IT HAS FLOWN. The gun ports stand about
+			// 120 cm over the hull origin, she floats some 70 cm deeper than the
+			// waterline she was modelled at, and heel drops the lee battery
+			// further still - so on a hard-heeled or bow-down frame the muzzle is
+			// genuinely under the local surface, and without this the whole
+			// broadside is destroyed on its first tick. It has happened: four
+			// balls, one timestamp, range=0m flight=0.00s, four foam rings on her
+			// own beam, a burned reload, and four entries in the splash count
+			// that never touched the sea.
+			//
+			// Sized to the SHIP, not the barrel: at these elevations a ball
+			// rises about a tenth of what it travels, so anything less than a
+			// hull length buys centimetres. A descending ball is exempt - that is
+			// a genuine short plunge, not a muzzle.
+			const bool bDescending = GetVelocity().Z < 0.f;
+			const float OutCm = FVector::Dist2D(GetActorLocation(), LaunchLocation);
+			if (bDescending || OutCm > 1600.f)
 			{
-				ReportAndDie(TEXT("splash"), GetActorLocation());
+				if (GetActorLocation().Z <= SurfaceZAtDeath)
+				{
+					ReportAndDie(TEXT("splash"), GetActorLocation());
+				}
+			}
+			else if (!bReportedAwash && GetActorLocation().Z <= SurfaceZAtDeath)
+			{
+				// Counted, once per ball. Silence here would put the number of
+				// balls that started underwater at zero for ever.
+				bReportedAwash = true;
+				UE_LOG(LogTemp, Warning,
+					TEXT("SHOTLOG awash by=%s shot=%d muzzleZ=%.0f surfZ=%.0f clear=%.0f"),
+					IsValid(Shooter) ? *Shooter->GetName() : TEXT("?"), ShotIndex,
+					GetActorLocation().Z, SurfaceZAtDeath,
+					GetActorLocation().Z - SurfaceZAtDeath);
 			}
 		}
 	}
@@ -263,10 +302,15 @@ void ACannonBall::ReportAndDie(const TCHAR* Reason, const FVector& Where)
 		AlongM = FVector::DotProduct(Miss, Line) * 0.01f;
 		LateralM = FVector::CrossProduct(Line, Miss).Z * 0.01f;
 	}
+	// surfZ is the gate on the wave-aware query: it read ~0 on every shot ever
+	// logged while the sea had a metre of wave in it, and it has to move with the
+	// swell now. A run in which it is negative on all of them is the flat plane
+	// back again.
 	UE_LOG(LogTemp, Display,
-		TEXT("SHOTLOG %s by=%s shot=%d range=%.0fm flight=%.2fs impactZ=%.0f along=%+.1f lateral=%+.1f"),
+		TEXT("SHOTLOG %s by=%s shot=%d range=%.0fm flight=%.2fs impactZ=%.0f surfZ=%.0f "
+			 "along=%+.1f lateral=%+.1f"),
 		Reason, IsValid(Shooter) ? *Shooter->GetName() : TEXT("?"), ShotIndex,
-		RangeM, FlightTime, Where.Z, AlongM, LateralM);
+		RangeM, FlightTime, Where.Z, SurfaceZAtDeath, AlongM, LateralM);
 
 	if (Collision)
 	{

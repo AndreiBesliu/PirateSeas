@@ -92,12 +92,19 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Sea")
 	float FollowStepCm = 500.f;
 
-	/** How far up a crest the white water begins, as a fraction of the tallest
-	 *  crest this wave set can build. 0.78 means the top fifth breaks, which
-	 *  is about what a fresh breeze looks like; lower it and the sea goes
-	 *  white, raise it past 1 and it never breaks at all. */
+	/** How far up a crest the white water begins and reaches full white, in
+	 *  STANDARD DEVIATIONS of the crest height - not in fractions of the sum of
+	 *  the amplitudes, which is a bound the sea never reaches and which left the
+	 *  water with no whitecaps at all while the log looked healthy.
+	 *
+	 *  For the shipped six-wave set (sigma 34 cm) these are 45 cm and 75 cm, and
+	 *  about a tenth of the sea breaks. The number to judge is the percentage
+	 *  the SEALOG line prints, not the centimetres. */
 	UPROPERTY(EditAnywhere, Category = "Sea")
-	float FoamCrestFraction = 0.78f;
+	float FoamCrestSigmas = 1.3f;
+
+	UPROPERTY(EditAnywhere, Category = "Sea")
+	float FoamFullSigmas = 2.2f;
 
 private:
 	/** Copies the water body's wave set into the material. */

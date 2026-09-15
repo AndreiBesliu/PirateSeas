@@ -1,6 +1,9 @@
 {
   "crowded": {
+    "awash": 0,
     "broadsides": 0,
+    "foam_breaking_pct": 11.6,
+    "foam_start_cm": 49.0,
     "groundings": 0,
     "lift_mean": 1.001,
     "ships_sunk": 0,
@@ -12,15 +15,40 @@
     "wake_ignored_max": 3,
     "wake_live_max": 24,
     "wake_stolen_max": 0,
-    "wake_stranded_max": 0
+    "wake_stranded_max": 0,
+    "wave_amplitude_cm": 119.0
   },
-  "grounding": {
-    "broadsides": 1,
-    "groundings": 2,
-    "islands_built": 1,
-    "lift_mean": 1.004,
+  "gale": {
+    "awash": 1,
+    "broadsides": 4,
+    "foam_breaking_pct": 11.6,
+    "foam_start_cm": 73.0,
+    "groundings": 0,
+    "lift_mean": 1.002,
     "ships_sunk": 0,
     "splash_lost_max": 0,
+    "splash_surfz_max": 84.0,
+    "splashes": 7,
+    "struck": 9,
+    "wake_discarded_max": 0,
+    "wake_doubled_max": 0,
+    "wake_ignored_max": 0,
+    "wake_live_max": 16,
+    "wake_stolen_max": 0,
+    "wake_stranded_max": 0,
+    "wave_amplitude_cm": 178.0
+  },
+  "grounding": {
+    "awash": 0,
+    "broadsides": 1,
+    "foam_breaking_pct": 11.6,
+    "foam_start_cm": 49.0,
+    "groundings": 2,
+    "islands_built": 1,
+    "lift_mean": 1.002,
+    "ships_sunk": 0,
+    "splash_lost_max": 0,
+    "splash_surfz_max": 12.0,
     "splashes": 2,
     "struck": 2,
     "wake_discarded_max": 0,
@@ -28,27 +56,36 @@
     "wake_ignored_max": 0,
     "wake_live_max": 24,
     "wake_stolen_max": 0,
-    "wake_stranded_max": 0
+    "wake_stranded_max": 0,
+    "wave_amplitude_cm": 119.0
   },
   "gunnery": {
+    "awash": 0,
     "broadsides": 4,
+    "foam_breaking_pct": 11.6,
+    "foam_start_cm": 45.0,
     "groundings": 0,
-    "lift_mean": 1.001,
+    "lift_mean": 1.002,
     "ships_sunk": 0,
     "splash_lost_max": 0,
-    "splashes": 5,
-    "struck": 11,
+    "splash_surfz_max": 30.0,
+    "splashes": 6,
+    "struck": 10,
     "wake_discarded_max": 0,
     "wake_doubled_max": 0,
     "wake_ignored_max": 0,
     "wake_live_max": 16,
     "wake_stolen_max": 0,
-    "wake_stranded_max": 0
+    "wake_stranded_max": 0,
+    "wave_amplitude_cm": 109.0
   },
   "sailing": {
+    "awash": 0,
     "broadsides": 0,
+    "foam_breaking_pct": 11.6,
+    "foam_start_cm": 49.0,
     "groundings": 0,
-    "lift_mean": 1.005,
+    "lift_mean": 1.002,
     "ships_sunk": 0,
     "splash_lost_max": 0,
     "splashes": 0,
@@ -58,12 +95,16 @@
     "wake_ignored_max": 0,
     "wake_live_max": 24,
     "wake_stolen_max": 0,
-    "wake_stranded_max": 0
+    "wake_stranded_max": 0,
+    "wave_amplitude_cm": 119.0
   },
   "sinking": {
+    "awash": 0,
     "broadsides": 0,
+    "foam_breaking_pct": 11.6,
+    "foam_start_cm": 45.0,
     "groundings": 0,
-    "lift_mean": 0.851,
+    "lift_mean": 0.875,
     "ships_sunk": 2,
     "splash_lost_max": 0,
     "splashes": 0,
@@ -73,6 +114,7 @@
     "wake_ignored_max": 0,
     "wake_live_max": 4,
     "wake_stolen_max": 0,
-    "wake_stranded_max": 0
+    "wake_stranded_max": 0,
+    "wave_amplitude_cm": 109.0
   }
 }
