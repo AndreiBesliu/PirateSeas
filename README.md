@@ -466,7 +466,7 @@ pereche de rulări citea împrăștiere și credea că citește semnal.
 | `-ShipForeRigDamage=x`, `-ShipMainRigDamage=x` | fiecare catarg separat, ca panoul să poată fi verificat că le arată diferit |
 | `-EnemyX= -EnemyY= -EnemyYaw=` | unde și cum apare inamicul |
 | `-EnemyCount=N` | câte nave inamice, de la 1 la 8 (implicit 2) |
-| `-Islands=1` | pune o insulă pe mare (deocamdată exact una, oricât ai cere) |
+| `-Islands=N` | pune N insule pe mare, 1 la 8 (0 sau lipsă = niciuna) |
 | `-IsleX= -IsleY= -IsleRadius=` | unde e și cât de mare (raza plajei, implicit 11000 cm) |
 | `-ShipRunAground=N` | din secunda N, mână nava în insulă cu toate pânzele sus, apoi strânge pânza la 10 s după atingere |
 | `-ShipSeed=N` | **fixează hazardul**, deci rularea se poate repeta |

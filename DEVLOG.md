@@ -2750,3 +2750,141 @@ Scenariul nou, rulat de trei ori cu aceleaşi flag-uri, a dat de fiecare dată
 aceleaşi numere. Linia de bază a fost rescrisă deliberat, în acelaşi commit.
 
 **Task Completed.**
+
+---
+
+## Task Started — 15.09.2026 (a doua recenzie adversarială)
+
+**Prompt:** „continua tu singur"
+**Model:** Claude Opus 5
+
+18 agenţi, şase lentile peste arborele de ACUM (normale, mare, ocean-C++,
+navă-C++, instrumente, documente-contra-cod), plus un combatant pe fiecare
+constatare de top. **34 raportate, 12 verificate adversarial, ZERO respinse.**
+Toate douăsprezece sunt reparate azi. Restul stau scrise în
+`tasks/REVIEW2_OPEN.md`, nu în capul meu.
+
+Trei dintre ele erau în codul scris **ieri**.
+
+### Contoarele mele nu puteau ieşi roşii
+
+`stranded` citea „slot cu firimituri şi fără navă" — o stare pe care pasul de
+curăţenie o interzice prin construcţie, fiindcă orice cale care şterge nava
+şterge firimiturile în acelaşi bloc. Nu putea să se aprindă pentru chiar
+defectul pentru care fusese scris (un siaj îngheţat ARE navă). Acum citeşte ce
+se strică de fapt: firimituri DESENATE fără ca nimeni să le fi avansat ceasul în
+cadrul ăsta.
+
+Şi m-a prins imediat pe mine: prima firimitură dintr-un slot gol ieşea
+„neîmbătrânită", contorul a dat 1 în gunnery. Un contor care plânge pe purtare
+corectă e acelaşi defect ca unul care nu poate plânge deloc.
+
+Mai rău: **contoarele erau locale pe cadru**, iar linia WAKELOG se tipăreşte o
+dată pe secundă. Un eveniment pe orice alt cadru era tipărit de nimeni. Proba
+prin mutaţie a arătat-o fără drept de apel: am pus legarea după rang înapoi şi
+toate contoarele au ieşit zero, pe o rulare al cărei propriu log arăta rangul
+schimbându-se de patru ori. Acum latch-uiesc:
+
+    legare după rang:       discarded=1
+    legare prin identitate: discarded=0
+
+### Siajul unei nave găurite dispărea într-un cadru
+
+`IsSunk()` e „integritate <= 0", deci se aprinde în clipa în care o ghiulea
+trece prin ea — cu douăzeci şi cinci de secunde de inundare în faţă, în care
+nava e măsurabil tot sub drum, la patru metri pe secundă. O scoteam din lista
+urmăriţilor în clipa aia, iar pasul de curăţenie citea „neurmărit" ca „aruncă
+istoria": şaptezeci de metri de apă albă între două cadre, apoi o cocă vizibil în
+mers fără siaj, fără guler şi fără braţe, pe o mare ca sticla, o jumătate de
+minut.
+
+Acum siajul e al APEI, nu al listei: îmbătrânirea e un pas separat peste toate
+sloturile, urmărirea decide doar cine mai LASĂ firimituri, iar o navă e urmărită
+cât e pe suprafaţă (FAZA de scufundare, nu `IsSunk()`).
+
+### Comparaţia mergea pe un singur nivel
+
+Reuniunea de cheile pe care am adăugat-o ieri era cu un nivel prea jos:
+scenariile însele se luau tot dintr-o parte. `compare({}, baseline)` nu raporta
+NIMIC. Iar fixturile mele foloseau acelaşi unic scenariu pe ambele părţi — adică
+erau de acord cu autorul exact acolo unde autorul greşea.
+
+### Marea nu citea vântul. Deloc.
+
+`SetSeaState` construia hula din două constante şi un cap compas de 25 de grade.
+Consecinţa e mai gravă decât imaginea: **fiecare citire „nu se schimbă nimic pe
+tot intervalul de vânt" din proiectul ăsta nu era o reparaţie care ţine la
+ambele capete, era o intrare care nu s-a mişcat niciodată.**
+
+Acum: amplitudinile se scalează cu vântul, direcţia vine din vânt, iar
+împrăştierea direcţională a scăzut de la 400 de grade (adică tot cercul: o mare
+fără direcţie) la 45.
+
+    5 m/s  →  49 cm,  spumă de la 20 cm
+    11 m/s → 109 cm,  spumă de la 45 cm
+    18 m/s → 178 cm,  spumă de la 73 cm
+
+### Şi pragul spumei era o fracţie dintr-un maxim de neatins
+
+0,78 din SUMA amplitudinilor — 109 cm — sumă pe care creasta o atinge doar dacă
+toate cele şase valuri urcă în acelaşi punct în aceeaşi clipă. Creasta e o sumă
+de şase cosinusuri: are o abatere standard, sigma = 34 cm, iar 0,78 din sumă e
+2,5 sigma. **Trei pixeli din o mie. Marea n-avea berbeci deloc**, iar capătul de
+sus al rampei nu era atins aritmetic. Logul arăta sănătos tot timpul: 85 pare o
+fracţie cuminte din 109 până întrebi ce e 109.
+
+Acum e în sigma, şi — partea care contează mai mult decât constanta — acoperirea
+se MĂSOARĂ: aceleaşi şase valuri, evaluate pe o reţea peste douăzeci de
+kilometri de apă, şi procentul din mare care trece pragul se tipăreşte. 10,8%.
+
+### Ghiuleaua murea în altă mare decât plutea nava
+
+`GetWaterSurfaceInfoAtLocation(..., true)` — iar `true` e `bIncludeDepth`, nu
+valuri, şi funcţia aia nu cere niciodată `IncludeWaves`. Dovada era deja pe disc:
+25 de stropi în toate logurile, niciunul deasupra lui Z=0, pe o mare de un metru.
+
+Şi, pe deasupra: **o salvă trasă dintr-un gol de val îşi ucidea toate cele patru
+ghiulele la gura tunului** — `range=0m flight=0.00s`, patru inele de spumă pe
+propriul bord, o reîncărcare arsă şi patru intrări în numărătoarea de stropi care
+n-au atins marea. Una din şaisprezece salve, în loguri. Garda e cât o lungime de
+cocă, nu cât o ţeavă (la elevaţiile astea ghiuleaua urcă o zecime din cât merge),
+iar cazul e numărat: `awash=1` în scenariul de furtună.
+
+### Cadrul normalelor era o constantă, nu o suprafaţă
+
+Cea mai gravă constatare era în reparaţia de ieri, şi aritmetica ei e exactă:
+`cross(N, cross(N, h))` e vectorul fix `h` turtit în planul tangent **şi negat** —
+o funcţie de `h`, nu de proiecţie. Unghiul faţă de direcţia pe care o înseamnă
+canalul verde: median 160 de grade, produsul scalar negativ pe 100% din suprafaţa
+cocii. Iar canalul verde poartă 99,5% din relieful texturii ăsteia, fiindcă
+îmbinările scândurilor merg pe rânduri. Fiecare îmbinare călăfătuită era luminată
+ca o şipcă în relief.
+
+A treia încercare nu mai inventează niciun cadru: o probă proiectată ESTE un
+gradient de înălţime în axele planului ei. Se reconstruieşte acolo, se amestecă
+GRADIENŢII (liniar — fără cusătură, deci fără nimic de ascuns cu un buton), se
+scoate partea de-a lungul normalei şi ce rămâne înclină normala geometrică.
+
+Şi trei plane în loc de două: ambele proiecţii vechi luau u din x, deci orice
+suprafaţă dintr-un plan de x constant — pupa, capul provei, capetele cabinei,
+faţa dinainte a fiecărui catarg — eşantiona o SINGURĂ coloană de texeli.
+
+### Ce am corectat în documente
+
+OWNER_VERIFY 3 îţi cerea să confirmi un throttle şi o cocă rotită din mouse —
+comenzile navei-jucărie din prima săptămână. OWNER_VERIFY 16 îţi spunea că marea
+n-are siaj, o sesiune întreagă după ce siajul există. README zicea că `-Islands`
+face exact o insulă „oricât ai cere"; face până la opt.
+
+### Măsurători
+
+Şase scenarii acum (`gale` e gunnery la 18 m/s, ca cifrele mării să difere în
+două puncte). Chei noi: amplitudinea hulei, pragul spumei, procentul care se
+sparge, `surfZ` la stropi, `awash`, şi cele cinci contoare de siaj pe care C++ le
+tipărea şi nu le citea nimeni. Logul se şterge înainte de fiecare scenariu şi i
+se verifică linia de comandă, fiindcă toate scenariile scriu în acelaşi fişier şi
+un editor care nu porneşte lăsa logul precedent acolo. `groundings` număra LINII,
+două pe lovitură: linia de bază a scăzut de la 2 la 1, adică de la un număr fără
+unitate la unul cu.
+
+**Task Completed.**

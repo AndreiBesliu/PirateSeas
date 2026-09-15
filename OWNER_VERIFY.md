@@ -97,18 +97,22 @@ de tastatură nu există într-o rulare fără interfață, deci confirmarea e a
 
 ## 3. Comenzile mișcă nava
 
-**Ce te uiți:** Apeși W, apoi A și D, apoi miști mouse-ul.
+**Ce te uiți:** Apeși W şi S, apoi A și D, apoi miști mouse-ul.
 
-**Cum arată bine:** W accelerează încet, ca o navă grea, nu instantaneu. Mouse-ul
-rotește și camera și coca, în același sens. Nava rămâne dreaptă, orizontală,
-oricât ai privi în sus.
+**Cum arată bine:** W şi S STRÂNG şi LASĂ pânza — bara SAIL SET din colţ se mută,
+şi abia după aia se mută nava, cu întârziere de navă grea. A şi D pun CÂRMA, iar
+nava începe să gireze doar dacă are drum; cu pânza strânsă, cârma nu face nimic.
+Mouse-ul mişcă DOAR camera; coca rămâne pe drumul ei.
 
-**Cum arată prost:** Nu se mișcă deloc (maparea de input n-a fost citită), sau
-nava se înclină în față când privești în jos, sau alunecă lateral fără să se
-rotească.
+**Cum arată prost:** Nu se mișcă nimic (maparea de input n-a fost citită). Sau
+nava se roteşte după mouse. Sau W o accelerează instantaneu, ca pe o maşină.
 
 **De ce nu pot eu:** Input-ul se leagă la runtime, într-o sesiune de joc cu
 tastatură. Într-un proces fără interfață nu există input de citit.
+
+**Corectat:** punctul ăsta descria până acum un throttle şi o cocă rotită din
+mouse — comenzile navei-jucărie din prima săptămână, înlocuite de mult de pânză
+şi cârmă. Îţi cerea să confirmi ceva ce jocul nu face.
 
 ---
 
@@ -366,7 +370,14 @@ albi. Nu pot spune dacă suprafaţa „se citeşte" ca apă în mişcare — aia
 judecată de ochi, pe un cadru care se schimbă.
 
 **Ce știu deja și n-am ascuns:** ridurile se văd că se repetă într-o dungă
-orizontală în zare, iar marea n-are siaj în spatele cocii.
+orizontală în zare.
+
+**Corectat:** aici scria „marea n-are siaj în spatele cocii". Are, de o sesiune
+întreagă — siaj din firimituri, guler la cocă, braţe Kelvin, inele de strop şi,
+de azi, berbeci pe creste. Punctul te trimitea să confirmi o lipsă care nu mai
+există. Uită-te şi la spuma de pe creste cât eşti acolo: pragul ei era până azi
+o fracţie dintr-un maxim pe care marea nu-l atinge niciodată, deci nu se spărgea
+NIMIC; acum se sparge vreo 11% din suprafaţă şi cifra e tipărită în log.
 
 ---
 
@@ -470,8 +481,9 @@ retastate, şi câte au fost respinse şi de ce. Dacă dealul arată *locuit* sa
 
 **Ce știu deja și n-am ascuns:** e prima treaptă, deliberat — frunzele sunt
 geometrie solidă, nu cartonaşe cu decupaj, şi nimic nu se mişcă în vânt. Şi
-`too steep=0`: dealul ăsta nu are nicăieri o pantă destul de mare cât să fie
-stâncă, deci nici piatra din material nu se arată vreodată pe el.
+aproape nimic de pe deal nu e destul de abrupt cât să treacă pragul de rocă: în
+scenariul de eşuare, `too steep=1` din 258 de puncte încercate. Practic piatra
+din material nu se arată aproape niciodată pe insula asta.
 
 ## 22. Relieful lemnului: iese în afară sau e desen pe pânză?
 

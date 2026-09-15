@@ -94,14 +94,37 @@ SCENARIOS = {
 
 
 def run(name, flags):
+    # DELETE THE LOG FIRST. Every scenario writes the same
+    # Saved/Logs/PirateSeas.log, so an editor that fails to start - a bad flag,
+    # a missing DLL, a build half-written - leaves the PREVIOUS scenario's log
+    # sitting there, and this reads it and reports its numbers under the new
+    # scenario's name. Nothing in the numbers would look wrong; they would be
+    # somebody else's numbers.
+    if os.path.exists(LOG):
+        os.remove(LOG)
+
     args = [EDITOR, UPROJECT] + PINNED + flags
     subprocess.run(args, cwd=ROOT, capture_output=True)
     # The editor exits 1 in this project regardless, for an unrelated water
     # collision-profile complaint, so the exit code proves nothing. The LOG is
     # the verdict.
     if not os.path.exists(LOG):
-        raise RuntimeError("%s produced no log at all" % name)
-    return io.open(LOG, encoding="utf-8", errors="replace").read()
+        raise RuntimeError("%s produced no log at all - the editor did not "
+                           "start, or wrote nowhere this script can see" % name)
+    text = io.open(LOG, encoding="utf-8", errors="replace").read()
+
+    # And that it is a log of THIS scenario: the game prints its own command
+    # line, so the flags that were asked for have to appear in it. A run that
+    # ended before it got that far is not a measurement of anything.
+    line = re.search(r"LogInit: Command Line:(.*)", text)
+    if not line:
+        raise RuntimeError("%s: the log carries no command line, so there is no "
+                           "proof it came from this run" % name)
+    for flag in flags:
+        if flag not in line.group(1):
+            raise RuntimeError("%s: the log's command line does not carry %s - "
+                               "this is a log of some other run" % (name, flag))
+    return text
 
 
 def measure(name, text):
@@ -109,7 +132,11 @@ def measure(name, text):
     m["broadsides"] = len(re.findall(r"SHOTLOG broadside", text))
     m["struck"] = len(re.findall(r"SHOTLOG (?:hit |rig )", text))
     m["splashes"] = len(re.findall(r"SHOTLOG splash", text))
-    m["groundings"] = len(re.findall(r"GROUNDLOG", text))
+    # Grounding BLOWS, not grounding log LINES. The damage path prints two lines
+    # per blow - "damage taken=" and "zone" - so this counted every blow twice
+    # and the baseline's "groundings: 2" was one grounding, reported as two. A
+    # number with no unit is not a measurement.
+    m["groundings"] = len(re.findall(r"GROUNDLOG damage", text))
     # Balls destroyed at the muzzle because the gun port was under the local
     # surface. Zero in every shipped scenario today; it exists because it was
     # NOT zero before the guard, and the four splashes it produced were counted
