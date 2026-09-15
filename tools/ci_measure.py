@@ -20,7 +20,14 @@ THREE RULES, each of which this project learned the hard way:
 3. SAY THE NUMBERS. A red light that does not print what moved sends whoever
    reads it back to reproduce the run by hand.
 
-4. A MEASUREMENT THAT STOPPED BEING TAKEN IS NOT A MATCH. Several of the numbers
+4. A MEASUREMENT THAT STOPPED BEING TAKEN IS NOT A MATCH - AT EITHER LEVEL. The
+   first version of this rule was implemented one level too low: the keys inside
+   a scenario were compared as a union while the SCENARIOS themselves were still
+   walked from the new result alone, so deleting an entry from SCENARIOS - most
+   damagingly `sinking`, which exists only to keep ships_sunk non-zero - printed
+   "every measurement matches the baseline" and exited 0. compare({}, baseline)
+   returned no differences at all. Both levels walk the union now, and
+   ci_checks.py feeds that exact case as a fixture. Several of the numbers
    below are recorded only when the log carries them, so a measurement can
    vanish rather than move - and a comparison that walks only the keys it just
    collected would never reach the missing one. This one walks the UNION of both
@@ -67,6 +74,14 @@ SCENARIOS = {
     # and this one was broken for three commits without a light going red.
     "sinking": ["-WindBearing=120", "-WindSpeed=11", "-EnemyX=9000",
                 "-EnemyY=1500", "-EnemySinkTest=6", "-ShipQuitAfter=40"],
+    # Six hulls and three wake slots. Same reasoning as `sinking`: the wake
+    # counters below are all zero in a world with fewer ships than slots, and a
+    # counter that is zero everywhere cannot be told from a broken one. Here
+    # `wake_ignored_max` is 3 and the rudder test keeps ships crossing in and out
+    # of the nearest-three set, which is the traffic that exercises the binding
+    # and the slot steal.
+    "crowded": ["-WindBearing=120", "-WindSpeed=12", "-EnemyCount=5",
+                "-ShipRudderTest=2", "-ShipQuitAfter=40"],
 }
 
 
@@ -101,10 +116,32 @@ def measure(name, text):
     if lifts:
         m["lift_mean"] = round(sum(lifts) / len(lifts), 3)
 
-    # The wake: the largest number of live breadcrumbs seen at once.
+    # The wake. NOTE which of these is the regression detector and which is not:
+    # wake_live_max is bounded by WakePointCount and already SITS on that ceiling
+    # (24) in the sailing and grounding scenarios, so a wake that goes wrong can
+    # only push it into a limit it has already reached. It is recorded because it
+    # is cheap, not because it can fail.
+    #
+    # These four are the ones that carry the load. Each is a thing the wake says
+    # must never happen, and each was printed for a whole session without being
+    # read by anything: a trail still being drawn with nobody advancing its clock
+    # (stranded), one ship holding two slots (doubled), a followed ship that
+    # could not be given a slot at all (discarded), and a fading trail taken to
+    # make room (stolen, which is legitimate but should not move silently).
     live = [int(v) for v in re.findall(r"WAKELOG live=(\d+)", text)]
     if live:
         m["wake_live_max"] = max(live)
+    for tag in ("stranded", "doubled", "stolen", "discarded", "ignored"):
+        vals = [int(v) for v in
+                re.findall(r"WAKELOG [^\n]*?\b%s=(\d+)" % tag, text)]
+        if vals:
+            m["wake_%s_max" % tag] = max(vals)
+
+    # And the splash slot the ring buffer had to overwrite: the counter added
+    # when the splash was built, never read until now.
+    lost = [int(v) for v in re.findall(r"WAKELOG [^\n]*?\blost=(\d+)", text)]
+    if lost:
+        m["splash_lost_max"] = max(lost)
 
     # Did the world build what it was asked for?
     isles = re.search(r"SEALOG islands built=(\d+) of (\d+)", text)
@@ -123,10 +160,20 @@ def compare(results, base):
     missing measurement, and it sat in a green pipeline for three commits.
     """
     moved, new, gone = [], [], []
-    for name, got in results.items():
+    # The union AT THE SCENARIO LEVEL TOO. Walking results.items() alone meant a
+    # scenario that stopped running was never visited: compare({}, baseline)
+    # reported nothing at all, and deleting one entry from SCENARIOS left the run
+    # printing "every measurement matches the baseline" while a quarter of the
+    # gate no longer ran.
+    for name in sorted(set(results) | set(base)):
         if name not in base:
             new.append(name)
             continue
+        if name not in results:
+            gone.append("%s (the whole scenario - %d numbers no longer taken)"
+                        % (name, len(base[name])))
+            continue
+        got = results[name]
         # The UNION of both sides. Walking only the keys just collected is how a
         # measurement disappears quietly: lift_mean, wake_live_max and
         # islands_built are each recorded only when the log carries the line

@@ -245,7 +245,18 @@ void AOceanSurface::UpdateWake(float DeltaSeconds)
 	{
 		Player = Cast<AShipPawn>(PC->GetPawn());
 	}
-	if (Player && !Player->IsSunk())
+	// STILL ON THE SURFACE, not "not holed". IsSunk() is HullIntegrity <= 0, so
+	// it flips the instant a ball goes through her - with twenty-five seconds of
+	// flooding still to run, during which she is measurably still under way at
+	// four metres a second. Following on IsSunk() meant a hull visibly making
+	// way with no wake, no collar and no bow arms at all, in a glassy sea, for
+	// half a minute. She lays water until the deck goes under; after that she
+	// stops laying and what she left ages out behind her.
+	const auto OnSurface = [](const AShipPawn* S)
+	{
+		return S->GetSinkPhase() <= ESinkPhase::Flooding;
+	};
+	if (Player && OnSurface(Player))
 	{
 		Ships.Add(Player);
 	}
@@ -254,7 +265,7 @@ void AOceanSurface::UpdateWake(float DeltaSeconds)
 	for (TActorIterator<AShipPawn> It(GetWorld()); It; ++It)
 	{
 		AShipPawn* S = *It;
-		if (IsValid(S) && S != Player && !S->IsSunk())
+		if (IsValid(S) && S != Player && OnSurface(S))
 		{
 			Others.Add(S);
 		}
@@ -293,32 +304,111 @@ void AOceanSurface::UpdateWake(float DeltaSeconds)
 	//   advancing while it is still packed and pushed every frame: a wake
 	//   frozen in the water, at full strength, for the rest of the game.
 	Trails.SetNum(MaxWakeShips);
+
+	// The water does not care whether we are still watching. A trail AGES
+	// wherever it lies - that is its own pass over every slot, not a step inside
+	// the loop over followed ships, because the moment ageing lives inside that
+	// loop a slot the loop does not reach stops ageing while it is still drawn.
+	// The trail is only thrown away when it has aged to nothing.
+	//
+	// It used to be erased the instant its ship left the followed set: seventy
+	// metres of white water gone in one frame, for a ship that was still there.
 	for (FWakeTrail& T : Trails)
 	{
-		if (!T.Ship.IsValid() || !Ships.Contains(Cast<AShipPawn>(T.Ship.Get())))
+		T.bAged = false;
+		if (!T.Ship.IsValid())
 		{
-			T.Crumbs.Reset();
-			T.Ages.Reset();
-			T.bHasDropped = false;
+			// The actor is gone - the wreck was destroyed. Her wake is still in
+			// the water and goes on fading; only the binding is dropped.
 			T.Ship = nullptr;
+		}
+		if (T.Crumbs.Num() > 0)
+		{
+			for (float& A : T.Ages)
+			{
+				A += DeltaSeconds;
+			}
+			while (T.Ages.Num() > 0 && T.Ages.Last() > WakeLifeSeconds)
+			{
+				T.Ages.Pop();
+				T.Crumbs.Pop();
+			}
+			T.bAged = true;
+		}
+		if (T.Crumbs.Num() == 0 && !Ships.Contains(Cast<AShipPawn>(T.Ship.Get())))
+		{
+			T.Ship = nullptr;
+			T.bHasDropped = false;
 		}
 	}
 
+	// A slot bound to a ship that is no longer followed, but still holding
+	// crumbs, is a wake fading behind her - not a free slot. Taking one is
+	// legitimate when a new ship needs somewhere to go, and it is COUNTED as a
+	// steal so it can be told apart from the thing that must never happen:
+	// taking a slot away from a ship that IS still followed, which is what rank
+	// binding did on every distance swap.
 	for (AShipPawn* S : Ships)
 	{
-		// The slot this ship already owns, or else the first free one. Ships is
-		// capped at MaxWakeShips and every slot not owned by a ship in it was
-		// just freed above, so a free one always exists; the guard is there
-		// because "always" is what the last version of this said too.
 		FWakeTrail* Found = Trails.FindByPredicate(
 			[S](const FWakeTrail& C) { return C.Ship.Get() == S; });
 		if (!Found)
 		{
 			Found = Trails.FindByPredicate(
-				[](const FWakeTrail& C) { return C.Ship.Get() == nullptr; });
-			if (!Found)
+				[](const FWakeTrail& C)
+				{ return C.Ship.Get() == nullptr && C.Crumbs.Num() == 0; });
+		}
+		if (!Found)
+		{
+			// Nothing empty. Take the fading trail with the OLDEST head crumb -
+			// the one nearest to going anyway - rather than leave a ship with no
+			// wake for the thirteen seconds it takes a slot to clear.
+			float Oldest = -1.f;
+			for (FWakeTrail& C : Trails)
 			{
-				continue;
+				AShipPawn* Held = Cast<AShipPawn>(C.Ship.Get());
+				if (Held && Ships.Contains(Held))
+				{
+					continue;
+				}
+				const float Head = C.Ages.Num() > 0 ? C.Ages[0] : TNumericLimits<float>::Max();
+				if (Head > Oldest)
+				{
+					Oldest = Head;
+					Found = &C;
+				}
+			}
+		}
+		if (!Found)
+		{
+			// No slot at all for a followed ship. Ships is capped at
+			// MaxWakeShips and there are MaxWakeShips slots, so this cannot
+			// happen - and "cannot happen" is what the last version of this said
+			// too, so it is counted rather than assumed.
+			++WakeDiscarded;
+			continue;
+		}
+		if (Found->Ship.Get() != S)
+		{
+			// The one place a trail is ever thrown away, so the accounting lives
+			// here. Taking a fading trail from a ship nobody is following any
+			// more is a STEAL and is fine. Taking one from a ship that is STILL
+			// FOLLOWED is the rank-binding bug: two ships swap distance rank,
+			// each finds a stranger in its slot, and both wakes vanish in open
+			// water. That must never happen, so it is counted separately - and
+			// the counter was proved by putting rank binding back and watching
+			// it go red, rather than by being trusted.
+			if (Found->Crumbs.Num() > 0)
+			{
+				AShipPawn* Held = Cast<AShipPawn>(Found->Ship.Get());
+				if (Held && Ships.Contains(Held))
+				{
+					++WakeDiscarded;
+				}
+				else
+				{
+					++WakeStolen;
+				}
 			}
 			Found->Ship = S;
 			Found->Crumbs.Reset();
@@ -326,16 +416,6 @@ void AOceanSurface::UpdateWake(float DeltaSeconds)
 			Found->bHasDropped = false;
 		}
 		FWakeTrail& T = *Found;
-
-		for (float& A : T.Ages)
-		{
-			A += DeltaSeconds;
-		}
-		while (T.Ages.Num() > 0 && T.Ages.Last() > WakeLifeSeconds)
-		{
-			T.Ages.Pop();
-			T.Crumbs.Pop();
-		}
 
 		const FVector Here = S->GetActorLocation();
 		const float SpeedCmS = S->GetVelocity().Size2D();
@@ -353,6 +433,13 @@ void AOceanSurface::UpdateWake(float DeltaSeconds)
 			T.Ages.Insert(0.f, 0);
 			T.LastDrop = Here;
 			T.bHasDropped = true;
+			// This trail's clock is current: the crumb just laid is zero seconds
+			// old. Without this the FIRST crumb dropped into an empty slot counts
+			// as un-aged and the stranded counter fires on it - which is exactly
+			// what it did, reading 1 in the gunnery scenario on the first run
+			// after it was written. A counter that cries on correct behaviour is
+			// the same defect as one that cannot cry at all.
+			T.bAged = true;
 			while (T.Crumbs.Num() > CrumbsPerShip)
 			{
 				T.Crumbs.Pop();
@@ -361,23 +448,30 @@ void AOceanSurface::UpdateWake(float DeltaSeconds)
 		}
 	}
 
-	// Two things that must be zero, counted rather than trusted, because the
-	// bug they describe is invisible in every other number the wake prints:
-	// the frozen trail was live, well-formed and the right length. A stranded
-	// slot holds crumbs nobody is updating; a doubled ship owns two slots.
-	int32 Stranded = 0, Doubled = 0;
+	// Counted rather than trusted, because the bug they describe is invisible in
+	// every other number the wake prints: the frozen trail was live, well-formed
+	// and the right length.
+	//
+	// `stranded` used to read "a slot with crumbs and no ship", which the pass
+	// above forbids by construction - every path that cleared the ship cleared
+	// the crumbs in the same block, so the counter was nailed to zero, could not
+	// fire for the very bug it was written for (a frozen trail HAS a ship), and
+	// would have shipped a green light over a wake standing still in open water.
+	// It now reads what actually goes wrong: crumbs that are being DRAWN while
+	// nobody advanced their clock this frame. Put the ageing back inside the
+	// followed-ships loop and this goes red on the first frame a slot is missed.
 	for (int32 a = 0; a < Trails.Num(); ++a)
 	{
-		if (Trails[a].Ship.Get() == nullptr && Trails[a].Crumbs.Num() > 0)
+		if (Trails[a].Crumbs.Num() > 0 && !Trails[a].bAged)
 		{
-			++Stranded;
+			++WakeStranded;
 		}
 		for (int32 b = a + 1; b < Trails.Num(); ++b)
 		{
 			if (Trails[a].Ship.Get() != nullptr
 				&& Trails[a].Ship.Get() == Trails[b].Ship.Get())
 			{
-				++Doubled;
+				++WakeDoubled;
 			}
 		}
 	}
@@ -438,14 +532,24 @@ void AOceanSurface::UpdateWake(float DeltaSeconds)
 	// The live part: collar and bow arms, from where each ship is THIS frame.
 	// Packed A = (x, y, trackX, trackY), B = (half-length, half-beam, strength,
 	// tan of the Kelvin half-angle).
+	// Off the TRAIL's ship, not off the followed list, so the slot that draws a
+	// ship's crumbs also draws her collar - and a hull that has stopped being
+	// followed keeps hers for as long as she is still on the surface.
 	for (int32 s = 0; s < MaxWakeShips; ++s)
 	{
 		FLinearColor A(0.f, 0.f, 0.f, 0.f);
 		FLinearColor B(0.f, 0.f, 0.f, 0.f);
-		if (Ships.IsValidIndex(s) && IsValid(Ships[s]))
+		AShipPawn* Laid = Trails.IsValidIndex(s)
+			? Cast<AShipPawn>(Trails[s].Ship.Get()) : nullptr;
+		// The phase, not IsSunk(): IsSunk() flips at the holing instant, so
+		// gating on it switches the collar off in one frame under a ship that is
+		// still making way. The collar and the bow arms are drawn in world XY
+		// with no notion of the hull's depth, so a plunging ship would otherwise
+		// paint surface foam from twenty-eight metres down.
+		if (Laid && OnSurface(Laid))
 		{
-			const FVector Where = Ships[s]->GetActorLocation();
-			FVector Track = Ships[s]->GetVelocity();
+			const FVector Where = Laid->GetActorLocation();
+			FVector Track = Laid->GetVelocity();
 			Track.Z = 0.f;
 			// Her TRACK, not her heading: she makes leeway, and the water
 			// closes behind where she actually went. Falls back to the heading
@@ -453,7 +557,7 @@ void AOceanSurface::UpdateWake(float DeltaSeconds)
 			const float SpeedCmS = Track.Size();
 			const FVector Dir = (SpeedCmS > 1.f)
 				? Track / SpeedCmS
-				: Ships[s]->GetActorForwardVector().GetSafeNormal2D();
+				: Laid->GetActorForwardVector().GetSafeNormal2D();
 			const float Strength = FMath::Clamp(
 				SpeedCmS / FMath::Max(1.f, WakeFullSpeedCmS), 0.f, 1.f);
 			A = FLinearColor(Where.X, Where.Y, Dir.X, Dir.Y);
@@ -484,9 +588,10 @@ void AOceanSurface::UpdateWake(float DeltaSeconds)
 		}
 		UE_LOG(LogTemp, Display,
 			TEXT("WAKELOG live=%d of %d tracked=%s ignored=%d stranded=%d doubled=%d "
-				 "splashes=%d live=%d seen=%d lost=%d"),
-			Live, WakePointCount, *Names, Ignored, Stranded, Doubled,
-			MaxSplashes, LiveSplashes, SplashesSeen, SplashesOverwritten);
+				 "stolen=%d discarded=%d splashes=%d alive=%d seen=%d lost=%d"),
+			Live, WakePointCount, *Names, Ignored, WakeStranded, WakeDoubled,
+			WakeStolen, WakeDiscarded, MaxSplashes, LiveSplashes,
+			SplashesSeen, SplashesOverwritten);
 	}
 }
 

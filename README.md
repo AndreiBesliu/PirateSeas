@@ -395,16 +395,17 @@ n-a văzut-o vreodată picând e o poartă în care nimeni n-are motiv să aibă
 
 **`measure`** rulează jocul pe bune, fără interfaţă, şi compară numerele cu o
 linie de bază din `tools/measurement_baseline.json`. Are nevoie de motor, deci
-merge doar pe un runner propriu, pe o maşină care îl are. Patru scenarii, toate
+merge doar pe un runner propriu, pe o maşină care îl are. Cinci scenarii, toate
 cu hazardul fixat: o salvă la distanţă cunoscută, o navă mânată pe plajă, una
-care navighează sub cârmă, şi una în care o navă e sabordată dinadins.
+care navighează sub cârmă, una în care o navă e sabordată dinadins, şi una cu
+şase coci şi trei sloturi de siaj.
 
-Ultimul nu spune nimic despre tunuri. Există ca `ships_sunk` să fie **diferit de
-zero undeva**: numărătoarea aia citea un şir pe care jocul nu-l scrie niciodată
-(`sink=sinking`, când fazele se numesc `afloat|flooding|foundering|plunging|
-wreck`), deci era pironită la zero şi poarta nu putea ieşi roşie orice s-ar fi
-întâmplat în joc. Un contor care dă zero pe toate scenariile nu se deosebeşte cu
-nimic de un contor stricat.
+Ultimele două nu spun nimic despre tunuri. Există ca `ships_sunk` şi contoarele
+de siaj să fie **diferite de zero undeva**: `ships_sunk` citea un şir pe care
+jocul nu-l scrie niciodată (`sink=sinking`, când fazele se numesc
+`afloat|flooding|foundering|plunging|wreck`), deci era pironit la zero şi poarta
+nu putea ieşi roşie orice s-ar fi întâmplat în joc. Un contor care dă zero pe
+toate scenariile nu se deosebeşte cu nimic de un contor stricat.
 
 Rulabile şi local, fără GitHub:
 

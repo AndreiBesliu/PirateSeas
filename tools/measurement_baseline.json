@@ -1,39 +1,78 @@
 {
+  "crowded": {
+    "broadsides": 0,
+    "groundings": 0,
+    "lift_mean": 1.001,
+    "ships_sunk": 0,
+    "splash_lost_max": 0,
+    "splashes": 0,
+    "struck": 0,
+    "wake_discarded_max": 0,
+    "wake_doubled_max": 0,
+    "wake_ignored_max": 3,
+    "wake_live_max": 24,
+    "wake_stolen_max": 0,
+    "wake_stranded_max": 0
+  },
   "grounding": {
     "broadsides": 1,
     "groundings": 2,
     "islands_built": 1,
     "lift_mean": 1.004,
     "ships_sunk": 0,
+    "splash_lost_max": 0,
     "splashes": 2,
     "struck": 2,
-    "wake_live_max": 24
+    "wake_discarded_max": 0,
+    "wake_doubled_max": 0,
+    "wake_ignored_max": 0,
+    "wake_live_max": 24,
+    "wake_stolen_max": 0,
+    "wake_stranded_max": 0
   },
   "gunnery": {
     "broadsides": 4,
     "groundings": 0,
     "lift_mean": 1.001,
     "ships_sunk": 0,
+    "splash_lost_max": 0,
     "splashes": 5,
     "struck": 11,
-    "wake_live_max": 16
+    "wake_discarded_max": 0,
+    "wake_doubled_max": 0,
+    "wake_ignored_max": 0,
+    "wake_live_max": 16,
+    "wake_stolen_max": 0,
+    "wake_stranded_max": 0
   },
   "sailing": {
     "broadsides": 0,
     "groundings": 0,
     "lift_mean": 1.005,
     "ships_sunk": 0,
+    "splash_lost_max": 0,
     "splashes": 0,
     "struck": 0,
-    "wake_live_max": 24
+    "wake_discarded_max": 0,
+    "wake_doubled_max": 0,
+    "wake_ignored_max": 0,
+    "wake_live_max": 24,
+    "wake_stolen_max": 0,
+    "wake_stranded_max": 0
   },
   "sinking": {
     "broadsides": 0,
     "groundings": 0,
     "lift_mean": 0.851,
     "ships_sunk": 2,
+    "splash_lost_max": 0,
     "splashes": 0,
     "struck": 0,
-    "wake_live_max": 3
+    "wake_discarded_max": 0,
+    "wake_doubled_max": 0,
+    "wake_ignored_max": 0,
+    "wake_live_max": 4,
+    "wake_stolen_max": 0,
+    "wake_stranded_max": 0
   }
 }

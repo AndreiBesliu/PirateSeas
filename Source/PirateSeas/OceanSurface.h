@@ -200,10 +200,31 @@ private:
 		TArray<float> Ages;
 		FVector LastDrop = FVector::ZeroVector;
 		bool bHasDropped = false;
+
+		/** Cleared at the top of every UpdateWake, set wherever the ages are
+		 *  advanced. A slot that still holds crumbs and was not aged is a trail
+		 *  being DRAWN by nobody's clock - which is exactly the frozen wake the
+		 *  rank-binding bug produced, and exactly what the counter that replaced
+		 *  it could not see. */
+		bool bAged = false;
 	};
 
 	TArray<FWakeTrail> Trails;
 	bool bWakeReported = false;
+
+	/** --- the four numbers the wake says must never move -------------------
+	 *
+	 *  CUMULATIVE, deliberately. They were per-frame locals first, and the
+	 *  WAKELOG line that carries them is printed once a SECOND - so a slot
+	 *  discarded on one frame in sixty was printed by exactly nobody, and the
+	 *  mutation test that put rank binding back to prove they could fire came
+	 *  back all zeros on a run whose own log showed the distance rank swapping
+	 *  four times. A counter for a thing that must never happen has to latch,
+	 *  not sample. */
+	int32 WakeStranded = 0;
+	int32 WakeDoubled = 0;
+	int32 WakeStolen = 0;
+	int32 WakeDiscarded = 0;
 
 	/** --- splashes ---------------------------------------------------------
 	 *

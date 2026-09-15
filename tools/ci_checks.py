@@ -307,6 +307,35 @@ def check_comparison():
     if not ci_measure.compare({"s": {"hits": 3, "lift_mean": 1.4}}, base)[0]:
         fail("the float tolerance swallows a change four hundred times its size")
 
+    # A WHOLE SCENARIO that stopped being run. The fixtures above all use the
+    # same single scenario name on both sides, so they proved the key-level union
+    # and agreed with their author exactly where he was wrong: the scenario level
+    # still walked one side, and compare({}, base) reported no differences at all
+    # for a run that measured nothing.
+    moved, new, gone = ci_measure.compare({}, base)
+    if len(gone) != 1 or moved or new:
+        fail("a whole scenario that stopped running was not reported: "
+             "moved=%s new=%s gone=%s" % (moved, new, gone))
+
+    two = {"s": {"hits": 3, "lift_mean": 1.0}, "t": {"hits": 1}}
+    moved, new, gone = ci_measure.compare({"s": {"hits": 3, "lift_mean": 1.0}}, two)
+    if len(gone) != 1 or moved or new:
+        fail("one scenario of two dropping out was not reported: gone=%s" % gone)
+
+    # And the counters the game really prints. This is a WAKELOG line copied from
+    # a log, with the numbers changed: every one of these was being printed and
+    # read by nothing at all until this commit.
+    w = ci_measure.measure("fixture", "LogTemp: Display: WAKELOG live=6 of 24 "
+                           "tracked=ShipPawn_0:3  ignored=3 stranded=2 doubled=1 "
+                           "stolen=5 discarded=7 splashes=8 alive=0 seen=0 lost=4\n")
+    got = (w.get("wake_stranded_max"), w.get("wake_doubled_max"),
+           w.get("wake_stolen_max"), w.get("wake_discarded_max"),
+           w.get("wake_ignored_max"), w.get("splash_lost_max"),
+           w.get("wake_live_max"))
+    if got != (2, 1, 5, 7, 3, 4, 6):
+        fail("the wake counters read %s from a line holding "
+             "(2, 1, 5, 7, 3, 4, 6)" % (got,))
+
     # And the counter the review caught: it must match the line the game really
     # prints. This is the text from ShipPawn.cpp, not a paraphrase of it.
     sunk = ci_measure.measure("fixture", """
