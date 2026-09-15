@@ -452,7 +452,8 @@ def check_comparison():
         "LogTemp: Display: PRIZELOG MerchantShipPawn_0 taken value=1200 cargo=1200 "
         "hull=1.00 rig=0.55 zone=rig t=70.9 purse=1200 prizes=1" + chr(10) +
         "LogTemp: Display: PRIZELOG PURSE purse=1200 prizes=1 valueMax=1200 "
-        "cargo=1200 manned=0 refused=0 handsOut=0 closest=272" + chr(10))
+        "cargo=1200 manned=0 refused=0 handsSent=0 closest=272 landed=0 "
+        "landedValue=0 handsHome=0" + chr(10))
     want = {"purse_end": 1200, "prizes_taken": 1, "prize_value_max": 1200,
             "prize_hull_at_take": 1.0, "prize_rig_at_take": 0.55,
             "prize_strike_zone": 1, "purse_balances": 1}
@@ -464,7 +465,8 @@ def check_comparison():
         "LogTemp: Display: PRIZELOG MerchantShipPawn_0 taken value=696 cargo=1200 "
         "hull=0.58 rig=1.00 zone=hull t=83.1 purse=696 prizes=1" + chr(10) +
         "LogTemp: Display: PRIZELOG PURSE purse=696 prizes=1 valueMax=696 "
-        "cargo=1200 manned=0 refused=0 handsOut=0 closest=272" + chr(10))
+        "cargo=1200 manned=0 refused=0 handsSent=0 closest=272 landed=0 "
+        "landedValue=0 handsHome=0" + chr(10))
     want = {"purse_end": 696, "prize_hull_at_take": 0.58,
             "prize_rig_at_take": 1.0, "prize_strike_zone": 0, "purse_balances": 1}
     got = {k: ph.get(k) for k in want}
@@ -480,7 +482,8 @@ def check_comparison():
         "LogTemp: Display: PRIZELOG MerchantShipPawn_1 taken value=600 cargo=1200 "
         "hull=0.50 rig=1.00 zone=hull t=90.0 purse=1200 prizes=2" + chr(10) +
         "LogTemp: Display: PRIZELOG PURSE purse=1000 prizes=2 valueMax=600 "
-        "cargo=1200 manned=0 refused=0 handsOut=0 closest=50" + chr(10))
+        "cargo=1200 manned=0 refused=0 handsSent=0 closest=50 landed=0 "
+        "landedValue=0 handsHome=0" + chr(10))
     if bad.get("purse_balances") != 0:
         fail("a purse that does not add up read purse_balances=%s"
              % bad.get("purse_balances"))
@@ -493,14 +496,23 @@ def check_comparison():
         "LogTemp: Display: PRIZELOG MerchantShipPawn_0 taken value=1200 cargo=1200 "
         "hull=1.00 rig=0.55 zone=rig t=70.9 purse=1200 prizes=1" + chr(10) +
         "LogTemp: Display: PRIZELOG MerchantShipPawn_0 manned by=EnemyShipPawn_0 "
-        "crew=12 closest=65m spent=20.0 t=133.8 manned=1 handsOut=12" + chr(10) +
+        "crew=12 closest=65m spent=20.0 t=133.8 manned=1 handsSent=12" + chr(10) +
         "LogTemp: Display: PRIZELOG PURSE purse=2400 prizes=2 valueMax=1200 "
-        "cargo=1200 manned=2 refused=0 handsOut=24 closest=65" + chr(10) +
+        "cargo=1200 manned=2 refused=0 handsSent=24 closest=65 landed=1 "
+        "landedValue=1200 handsHome=12" + chr(10) +
         "LogTemp: Display: SEALOG EnemyShipPawn_0 landTicks=0 clawOffs=0 "
         "rejoinTicks=0 avoidTicks=0 pursuitTicks=2619 prizeTicks=8501" + chr(10))
     want = {"purse_end": 2400, "prizes_taken": 2, "prizes_manned": 2,
-            "prizes_refused": 0, "prize_hands_out": 24, "prize_closest_m": 65.0,
-            "prize_ticks_max": 8501, "pursuit_ticks_max": 2619}
+            "prizes_refused": 0, "prize_hands_sent": 24, "prize_closest_m": 65.0,
+            "prize_ticks_max": 8501, "pursuit_ticks_max": 2619,
+            # The port's three, off the same line: two prizes taken and manned,
+            # ONE of them home. purse_end 2400 beside purse_landed 1200 is the
+            # whole distinction - what she was worth against what reached the
+            # quay - and a reader that collapsed them would show up here.
+            "prizes_landed": 1, "purse_landed": 1200, "prize_hands_home": 12}
+    # prize_hands_home means men who reached a DECK, not men who reached the
+    # quay. A mutation that removed the return left it reading 12 until the two
+    # were separated; the SHIPLOG line now carries both, crew= and returned=.
     got = {k: pm.get(k) for k in want}
     if got != want:
         fail("the possession lines read %s, wanted %s" % (got, want))
@@ -512,8 +524,9 @@ def check_comparison():
         "LogTemp: Display: PRIZELOG MerchantShipPawn_0 REFUSED by=EnemyShipPawn_0: "
         "28 hands aboard, 16 would be left, floor is 20 t=146.3 refused=1" + chr(10) +
         "LogTemp: Display: PRIZELOG PURSE purse=1200 prizes=1 valueMax=1200 "
-        "cargo=1200 manned=0 refused=1 handsOut=0 closest=41" + chr(10))
-    want = {"prizes_manned": 0, "prizes_refused": 1, "prize_hands_out": 0,
+        "cargo=1200 manned=0 refused=1 handsSent=0 closest=41 landed=0 "
+        "landedValue=0 handsHome=0" + chr(10))
+    want = {"prizes_manned": 0, "prizes_refused": 1, "prize_hands_sent": 0,
             "prizes_taken": 1, "prize_closest_m": 41.0}
     got = {k: pf.get(k) for k in want}
     if got != want:

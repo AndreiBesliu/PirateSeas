@@ -1135,6 +1135,17 @@ bool AShipPawn::DetachPrizeCrew(int32 Count)
 	return true;
 }
 
+int32 AShipPawn::TakeBackPrizeCrew(int32 Count)
+{
+	if (Count <= 0)
+	{
+		return 0;
+	}
+	Hands += Count;
+	HandsReturned += Count;
+	return Count;
+}
+
 void AShipPawn::ManAsPrize(AShipPawn* Taker, int32 CrewAboard)
 {
 	if (bIsPrize)
@@ -1143,6 +1154,7 @@ void AShipPawn::ManAsPrize(AShipPawn* Taker, int32 CrewAboard)
 	}
 	bIsPrize = true;
 	PrizeCrewAboard = CrewAboard;
+	TakenBy = Taker;
 	// Her own people are prisoners; the men who work her now are the ones who
 	// came across. She keeps lying to, as she has since she struck.
 	Hands = CrewAboard;
@@ -1151,6 +1163,44 @@ void AShipPawn::ManAsPrize(AShipPawn* Taker, int32 CrewAboard)
 	UE_LOG(LogTemp, Display, TEXT("SHIPLOG %s MANNED by=%s crew=%d t=%.1f"),
 		*GetName(), Taker ? *Taker->GetName() : TEXT("none"), CrewAboard,
 		GetWorld()->GetTimeSeconds());
+}
+
+bool AShipPawn::LandPrize(int32& OutReturned)
+{
+	OutReturned = 0;
+	if (!bIsPrize || bPrizeLanded)
+	{
+		return false;
+	}
+	bPrizeLanded = true;
+	const int32 Home = PrizeCrewAboard;
+	PrizeCrewAboard = 0;
+	Hands = 0;
+	SailTrimInput = -1.f;
+	SteerInput = 0.f;
+
+	// Captor, not Owner: AActor already has an Owner and a local of that name
+	// hides it, which this project compiles as an error on purpose.
+	AShipPawn* Captor = TakenBy.Get();
+	if (Captor && !Captor->IsSunk())
+	{
+		OutReturned = Captor->TakeBackPrizeCrew(Home);
+		UE_LOG(LogTemp, Display,
+			TEXT("CREWLOG %s has %d hands home from a prize, %d/%d aboard (%d still away)"),
+			*Captor->GetName(), OutReturned, Captor->Hands, Captor->HandsMax,
+			Captor->GetHandsAway());
+	}
+	else
+	{
+		// Said out loud rather than quietly dropped: the men reached port,
+		// the ship that sent them did not, and nobody is the better for it.
+		UE_LOG(LogTemp, Warning,
+			TEXT("CREWLOG %d hands off %s have no ship to return to"),
+			Home, *GetName());
+	}
+	UE_LOG(LogTemp, Display, TEXT("SHIPLOG %s LANDED crew=%d returned=%d t=%.1f"),
+		*GetName(), Home, OutReturned, GetWorld()->GetTimeSeconds());
+	return true;
 }
 
 void AShipPawn::MakePort()

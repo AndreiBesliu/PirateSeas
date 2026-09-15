@@ -398,6 +398,12 @@ void ASeaGameMode::SpawnIslands()
 	{
 		Births.Add(Landfall);
 	}
+	if (bHasPort)
+	{
+		// An island on the roadstead is not a scenario either: it is a prize
+		// sailed onto a beach by her own orders.
+		Births.Add(PortLocation);
+	}
 
 	int32 Built = 0;
 	for (int32 i = 0; i < Count; ++i)
@@ -982,6 +988,34 @@ void ASeaGameMode::ReadConvoyFlags()
 		FMath::Abs(FMath::FindDeltaAngleDegrees(ConvoyCourseYaw, WindFrom)),
 		Landfall.X, Landfall.Y, ConvoyRangeM, ConvoyNeed);
 
+
+	// The port. Downwind of the convoy by default, because twelve men do not
+	// beat a laden hull home; -PortX/-PortY put it wherever you like.
+	int32 PortOn = 0;
+	if (FParse::Value(FCommandLine::Get(), TEXT("Port="), PortOn) && PortOn > 0)
+	{
+		bHasPort = true;
+	}
+	if (bHasPort)
+	{
+		FParse::Value(FCommandLine::Get(), TEXT("PortOffingM="), PortOffingM);
+		float PortRadiusM = PortRadiusCm * 0.01f;
+		if (FParse::Value(FCommandLine::Get(), TEXT("PortRadiusM="), PortRadiusM))
+		{
+			PortRadiusCm = PortRadiusM * 100.f;
+		}
+		const FVector Downwind = FRotator(0.f, WindTo, 0.f).Vector();
+		FVector Where = ConvoyStart + Downwind * PortOffingM * 100.f;
+		FParse::Value(FCommandLine::Get(), TEXT("PortX="), Where.X);
+		FParse::Value(FCommandLine::Get(), TEXT("PortY="), Where.Y);
+		PortLocation = FVector(
+			FMath::Clamp(Where.X, -OceanHalfExtentCm, OceanHalfExtentCm),
+			FMath::Clamp(Where.Y, -OceanHalfExtentCm, OceanHalfExtentCm), 0.f);
+		UE_LOG(LogTemp, Display,
+			TEXT("PORTLOG roadstead at (%.0f,%.0f), radius %.0f m, %.0f m downwind of the convoy"),
+			PortLocation.X, PortLocation.Y, PortRadiusCm * 0.01f, PortOffingM);
+	}
+
 	// -RaiderSide=weather|lee moves the SQUADRON's spawn to that side of the
 	// convoy, along the wind. The raider in a measured run is an ordinary
 	// enemy hull with the ordinary captain, who hunts the nearest hostile
@@ -1063,6 +1097,48 @@ void ASeaGameMode::SpawnConvoy()
 
 void ASeaGameMode::SamplePrizes()
 {
+	// PRIZES COMING HOME, and note WHERE this lives. It was written first
+	// inside SampleWeatherGauge, next to the merchants' own landfall, because
+	// it is the same question asked of the other side. It never ran: that
+	// function returns on bMissionOver and FinishMission clears its timer, and
+	// the convoy is decided at about seventy seconds while a prize needs three
+	// hundred to get home. Measured, and the log said it in one line - a prize
+	// six metres from the quay beside landed=0. It belongs on THIS timer, the
+	// one that is never cleared, and the reason that timer exists at all.
+	if (bHasPort)
+	{
+		const float Now = GetWorld()->GetTimeSeconds();
+		for (const TWeakObjectPtr<AShipPawn>& Ptr : Convoy)
+		{
+			AShipPawn* Home = Ptr.Get();
+			if (!IsValid(Home) || !Home->IsPrize() || Home->IsSunk())
+			{
+				continue;
+			}
+			if (FVector::Dist2D(Home->GetActorLocation(), PortLocation) > PortRadiusCm)
+			{
+				continue;
+			}
+			// The landing and the men are asked SEPARATELY: a prize reaches
+			// the quay whether or not the ship that took her is still afloat
+			// to receive her crew back.
+			int32 Back = 0;
+			if (!Home->LandPrize(Back))
+			{
+				continue;
+			}
+			++PrizesLanded;
+			HandsHome += Back;
+			// The money, REALISED. Purse is what she was worth when she
+			// struck; this is what actually reached the quay.
+			Landed += Home->GetPrizeValue();
+			UE_LOG(LogTemp, Display,
+				TEXT("PRIZELOG %s landed value=%d t=%.1f landed=%d of %d purse=%d handsHome=%d"),
+				*Home->GetName(), Home->GetPrizeValue(), Now, PrizesLanded,
+				PrizesManned, Landed, HandsHome);
+		}
+	}
+
 	for (const TWeakObjectPtr<AShipPawn>& Ptr : Convoy)
 	{
 		AShipPawn* Prize = Ptr.Get();
@@ -1123,10 +1199,32 @@ void ASeaGameMode::SamplePrizes()
 		if (Taker->DetachPrizeCrew(PrizeCrewHands))
 		{
 			Prize->ManAsPrize(Taker, PrizeCrewHands);
+			// And she sails, if there is anywhere to sail to. The same
+			// controller that brought her down the coast takes her home.
+			//
+			// The ELSE is not tidiness. She was given a destination when she
+			// was spawned - the convoy's own landfall - and striking does not
+			// take it away, so without this a prize in a world with no port
+			// would have stood on for the enemy's roadstead with your men
+			// aboard her.
+			if (AShipAIController* PrizeAI =
+				Cast<AShipAIController>(Prize->GetController()))
+			{
+				if (bHasPort)
+				{
+					PrizeAI->SetDestination(PortLocation);
+				}
+				else
+				{
+					PrizeAI->ClearDestination();
+				}
+			}
 			++PrizesManned;
+			// Cumulative SENT, mirrored here so a raider who is sunk with men
+			// still at sea does not take the number down with her.
 			HandsOutInPrizes = Taker->GetHandsInPrizes();
 			UE_LOG(LogTemp, Display,
-				TEXT("PRIZELOG %s manned by=%s crew=%d closest=%.0fm spent=%.1f t=%.1f manned=%d handsOut=%d"),
+				TEXT("PRIZELOG %s manned by=%s crew=%d closest=%.0fm spent=%.1f t=%.1f manned=%d handsSent=%d"),
 				*Prize->GetName(), *Taker->GetName(), PrizeCrewHands, BestM,
 				Spent, Now, PrizesManned, HandsOutInPrizes);
 		}
@@ -1284,6 +1382,7 @@ void ASeaGameMode::HandleShipStruck(AShipPawn* Ship, AActor* Causer)
 		const float Sound = FMath::Clamp(
 			Ship->GetHullIntegrity() / FMath::Max(1.f, Ship->GetMaxHullIntegrity()), 0.f, 1.f);
 		const int32 Value = FMath::RoundToInt(Laden->GetCargoValue() * Sound);
+		Ship->SetPrizeValue(Value);
 		Purse += Value;
 		++PrizesTaken;
 		PrizeValueMax = FMath::Max(PrizeValueMax, Value);
@@ -1383,9 +1482,10 @@ void ASeaGameMode::QuitNow()
 	// counter that is simply absent from thirteen scenarios cannot be told
 	// from one that stopped being written.
 	UE_LOG(LogTemp, Display,
-		TEXT("PRIZELOG PURSE purse=%d prizes=%d valueMax=%d cargo=%d manned=%d refused=%d handsOut=%d closest=%.0f"),
+		TEXT("PRIZELOG PURSE purse=%d prizes=%d valueMax=%d cargo=%d manned=%d refused=%d handsSent=%d closest=%.0f landed=%d landedValue=%d handsHome=%d"),
 		Purse, PrizesTaken, PrizeValueMax, ConvoyCargo, PrizesManned,
-		PrizesRefused, HandsOutInPrizes, PrizeClosestM);
+		PrizesRefused, HandsOutInPrizes, PrizeClosestM, PrizesLanded, Landed,
+		HandsHome);
 	UE_LOG(LogTemp, Display, TEXT("SEALOG quitting at t=%.1fs"),
 		GetWorld()->GetTimeSeconds());
 	if (GEngine)

@@ -702,3 +702,30 @@ nici la sfârşitul misiunii. Cele douăzeci de secunde se CUMULEAZĂ (poţi ple
 reveni). Şi în rulările măsurate cel care ia prada e un căpitan AI cu
 `-AIPrize=1`; cu doctrina stinsă, cel mai aproape ajunge natural de o navă
 oprită e 272 m, deci un jucător trebuie să vrea să se apropie.
+
+## 29. Portul: se vede că prada pleacă singură acasă?
+
+**Ce te uiți:** `-Convoy=2 -EnemyCount=0 -Port=1`. Opreşti un negustor, te
+apropii şi trimiţi oameni la bord. Apoi uită-te ce face nava aia, şi la cele
+două rânduri din panou: PURSE şi LANDED.
+
+**Cum arată bine:** După ce oamenii tăi urcă la bord, prada **întinde pânza
+singură** şi pleacă cu vântul din pupă spre radă — nu stă pe loc. Cât e pe drum,
+PURSE arată 1200 şi LANDED arată 0. Când intră în radă, LANDED urcă la 1200,
+bara HANDS de la tine creşte înapoi cu doisprezece, iar textul „12 hands away"
+dispare.
+
+**Cum arată prost:** Prada rămâne pe loc cu pânza strânsă. Sau porneşte şi merge
+în vânt, chinuit, în loc să fugă sub vânt. Sau LANDED urcă fără ca ea să fi
+ajuns. Sau oamenii nu se întorc niciodată. Sau cele două rânduri se suprapun
+peste ce e sub ele.
+
+**De ce nu pot eu:** Pot măsura tot — când a plecat, cu ce viteză, când a intrat,
+câţi oameni s-au întors, cât a ajuns la chei — şi am măsurat. Dacă „prada mea
+pleacă acasă" se CITEŞTE ca atare pe ecran, sau dacă drumul ei arată ca o navă
+condusă de doisprezece oameni, sunt judecăţi de ochi.
+
+**Ce știu deja și n-am ascuns:** rada e un cerc pe apă, nu un oraş — n-ai ce
+vedea acolo. Nimeni nu încearcă să-ţi recaptureze prada pe drum. Punga tot nu
+cumpără nimic. Şi din două prăzi luate, în cinci sute de secunde doar una
+ajunge — a doua rămâne pe mare când se termină partida.

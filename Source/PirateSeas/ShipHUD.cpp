@@ -390,7 +390,18 @@ void AShipHUD::DrawGuns(AShipPawn* Ship)
 			// What the prizes are worth. It buys nothing yet and the README
 			// says so; a number on the panel that implied a shop would be
 			// the panel telling a lie the game cannot keep.
-			const int32 Away = Sea->GetHandsOutInPrizes();
+			// Men actually away NOW: sent, less those who came home with a
+			// prize. The panel must not tell a captain he is short of twelve
+			// men who are standing on his own deck again.
+			const int32 Away = Sea->GetHandsAwayNow();
+			if (Sea->HasPort())
+			{
+				DrawText(FString::Printf(TEXT("LANDED %d  of %d claimed, %d prize%s home"),
+					Sea->GetLanded(), Sea->GetPurse(), Sea->GetPrizesLanded(),
+					Sea->GetPrizesLanded() == 1 ? TEXT("") : TEXT("s")),
+					Sea->GetLanded() > 0 ? Good : Faint, X, Y, Small, Scale);
+				Y += Line * 0.95f;
+			}
 			DrawText(Away > 0
 				? FString::Printf(TEXT("PURSE  %d  from %d prize%s, %d manned, %d hands away"),
 					Sea->GetPurse(), Sea->GetPrizesTaken(),

@@ -72,11 +72,17 @@ vânt în plante şi greement, `-Hour=` pentru ora din zi.
 10. **Un contor care creşte cât timp nava nu realizează nimic măsoară lungimea
    rulării.** Un raider refuzată stătea lângă pradă până la final: 13.224 de
    ticuri de nimic. Orice stare „stau şi aştept" are nevoie de o ieşire.
-11. **Întinderea rulării nu repară o geometrie greşită.** `prizes_refused` a
+11. **Un timer oprit la sfârşitul misiunii nu vede ce urmează după ea.**
+   Verificarea „a ajuns prada în radă?" a fost scrisă în `SampleWeatherGauge`,
+   care se opreşte la `bMissionOver` — iar convoiul se decide la 71 s, în timp
+   ce o pradă are nevoie de 356. Logul a spus-o într-un rând: o pradă la ŞASE
+   metri de chei lângă `landed=0`. Orice lucru care se întâmplă după deznodământ
+   are nevoie de propriul timer.
+12. **Întinderea rulării nu repară o geometrie greşită.** `prizes_refused` a
    citit 0 la 400 s şi la 500 s; cauza nu era timpul, ci că ţinta rămăsese la
    350 m SUB VÂNT, ceea ce polara proiectului preţuieşte la sute de secunde.
    Refuzul s-a făcut determinist, nu răbdător.
-12. **Un număr derivat se scrie cu ingredientele pe aceeaşi linie**
+13. **Un număr derivat se scrie cu ingredientele pe aceeaşi linie**
    (`value=1200 cargo=1200 hull=1.00`), şi suma lui se re-derivă într-o
    fixtură (`purse_balances`): altfel o greşeală de transcriere în bani e o
    cifră pe care trebuie s-o vadă cineva cu ochiul.
@@ -129,7 +135,15 @@ Livrat:
    (aprinsă): 0 contra 2 prăzi stăpânite, 0 contra 24 de oameni plecaţi,
    reîncărcare 1,00 contra 0,75. Plus `prize_shorthanded` pentru podea.
 
-Următorul: magazia (muniţie finită), apoi un port unde punga să cumpere ceva.
+6. **Portul**: `-Port=1` pune o radă SUB VÂNTUL convoiului; o pradă cu echipaj
+   la bord face vela spre ea pe exact drumul unui negustor (`TickMerchant` +
+   `SetDestination`), iar la sosire banii devin reali (`Landed`) şi oamenii se
+   întorc (`HandsReturned`). Perechea `prize_home`/`prize_noport`: 1 contra 0
+   prăzi ajunse, 1200 contra 0 la chei, 12 contra 0 oameni întorşi — şi
+   `purse_end` IDENTIC, fiindcă valoarea se stabileşte la pavilion.
+
+Următorul: **punga să CUMPERE** (reparaţii de cocă, oameni, muniţie — cocă e
+singurul lucru pe care marea nu-l repară), apoi magazia (muniţie finită).
 **Abordajul rămâne AMÂNAT.**
 
 ## Ce aşteaptă ochiul owner-ului

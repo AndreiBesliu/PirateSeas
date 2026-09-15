@@ -58,7 +58,17 @@ public:
 	int32 GetPurse() const { return Purse; }
 	int32 GetPrizesTaken() const { return PrizesTaken; }
 	int32 GetPrizesManned() const { return PrizesManned; }
-	int32 GetHandsOutInPrizes() const { return HandsOutInPrizes; }
+	/** Men SENT to prizes over the whole run, cumulative. Not men currently
+	 *  away: both halves are kept monotonic and the difference is derived,
+	 *  because a counter that goes up and down cannot be read as a total. */
+	int32 GetHandsSentToPrizes() const { return HandsOutInPrizes; }
+	int32 GetHandsHome() const { return HandsHome; }
+	int32 GetHandsAwayNow() const { return HandsOutInPrizes - HandsHome; }
+	/** Money CLAIMED at the strike is not money LANDED. A prize pays when she
+	 *  is in the roadstead, and not before. */
+	int32 GetLanded() const { return Landed; }
+	int32 GetPrizesLanded() const { return PrizesLanded; }
+	bool HasPort() const { return bHasPort; }
 
 protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Sea")
@@ -193,6 +203,27 @@ protected:
 	 *  never firing at all. -PrizeBoatSeconds=N. */
 	UPROPERTY(EditDefaultsOnly, Category = "Prize")
 	float PrizeBoatSeconds = 20.f;
+
+	/** --- the port ------------------------------------------------------
+	 *
+	 *  Your own anchorage. A prize with your men aboard runs for it, and the
+	 *  money is not yours until she is in it. -Port=1 puts one on the water;
+	 *  without the flag there is none, and everything already measured is
+	 *  exactly as it was.
+	 *
+	 *  Laid DOWNWIND of where the convoy is sighted, which is not decoration:
+	 *  a prize is worked by twelve men where sixty sailed her, and twelve men
+	 *  do not beat a laden hull to windward. Running home before the wind is
+	 *  what a prize master would do and what this project's own polar makes
+	 *  him do. -PortX/-PortY override the position outright. */
+	UPROPERTY(EditDefaultsOnly, Category = "Port")
+	bool bHasPort = false;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Port")
+	float PortOffingM = 900.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Port")
+	float PortRadiusCm = 15000.f;
 
 	/** How far off the convoy -RaiderSide= puts the raider, in metres, along
 	 *  the wind. -RaiderOffingM=. */
@@ -401,6 +432,10 @@ private:
 	int32 PrizesManned = 0;
 	int32 PrizesRefused = 0;
 	int32 HandsOutInPrizes = 0;
+	int32 PrizesLanded = 0;
+	int32 Landed = 0;
+	int32 HandsHome = 0;
+	FVector PortLocation = FVector::ZeroVector;
 	/** Closest any hunter came to a struck prize, in metres, over the run.
 	 *  Written whether the doctrine is on or off: it is how the hailing
 	 *  distance was chosen, and how a take that never happens explains

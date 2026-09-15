@@ -183,6 +183,10 @@ public:
 	 *  are sailing her, not serving your guns. That is the whole cost, and it
 	 *  is paid out of the same pool the crew slice made scarce. */
 	bool IsPrize() const { return bIsPrize; }
+	/** What she was worth at the moment she struck. Set by the game mode
+	 *  there, spent by the game mode at the quay. */
+	int32 GetPrizeValue() const { return PrizeValue; }
+	void SetPrizeValue(int32 Value) { PrizeValue = Value; }
 	int32 GetPrizeCrewAboard() const { return PrizeCrewAboard; }
 	/** Latched, cumulative: men sent away to prizes over the whole run. */
 	int32 GetHandsInPrizes() const { return HandsInPrizes; }
@@ -198,8 +202,39 @@ public:
 	 *  with shot. */
 	bool DetachPrizeCrew(int32 Count);
 
+	/** The mirror of DetachPrizeCrew: men coming back off a prize that got
+	 *  home. Returns how many. One function so that "the men returned" is a
+	 *  single fact in a single place - the first version set the pawn's
+	 *  counters in one statement and the caller's report in another, and a
+	 *  mutation that removed the first left the second saying twelve men came
+	 *  home to a ship that never got them. */
+	int32 TakeBackPrizeCrew(int32 Count);
+
 	/** Marks her as taken, and puts the prize crew aboard HER. */
 	void ManAsPrize(AShipPawn* Taker, int32 CrewAboard);
+
+	/** Who took her, so her crew knows whose deck to come home to. A weak
+	 *  pointer: a raider can be sunk while her prize is still running for
+	 *  the port, and then the men have no ship to return to - which is the
+	 *  truth and is logged rather than papered over. */
+	AShipPawn* GetTakenBy() const { return TakenBy.Get(); }
+
+	/** She is in the roadstead. Returns true if this is the landing (it is
+	 *  idempotent), and puts into OutReturned the number of men who actually
+	 *  reached a deck - which is NOT the same as the number who reached the
+	 *  quay: a raider can be sunk while her prize is still running home, and
+	 *  then nobody gets those men back.
+	 *
+	 *  The two were one number until a mutation test removed the return and
+	 *  the key called prize_hands_home did not move. It was counting men
+	 *  landed WITH a prize, under a name that promised men landed ON A SHIP. */
+	bool LandPrize(int32& OutReturned);
+
+	/** Men come home from a prize delivered. Latched and cumulative, like
+	 *  HandsInPrizes, so both stay monotonic and the two reconcile:
+	 *  Hands + Casualties + (HandsInPrizes - HandsReturned) == HandsMax. */
+	int32 GetHandsReturned() const { return HandsReturned; }
+	int32 GetHandsAway() const { return HandsInPrizes - HandsReturned; }
 
 	/** The rig threshold that brings a merchant to strike. Read by the game
 	 *  mode so the prize log can say WHICH of the two thresholds did it,
@@ -1034,8 +1069,12 @@ private:
 	 *  discovered later: once a prize crew has left, Hands + Casualties no
 	 *  longer equals HandsMax. The missing men are here. */
 	int32 HandsInPrizes = 0;
+	int32 HandsReturned = 0;
 	bool bIsPrize = false;
+	bool bPrizeLanded = false;
+	int32 PrizeValue = 0;
 	int32 PrizeCrewAboard = 0;
+	TWeakObjectPtr<AShipPawn> TakenBy;
 	float RepairShare = 0.f;
 	/** Latched: integrity restored over the whole run, all targets. */
 	float RepairedTotal = 0.f;

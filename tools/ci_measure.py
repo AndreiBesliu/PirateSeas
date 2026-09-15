@@ -221,6 +221,29 @@ SCENARIOS = {
                           "-RaiderOffingM=600", "-ConvoyCargo=1200",
                           "-AIAimHigh=1", "-AIPrize=1", "-EnemyHands=28",
                           "-ShipQuitAfter=300"],
+    # THE PORT. A prize with twelve men aboard runs for a roadstead laid
+    # downwind, and the money is not the raider's until she is in it. The two
+    # halves are one flag apart, -Port=, and both run 500 s because that is
+    # what the trip takes: manned at 134 s, alongside the quay at 356. They
+    # are a separate PAIR rather than a variation on prize_manned, which stops
+    # at 400 s - stretching that scenario instead would have made the quit
+    # time a second difference between the halves, and then a landing could be
+    # credited to the extra hundred seconds rather than to the port.
+    #
+    # Keys that must differ: prizes_landed, purse_landed, prize_hands_home.
+    # purse_end must NOT differ: what she is worth is settled when she strikes,
+    # and a port that changed that would mean the value was never banked where
+    # the last commit says it was.
+    "prize_home": ["-WindBearing=0", "-WindSpeed=12", "-Convoy=2",
+                   "-ConvoyX=120000", "-ConvoyY=150000", "-ConvoyWindAngle=90",
+                   "-ConvoyRangeM=1200", "-EnemyCount=1", "-RaiderSide=weather",
+                   "-RaiderOffingM=600", "-ConvoyCargo=1200", "-AIAimHigh=1",
+                   "-AIPrize=1", "-Port=1", "-ShipQuitAfter=500"],
+    "prize_noport": ["-WindBearing=0", "-WindSpeed=12", "-Convoy=2",
+                     "-ConvoyX=120000", "-ConvoyY=150000", "-ConvoyWindAngle=90",
+                     "-ConvoyRangeM=1200", "-EnemyCount=1", "-RaiderSide=weather",
+                     "-RaiderOffingM=600", "-ConvoyCargo=1200", "-AIAimHigh=1",
+                     "-AIPrize=1", "-ShipQuitAfter=500"],
 }
 
 
@@ -473,8 +496,9 @@ def measure(name, text):
     # transcription bug in money then reads as a boolean that MOVED rather than
     # as a number somebody has to eyeball.
     purse = re.search(r"PRIZELOG PURSE purse=(\d+) prizes=(\d+) valueMax=(\d+) "
-                      r"cargo=(\d+) manned=(\d+) refused=(\d+) handsOut=(\d+) "
-                      r"closest=(-?[0-9.]+)", text)
+                      r"cargo=(\d+) manned=(\d+) refused=(\d+) handsSent=(\d+) "
+                      r"closest=(-?[0-9.]+) landed=(\d+) landedValue=(\d+) "
+                      r"handsHome=(\d+)", text)
     if purse:
         m["purse_end"] = int(purse.group(1))
         m["prizes_taken"] = int(purse.group(2))
@@ -485,8 +509,19 @@ def measure(name, text):
         # reading zero.
         m["prizes_manned"] = int(purse.group(5))
         m["prizes_refused"] = int(purse.group(6))
-        m["prize_hands_out"] = int(purse.group(7))
+        # RENAMED from prize_hands_out, which read as "men currently away" and
+        # meant "men ever sent". With the port, prizes come home and the two
+        # stopped being the same number; a field with two meanings is the
+        # defect this project keeps paying for. Both halves are cumulative and
+        # monotonic, and "away now" is the difference.
+        m["prize_hands_sent"] = int(purse.group(7))
         m["prize_closest_m"] = round(float(purse.group(8)), 0)
+        # The port. purse_end is what the prizes were WORTH; purse_landed is
+        # what reached the quay. They are equal only when every prize got
+        # home, and the gap is the whole point of having a port at all.
+        m["prizes_landed"] = int(purse.group(9))
+        m["purse_landed"] = int(purse.group(10))
+        m["prize_hands_home"] = int(purse.group(11))
     taken = re.findall(r"PRIZELOG \S+ taken value=(\d+) cargo=(\d+) hull=([0-9.]+) "
                        r"rig=([0-9.]+) zone=(\w+) t=[0-9.]+ purse=(\d+) prizes=(\d+)", text)
     if taken:

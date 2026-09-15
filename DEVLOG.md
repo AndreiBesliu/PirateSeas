@@ -3503,3 +3503,105 @@ totul la loc.
 `prize_ticks_max`.
 
 **Task Completed.**
+
+---
+
+## Task Started — 15.09.2026 (mecanica, commit 6: portul)
+
+**Prompt:** „continua cu commit 2" → întrebat, owner-ul a ales **portul (punga să
+cumpere ceva)** din trei variante
+**Model:** Claude Opus 5
+
+Portul, felia 1: **acolo unde o pradă devine bani şi oamenii se întorc.**
+
+O pradă cu echipajul tău la bord face vela şi fuge spre o radă prietenă pe exact
+acelaşi drum pe care un negustor îl navighează spre radă — fiindcă exact asta e:
+un negustor cu altă destinaţie. Zero comportament nou: `TickMerchant` +
+`SetDestination`, amândouă deja măsurate.
+
+Rada e aşezată implicit **sub vântul** convoiului, şi nu din decor: o pradă e
+lucrată de doisprezece oameni acolo unde şaizeci o navigau, iar doisprezece
+oameni nu duc o cocă încărcată în vânt. Polara proiectului o spune, aşezarea o
+respectă.
+
+### Două cifre, nu una
+
+`PURSE` e cât valorau prăzile când au coborât pavilionul. `LANDED` e cât a ajuns
+la chei. Sunt egale doar dacă toate au ajuns acasă — şi din două prăzi luate, în
+cinci sute de secunde **una** ajunge. Cealaltă e pe mare când se termină partida,
+şi aia e o pierdere adevărată.
+
+Perechea `prize_home` / `prize_noport`, un singur flag:
+
+| | prăzi ajunse | la chei | oameni întorşi | tunuri la quit |
+|---|---|---|---|---|
+| fără port | 0 | 0 | 0 | 0,75 |
+| cu port | 1 | 1200 | 12 | **1,00** |
+
+`purse_end` e IDENTIC în ambele (2400) — şi trebuie să fie: valoarea se
+stabileşte la pavilion, iar un port care ar schimba-o ar însemna că nu fusese
+încasată acolo unde commit-ul trecut spune că a fost. Iar reîncărcarea care se
+întoarce la 1,00 e mecanica plătind a doua oară, într-un loc independent: cei
+doisprezece oameni întorşi duc tunurile înapoi la 48.
+
+### Capcana în care am căzut, deşi era scrisă
+
+Verificarea „a ajuns prada în radă?" am pus-o prima dată în `SampleWeatherGauge`,
+lângă rada negustorilor, fiindcă e aceeaşi întrebare pusă celeilalte tabere.
+**N-a rulat niciodată.** Funcţia aia iese pe `bMissionOver`, iar `FinishMission`
+îi şterge timerul — convoiul se decide la 71 s, prada are nevoie de 356.
+
+Recenzia de design de acum două commit-uri identificase exact capcana asta la un
+alt design („e moartă prin construcţie"), şi tot am intrat în ea. Ce a salvat-o e
+instrumentul: logul a spus-o într-un singur rând — o pradă la **şase metri** de
+chei lângă `landed=0`. Verificarea a mutat pe timerul prăzilor, cel care nu se
+şterge niciodată, şi care pentru asta există.
+
+### Un defect pe care l-a prins suita, nu eu
+
+`prize_manned` — scenariu FĂRĂ port — şi-a mişcat două numere de siaj. Cauza: un
+negustor primeşte destinaţia (rada lui) la naştere, iar coborârea pavilionului
+nu i-o ia. Deci o pradă luată într-o lume fără port pleca spre **rada
+inamicului**, cu doisprezece oameni de-ai tăi la bord. Reparat la cauză:
+`ClearDestination()` când nu există port.
+
+Două numere de siaj într-un scenariu care n-are nicio legătură cu portul au fost
+tot ce a ieşit la suprafaţă. Fără suită, ar fi fost o navă care pleacă în direcţia
+greşită şi nimeni n-ar fi ştiut.
+
+### Un câmp care ar fi devenit mincinos
+
+`handsOut=` însemna „oameni trimişi vreodată", şi se citea „oameni plecaţi
+acum". Cât timp nimeni nu se întorcea, erau acelaşi număr. Portul le-a despărţit.
+Redenumit `handsSent=`, cu `handsHome=` lângă el, amândouă monotone, iar „plecaţi
+acum" se derivă. Cheia din linia de bază s-a redenumit la fel, ceea ce poarta a
+raportat ca 18 măsurători care „au încetat să fie luate" — exact ce trebuie să
+raporteze.
+
+### Mutaţii, şi una care a găsit instrumentul, nu codul
+
+Restaurate din copie pristină şi comparate bit cu bit: (A) prada nu navighează —
+rămâne unde a fost luată, `prizes_landed` 1 → 0, perechea se prăbuşeşte; (C)
+pristin — totul la loc.
+
+(B) **oamenii nu se mai întorc** a fost interesantă. Prima oară, `prize_hands_home`
+a citit tot 12. Nu codul era în regulă — **cheia era**: număra oamenii care ajung
+la CHEI, sub un nume care promitea oameni ajunşi pe o PUNTE. Cât timp cele două
+erau acelaşi număr, nimeni n-avea cum să vadă. Cauza era că pawn-ul îşi seta
+contoarele într-o instrucţiune şi raporta apelantului în alta, deci o mutaţie
+care o scotea pe prima o lăsa pe a doua să spună că doisprezece oameni s-au
+întors la o navă care nu i-a primit.
+
+Reparat prin factorizare: `TakeBackPrizeCrew()`, oglinda lui `DetachPrizeCrew()`
+— **o funcţie, un adevăr**. Acum mutaţia dă exact ce trebuie: prada ajunge la
+chei (1200 încasaţi), zero oameni se întorc, tunurile rămân la 0,75.
+
+Suita: **zero numere mutate**. Cele 18 „au încetat să fie măsurate" sunt
+redenumirea deliberată `prize_hands_out` → `prize_hands_sent`; restul sunt chei
+noi (`prizes_landed`, `purse_landed`, `prize_hands_home`) şi cele două scenarii.
+
+**Ce NU face:** punga tot nu CUMPĂRĂ nimic. Portul face banii reali şi aduce
+oamenii înapoi; tunuri, oameni noi şi reparaţii de cocă pe bani sunt felia
+următoare. Şi nimeni nu încearcă să recaptureze o pradă pe drum.
+
+**Task Completed.**

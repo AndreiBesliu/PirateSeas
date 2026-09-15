@@ -36,6 +36,14 @@ public:
 	/** Where a merchant is bound. The game mode lays the course; she sails it. */
 	void SetDestination(const FVector& Where);
 
+	/** She is bound nowhere and lies to. Needed the moment prizes learned to
+	 *  sail: a merchant is given her landfall when she is spawned, and that
+	 *  destination survives her striking - so a prize taken in a world with no
+	 *  port would have made sail for the ENEMY'S roadstead with twelve of your
+	 *  men aboard. Caught by the wake numbers in prize_manned moving, in a
+	 *  scenario that has no port in it at all. */
+	void ClearDestination() { bHasDestination = false; }
+
 	/** Counted, not assumed: both must read 0 in a world with no island. */
 	int32 GetLandTicks() const { return LandTicks; }
 	int32 GetClawOffs() const { return ClawOffs; }

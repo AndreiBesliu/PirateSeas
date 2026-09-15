@@ -112,7 +112,15 @@ void AShipAIController::TickMerchant(AShipPawn* Me, float DeltaSeconds)
 	// Struck or in port she lies to: sail off, helm amidships, EVERY tick.
 	// SailTrimInput is a rate the pawn integrates, so a single furl order
 	// holds only until something overwrites it, and a sinking clears it.
-	if (Me->IsOutOfTheFight() || !bHasDestination)
+	//
+	// A PRIZE IS THE EXCEPTION, and she is the reason this branch is worth
+	// re-reading. A ship that has struck lies to for ever - until somebody
+	// puts a crew aboard her. Then she sails again, to a destination the game
+	// mode gave her, down exactly the same three lines a merchant uses to
+	// make her landfall. That is the whole of "sail a prize home": no new
+	// behaviour, the same seamanship pointed somewhere else.
+	const bool bSailingAsPrize = Me->IsPrize() && !Me->IsSunk() && bHasDestination;
+	if ((Me->IsOutOfTheFight() && !bSailingAsPrize) || !bHasDestination)
 	{
 		Me->SetSailTrimInput(-1.f);
 		Me->SetSteerInput(0.f);
@@ -147,7 +155,8 @@ void AShipAIController::TickMerchant(AShipPawn* Me, float DeltaSeconds)
 	{
 		LogTimer = 0.f;
 		UE_LOG(LogTemp, Display,
-			TEXT("AILOG merchant %s port=%.0fm headingErr=%.0f hull=%.0f speed=%.1fm/s windAng=%.0f rig=%.2f trim=%.2f"),
+			TEXT("AILOG %s %s port=%.0fm headingErr=%.0f hull=%.0f speed=%.1fm/s windAng=%.0f rig=%.2f trim=%.2f"),
+			Me->IsPrize() ? TEXT("prize") : TEXT("merchant"),
 			*Me->GetName(), ToPort.Size2D() * 0.01f, Err, Me->GetHullIntegrity(),
 			Me->GetForwardSpeedMS(), Me->GetWindAngleDeg(), Me->GetRigEfficiency(),
 			Me->GetSailTrim());

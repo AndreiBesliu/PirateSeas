@@ -430,6 +430,29 @@ flag (`-AIAimHigh=`) şi dă fix cifrele astea, la 70,9 s şi 83,1 s.
 Punga se vede în panou sub rândul CONVOY şi se scrie la sfârşitul fiecărei
 rulări (`PRIZELOG PURSE`), inclusiv într-o rulare fără convoi — un zero numărat.
 
+### Portul: unde o pradă devine bani şi oamenii se întorc
+
+`-Port=1` pune o radă prietenă pe apă. O pradă cu echipajul tău la bord **face
+vela şi fuge spre ea** — pe exact acelaşi drum pe care un negustor îl navighează
+spre radă, fiindcă asta şi e: un negustor cu altă destinaţie. Când intră în
+radă, **banii sunt ai tăi** şi **oamenii se întorc pe puntea ta**.
+
+Rada e aşezată implicit **sub vântul** convoiului (`-PortOffingM=`, implicit
+900 m), şi nu din decor: o pradă e lucrată de doisprezece oameni acolo unde
+şaizeci o navigau, iar doisprezece oameni nu duc o cocă încărcată în vânt.
+`-PortX/-PortY` o pun unde vrei.
+
+Panoul arată acum două cifre, nu una:
+
+- **PURSE** — cât valorează prăzile la momentul în care au coborât pavilionul;
+- **LANDED** — cât a ajuns efectiv la chei.
+
+Sunt egale doar dacă toate prăzile au ajuns acasă. Măsurat: din două prăzi
+luate în cinci sute de secunde, **una** ajunge (1200 din 2400), iar cei
+doisprezece oameni întorşi duc tunurile raider-ului înapoi la viteză plină
+(1,00 faţă de 0,75). Cealaltă e încă pe mare când se termină partida — şi asta
+e o pierdere reală, nu o rotunjire.
+
 ### Stăpânirea: o pradă nu e a ta până nu ai oameni pe ea
 
 O navă care a coborât pavilionul e **oprită**, nu **a ta**. Ca s-o iei, te apropii
@@ -621,6 +644,10 @@ pereche de rulări citea împrăștiere și credea că citește semnal.
 | `-PrizeRangeM=N` | de la ce distanță pot ajunge bărcile (implicit 150 m) |
 | `-PrizeBoatSeconds=N` | câte secunde lângă pradă le ia bărcilor (implicit 20, CUMULATE) |
 | `-EnemyHands=N` | inamicul pornește cu N oameni (doar navele Coroanei, nu negustorii) |
+| `-Port=1` | pune o radă prietenă unde prăzile se duc acasă (implicit NU există) |
+| `-PortOffingM=N` | la câți metri SUB VÂNTUL convoiului e rada (implicit 900) |
+| `-PortX= -PortY=` | poziția exactă a radei, dacă nu vrei una sub vânt |
+| `-PortRadiusM=N` | cât de mare e rada (implicit 150 m) |
 | `-Islands=N` | pune N insule pe mare, 1 la 8 (0 sau lipsă = niciuna) |
 | `-IsleX= -IsleY= -IsleRadius=` | unde e și cât de mare (raza plajei, implicit 11000 cm) |
 | `-ShipRunAground=N` | din secunda N, mână nava în insulă cu toate pânzele sus, apoi strânge pânza la 10 s după atingere |
@@ -883,8 +910,10 @@ toată nava, fiindcă `ObjectBounds` întorcea zero pentru mesh-ul ăla.
 - echipajul e o singură rezervă împărțită între tunuri și reparații: manevra
   velelor nu e încă o stație, coca nu se repară pe mare, nimeni nu se
   recrutează și nimeni nu se plătește
-- punga nu cumpără nimic și nu trece dintr-o rulare în alta; o pradă luată în
-  stăpânire rămâne pe loc — nu o duci în port, fiindcă nu există port
+- punga tot nu CUMPĂRĂ nimic: portul face banii reali și aduce oamenii înapoi,
+  dar n-ai de unde lua tunuri, oameni noi sau reparații de cocă pe bani, și
+  nimic nu trece dintr-o rulare în alta
+- nimeni nu recapturează o pradă care merge singură spre radă
 - abordajul e AMÂNAT explicit de owner; echipajul + reparaţiile şi economia +
   progresia sunt următoarele ateliere, în ordinea asta
 
