@@ -48,7 +48,19 @@ PARTS = {
     # albedo, normal, roughness (or None), tint, cm per tile, roughness floor,
     # roughness ceiling, metallic, normal strength,
     # PLANE WEIGHTS X, Y, Z  (which of the three projections this part uses),
-    # ROPE COLLAPSE (1 = shrink to a point at distance; only the cordage).
+    # ROPE COLLAPSE (1 = shrink to a point at distance; only the cordage),
+    # SWAY (how much this part bends in the wind; 0 for anything that should
+    # not move at all - a hull does not bend, and a deck that breathes is a
+    # bug, not weather), SWAY HEIGHT in cm (the height over which that bend
+    # builds up).
+    #
+    # THE WHOLE RIG MOVES AS ONE. Masts, sails and cordage carry the same amount
+    # over the same height on purpose: a shroud is made fast to the masthead, so
+    # if it swayed by four times what the mast does - which is what a "ropes are
+    # more flexible" reading of these numbers produced - it would visibly come
+    # away from the spar it is tied to. What a sail does on its own, luffing
+    # against its bolt ropes, is a separate and faster motion that is not built
+    # yet, and is not this.
     #
     # The weights replace the old TopWeight/SideSwap pair. There are three
     # planes now, not two: with only (x, z) and (x, y) every surface lying in a
@@ -63,22 +75,22 @@ PARTS = {
     # cost three runs to diagnose once; it is not being reintroduced for the
     # sake of symmetry.
     "M_Hull":     ("T_Timber_C", "T_Timber_N", "T_Timber_R",
-                   (0.72, 0.62, 0.58), 520.0, 0.45, 0.88, 0.0, 1.0, 1.0, 1.0, 1.0, 0.0),
+                   (0.72, 0.62, 0.58), 520.0, 0.45, 0.88, 0.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 600.0),
     "M_Deck":     ("T_Timber_C", "T_Timber_N", "T_Timber_R",
-                   (1.55, 1.42, 1.18), 330.0, 0.60, 0.95, 0.0, 1.2, 1.0, 1.0, 1.0, 0.0),
+                   (1.55, 1.42, 1.18), 330.0, 0.60, 0.95, 0.0, 1.2, 1.0, 1.0, 1.0, 0.0, 0.0, 600.0),
     # Masts and yards: round in XY, and nobody sees the top of a mast.
     "M_Wood":     ("T_Timber_C", "T_Timber_N", "T_Timber_R",
-                   (1.05, 0.92, 0.74), 240.0, 0.55, 0.90, 0.0, 0.8, 1.0, 1.0, 0.0, 0.0),
+                   (1.05, 0.92, 0.74), 240.0, 0.55, 0.90, 0.0, 0.8, 1.0, 1.0, 0.0, 0.0, 0.10, 1800.0),
     "M_DarkWood": ("T_Timber_C", "T_Timber_N", "T_Timber_R",
-                   (0.42, 0.36, 0.33), 300.0, 0.40, 0.80, 0.0, 1.0, 1.0, 1.0, 1.0, 0.0),
+                   (0.42, 0.36, 0.33), 300.0, 0.40, 0.80, 0.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 600.0),
     "M_Sail":     ("T_Canvas_C", "T_Canvas_N", None,
-                   (1.0, 1.0, 1.0), 900.0, 0.78, 0.96, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0),
+                   (1.0, 1.0, 1.0), 900.0, 0.78, 0.96, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.10, 1800.0),
     "M_Iron":     ("T_Iron_C", "T_Iron_N", None,
-                   (1.0, 1.0, 1.0), 90.0, 0.32, 0.62, 0.82, 1.0, 1.0, 1.0, 1.0, 0.0),
+                   (1.0, 1.0, 1.0), 90.0, 0.32, 0.62, 0.82, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 600.0),
     # Tarred hemp, tiled small: a rope is a few centimetres across and the lay
     # has to be visible at that size or the rigging reads as wire.
     "M_Rope":     ("T_Rope_C", "T_Rope_N", None,
-                   (1.0, 1.0, 1.0), 45.0, 0.74, 0.94, 0.0, 1.1, 1.0, 1.0, 0.0, 1.0),
+                   (1.0, 1.0, 1.0), 45.0, 0.74, 0.94, 0.0, 1.1, 1.0, 1.0, 0.0, 1.0, 0.10, 1800.0),
 }
 
 
@@ -198,6 +210,11 @@ def build_master():
 
     def normalizen(src, x, y, so=""):
         n = expr(unreal.MaterialExpressionNormalize, x, y)
+        link(src, so, n, IN1)
+        return n
+
+    def sinn(src, x, y, so=""):
+        n = expr(unreal.MaterialExpressionSine, x, y)
         link(src, so, n, IN1)
         return n
 
@@ -442,6 +459,83 @@ def build_master():
     # Per-instance, via RopeCollapse: 0 for every other slot, so the hull, deck
     # and sails have an identically zero world-position offset and cannot be
     # affected by this at all.
+    # ------------------------------------------------------- wind in the parts
+    #
+    # The one thing that made every still frame of this project read as a
+    # diorama: nothing moved. The sea moved, the ship moved, and every rope,
+    # sail and frond stood exactly still in a twelve-metre breeze.
+    #
+    # Shaped like actual wind on a flexible thing rather than like a sine wave:
+    # it is BENT DOWNWIND FIRST and oscillates about that bend, the bend grows
+    # with wind speed, a slow gust term swells and eases it, and the whole thing
+    # is anchored - the displacement is scaled by height above the piece's own
+    # origin, squared, so the root never moves and the tip moves most. A frond
+    # that slides sideways at its base is a mesh coming loose, not weather.
+    #
+    # All four wind numbers are PUSHED FROM C++ and default to a dead calm, so a
+    # part whose owner pushes nothing is exactly as still as it is today.
+    wind_x = scalar("WindVecX", 1.0, -2600, 1900, group="Wind")
+    wind_y = scalar("WindVecY", 0.0, -2600, 1980, group="Wind")
+    wind_s = scalar("WindSpeedMS", 0.0, -2600, 2060, group="Wind")
+    wind_t = scalar("WindTime", 0.0, -2600, 2140, group="Wind")
+    sway_amt = scalar("SwayAmount", 0.0, -2600, 2220, group="Wind")
+    # The height at which the bend reaches full, in centimetres above the
+    # piece's own origin. Per instance: a palm is six metres, a bush is one, and
+    # a mast is eighteen.
+    sway_h = scalar("SwayHeightCm", 600.0, -2600, 2300, group="Wind")
+    # Centimetres of bend per metre per second of wind, at the top of the
+    # piece. SIZED PHYSICALLY, not to a pixel metric: at six, a six-metre palm's
+    # crown travels about eighty centimetres in a fourteen-metre breeze, of
+    # which seventy per cent is the oscillation - a few pixels of movement at
+    # the distance the island is usually watched from, and a plain sway from the
+    # beach. It was sixteen for one build, which put the crown through two and a
+    # quarter metres: a palm tree behaving like a windscreen wiper.
+    sway_gain = scalar("SwayCmPerMS", 6.0, -2600, 2380, group="Wind")
+
+    # Anchored: 0 at the origin of the piece, 1 at its reference height, and
+    # SQUARED so the movement is a bend and not a slide.
+    lz_sway = mask(lp, -2400, 1900, False, False, True)
+    # An explicit height per instance, in centimetres. It was the piece's own
+    # bounds for one build - which is the right idea and does not work here: a
+    # probe with this ramp routed to emissive at daylight strength showed hn = 1
+    # over the WHOLE ship, hull bottom included, because ObjectBounds came back
+    # at about zero for that mesh and the divide collapsed. The plants ramped
+    # correctly in the same frame, which is exactly the kind of half-working
+    # that a number in a log would never have shown.
+    hn = sat(div(lz_sway, sway_h, -2100, 1820), -2050, 1820)
+    hn2 = mul(hn, "", hn, "", -1950, 1900)
+
+    # Per-instance phase, so a hillside of palms does not beat time together.
+    opos = expr(unreal.MaterialExpressionObjectPositionWS, -2400, 2460)
+    oph = mul(mask(opos, -2250, 2460, True, False, False), "",
+              const(0.0013, -2250, 2540), "", -2100, 2460)
+
+    # Two rates, a fast flutter over a slower swing. One sine reads as a
+    # metronome; two that do not share a period do not.
+    rate = add(const(1.6, -2250, 2620), mul(wind_s, "", const(0.09, -2250, 2700),
+                                            "", -2100, 2660), -1950, 2620)
+    phase = add(mul(wind_t, "", rate, "", -1800, 2620), oph, -1650, 2620)
+    osc = add(mul(sinn(phase, -1500, 2560), "", const(0.6, -1500, 2640), "",
+                  -1350, 2560),
+              mul(sinn(add(mul(phase, "", const(2.3, -1500, 2720), "", -1350, 2700),
+                           const(1.7, -1350, 2780), -1200, 2700), -1050, 2700),
+                  "", const(0.4, -1050, 2780), "", -900, 2700), -750, 2600)
+    # The gust: slow, and never all the way to nothing.
+    gust = add(const(0.65, -1500, 2860),
+               mul(sinn(mul(wind_t, "", const(0.31, -1650, 2940), "", -1500, 2940),
+                        -1350, 2940), "", const(0.35, -1350, 3020), "", -1200, 2940),
+               -1050, 2860)
+
+    # Bent downwind, oscillating about the bend.
+    bend = add(const(0.30, -900, 2380), mul(osc, "", const(0.70, -900, 2460), "",
+                                            -750, 2400), -600, 2380)
+    amp = mul(mul(mul(sway_amt, "", hn2, "", -1800, 2180), "",
+                  mul(wind_s, "", sway_gain, "", -1800, 2260), "", -1650, 2180),
+              "", mul(gust, "", bend, "", -600, 2440), "", -450, 2200)
+    wind_dir = app(app(wind_x, wind_y, -2400, 2060), const(0.0, -2400, 2140),
+                   -2250, 2060)
+    sway = mul(wind_dir, "", amp, "", -300, 2160)
+
     collapse = scalar("RopeCollapse", 0.0, -1500, 2600)
     fade_start = scalar("RopeFadeStartCm", 24000.0, -1500, 2680)
     fade_range = scalar("RopeFadeRangeCm", 16000.0, -1500, 2760)
@@ -451,7 +545,9 @@ def build_master():
     obj = expr(unreal.MaterialExpressionObjectPositionWS, -1300, 2900)
     toward = sub(obj, wp, -1100, 2880)
     wpo = mul(toward, "", mul(far, "", collapse, "", -900, 2760), "", -700, 2820)
-    MEL.connect_material_property(wpo, "",
+    # The two offsets ADD: a rope that is both swaying and collapsing does both,
+    # and every part that is neither contributes an identically zero vector.
+    MEL.connect_material_property(add(wpo, sway, -500, 2820), "",
                                   unreal.MaterialProperty.MP_WORLD_POSITION_OFFSET)
 
     metal = scalar("Metallic", 0.0, -500, 2150)
@@ -468,7 +564,7 @@ def build_master():
 def build_instances(master):
     out = {}
     for slot, (alb, nrm, rgh, tint, scale, rmin, rmax, metal, nstr,
-               wx, wy, wz, collapse) in PARTS.items():
+               wx, wy, wz, collapse, sway, swayh) in PARTS.items():
         name = "MI_" + slot.replace("M_", "")
         path = MAT_DIR + "/" + name
         if EAL.does_asset_exist(path):
@@ -496,7 +592,8 @@ def build_instances(master):
                      ("RoughMax", rmax), ("Metallic", metal),
                      ("NormalStrength", nstr), ("PlaneWeightX", wx),
                      ("PlaneWeightY", wy), ("PlaneWeightZ", wz),
-                     ("RopeCollapse", collapse)):
+                     ("RopeCollapse", collapse), ("SwayAmount", sway),
+                     ("SwayHeightCm", swayh)):
             MEL.set_material_instance_scalar_parameter_value(mi, k, v)
         # Only the hull and the lower works get soaked; a sail does not have a
         # waterline and neither does a topmast.
@@ -541,12 +638,14 @@ def assign(instances):
     L("assigned %d/%d" % (changed, len(slots)))
 
 
-def build_foliage(master):
-    """One instance for both plants, reusing the ship's timber-and-canvas
-    master. No new material: the master already projects biplanar in LOCAL
-    space, which is exactly what a mesh with no UV layer needs, and the palms
-    have none for the same reason the ship has none."""
-    name = "MI_Foliage"
+def build_foliage(master, name, mesh_path, sway_height_cm, sway_amount):
+    """One instance PER PLANT, reusing the ship's timber-and-canvas master.
+
+    It was one instance for both until the wind arrived, and the wind is what
+    separates them: the bend builds up over the plant's own height, and a palm
+    is six metres where a bush is one. Sharing one instance meant sharing one
+    height, which would have moved the palm properly and left the scrub - a
+    sixth as tall, and the ramp is squared - very nearly rigid."""
     path = MAT_DIR + "/" + name
     if EAL.does_asset_exist(path):
         EAL.delete_asset(path)
@@ -575,24 +674,29 @@ def build_foliage(master):
                  # about a quarter of the plant, measured - was drawn from a
                  # single stretched column of texels.
                  ("PlaneWeightX", 1.0), ("PlaneWeightY", 1.0),
-                 ("PlaneWeightZ", 1.0), ("RopeCollapse", 0.0)):
+                 ("PlaneWeightZ", 1.0), ("RopeCollapse", 0.0),
+                 ("SwayAmount", sway_amount), ("SwayHeightCm", sway_height_cm)):
         MEL.set_material_instance_scalar_parameter_value(mi, k, v)
     EAL.save_asset(path)
 
-    for mesh_path in ("/Game/Meshes/SM_Palm", "/Game/Meshes/SM_Scrub"):
-        mesh = EAL.load_asset(mesh_path)
-        if mesh is None:
-            L("foliage mesh missing: %s" % mesh_path)
-            continue
-        mesh.set_material(0, mi)
-        EAL.save_asset(mesh_path)
-        fresh = EAL.load_asset(mesh_path)
-        got = fresh.get_editor_property("static_materials")[0]             .get_editor_property("material_interface")
-        L("verify %s -> %s" % (mesh_path.split("/")[-1],
-                               got.get_name() if got else "NONE"))
+    mesh = EAL.load_asset(mesh_path)
+    if mesh is None:
+        L("foliage mesh missing: %s" % mesh_path)
+        return
+    mesh.set_material(0, mi)
+    EAL.save_asset(mesh_path)
+    fresh = EAL.load_asset(mesh_path)
+    got = fresh.get_editor_property("static_materials")[0].get_editor_property("material_interface")
+    L("verify %s -> %s (sway %.2f over %.0f cm)"
+      % (mesh_path.split("/")[-1], got.get_name() if got else "NONE",
+         sway_amount, sway_height_cm))
 
 
 master = build_master()
 assign(build_instances(master))
-build_foliage(master)
+# A palm bends over six metres of trunk; a bush is a metre of springy scrub and
+# moves proportionally more of itself, so it gets the larger amount over the
+# smaller height.
+build_foliage(master, "MI_Palm", "/Game/Meshes/SM_Palm", 620.0, 1.0)
+build_foliage(master, "MI_Scrub", "/Game/Meshes/SM_Scrub", 110.0, 1.35)
 L("DONE")

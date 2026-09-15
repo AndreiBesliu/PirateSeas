@@ -2984,3 +2984,86 @@ apoi toată suita rulată din nou peste ea: **toate măsurătorile se potrivesc*
 inclusiv cheile şi scenariile noi.
 
 **Task Completed.**
+
+---
+
+## Task Started — 15.09.2026 (vântul, în ce se îndoaie)
+
+**Prompt:** „Continua"
+**Model:** Claude Opus 5
+
+Primul gol din lista onestă de la OWNER_VERIFY 18: **nimic nu se mişca în vânt**.
+Marea răspundea la vânt de dimineaţă; plantele şi greementul nu, deloc.
+
+Materialul navei mută acum vârfurile cu vântul, iar C++-ul împinge direcţia,
+viteza şi un ceas în materiale dinamice — insula pentru plantele ei, fiecare navă
+pentru cele şapte sloturi ale ei. Patru scalari, toţi cu implicit „calm absolut",
+deci o piesă al cărei proprietar nu împinge nimic e exact la fel de nemişcată ca
+înainte.
+
+### Forma, nu amplitudinea
+
+Îndoită sub vânt ÎNTÂI, şi oscilează în jurul îndoirii; îndoirea creşte cu
+viteza; o rafală lentă o umflă şi o lasă; iar deplasarea e scalată cu înălţimea
+deasupra originii piesei, LA PĂTRAT, deci rădăcina nu se mişcă şi vârful se mişcă
+cel mai mult. O frunză care alunecă lateral din rădăcină nu e vânt, e un mesh
+care se desface.
+
+Faza vine din poziţia instanţei, ca o costişă întreagă de palmieri să nu bată la
+unison. Două ritmuri care nu împart perioada, fiindcă unul singur e metronom.
+
+### Trei instrumente greşite înainte de unul bun
+
+„Palmierii se mişcă în vânt" e exact genul de afirmaţie pe care proiectul ăsta o
+ia greşit uitându-se la ea, aşa că am scris `tools/png_diff.py` — compară o
+CASETĂ din două capturi şi dă un procent.
+
+**Şi primul lucru pe care l-a spus a fost că nu se mişcă nimic:** 18,33% din
+caseta cu dealul se schimbă într-o secundă cu plantele îngheţate, 18,02% cu ele
+în vânt. Ce se schimba acolo erau umbrele norilor.
+
+Următorul instrument — acelaşi instant, cu sway şi fără — a arătat că mecanismul
+merge (3,57% din pixeli deplasaţi). Al treilea, restrâns la pixelii pe care
+sway-ul chiar îi mişcă, a ieşit pe dos: cu plantele în mişcare se schimbă MAI
+PUŢIN de la cadru la cadru decât cu ele îngheţate. Explicaţia e TAA: netezirea
+temporală suprimă tocmai zonele care au vectori de mişcare.
+
+**Concluzia metodologică:** diferenţa de imagine nu poate răspunde „se vede
+mişcând?" la două sute de metri. Poate răspunde „e deplasat?", şi atât.
+
+### Sonda care nu lumina
+
+Am legat rampa de înălţime la Emissive ca s-o văd. Nu s-a aprins nimic — nici
+catargele. Motivul: scena e în unităţi fizice (soare 110.000 lux), deci un
+emissive de 1,0 e o lumânare la amiază. Ridicată la 120.000 de niţi, sonda a
+arătat imediat răspunsul: rampa era 1 peste TOATĂ nava, fundul cocii inclusiv,
+fiindcă `ObjectBounds` întoarce zero pentru mesh-ul ăla — în timp ce pe plante
+rampa mergea corect. Exact genul de „merge pe jumătate" pe care un număr din log
+nu l-ar fi arătat niciodată.
+
+Aşa că înălţimea de referinţă e explicită, per instanţă — şi de-aia `MI_Foliage`
+s-a despărţit în `MI_Palm` (620 cm) şi `MI_Scrub` (110 cm): îndoirea se
+construieşte pe înălţimea proprie a plantei, iar o tufă de un metru cu referinţa
+palmierului ar fi rămas practic rigidă (a şasea parte, la pătrat).
+
+### Amplitudinea e fizică, nu grafică
+
+Şase centimetri pe metru pe secundă: la 14 m/s coroana unui palmier de şase metri
+face vreo optzeci de centimetri. De la distanţa de la care e privită insula ăsta
+e un pixel-doi, **şi aşa şi trebuie** — un palmier care se vede clar mişcând de
+la două sute de metri e un palmier care se mişcă greşit. O versiune intermediară
+avea 2,2 metri: ştergător de parbriz.
+
+Şi tot greementul se mişcă la fel de mult: un sart e legat de vârful catargului,
+deci dacă parâma s-ar mişca de patru ori mai mult decât catargul — ce dădea
+citirea „parâmele sunt mai flexibile" — s-ar desprinde vizibil de vergă. Măsurat
+pe captură după corecţie: sarturile stau pe catarge.
+
+### Măsurători
+
+Trei chei noi: `sway_mats` (câte materiale dinamice a făcut insula), `sway_wind_ms`
+şi `sway_readback_ok` — ultima fiindcă a seta un parametru pe care materialul nu-l
+are e tăcut un no-op, exact cum erau cele trei butoane moarte de siaj. Fixtură în
+`ci_checks.py` pe linia reală, inclusiv pe cazul `readback FAILED`.
+
+**Task Completed.**

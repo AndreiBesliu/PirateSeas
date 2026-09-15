@@ -346,6 +346,24 @@ def check_comparison():
         fail("the scatter numbers read %s from a line holding (224.0, 0.54)"
              % ((sea.get("scatter_range_cm"), sea.get("scatter_span")),))
 
+    # The wind reaching the plants, off the line the island really prints.
+    sw = ci_measure.measure("fixture", "LogTemp: Display: ISLELOG Island_0 sway "
+                            "mats=2 wind=14.0 m/s toward 300 deg (readback ok 14.0)\n")
+    if (sw.get("sway_mats"), sw.get("sway_wind_ms"), sw.get("sway_readback_ok")) != (2, 14.0, 1):
+        fail("the sway line read %s from a line holding (2, 14.0, 1)"
+             % ((sw.get("sway_mats"), sw.get("sway_wind_ms"), sw.get("sway_readback_ok")),))
+    bad = ci_measure.measure("fixture", "LogTemp: Display: ISLELOG Island_0 sway "
+                             "mats=2 wind=14.0 m/s toward 300 deg (readback FAILED -1.0)\n")
+    if bad.get("sway_readback_ok") != 0:
+        fail("a FAILED readback was not reported as such: %s" % bad.get("sway_readback_ok"))
+
+    rg = ci_measure.measure("fixture", "LogTemp: Display: SHIPLOG ShipPawn_0 "
+                            "rigsway mats=7 wind=14.0 m/s toward 100 deg "
+                            "(readback ok 14.0)" + chr(10))
+    if (rg.get("rig_sway_mats"), rg.get("rig_sway_readback_ok")) != (7, 1):
+        fail("the rig sway line read %s from a line holding (7, 1)"
+             % ((rg.get("rig_sway_mats"), rg.get("rig_sway_readback_ok")),))
+
     # And the island band, where the whole point is that the two numbers agree.
     isle = ci_measure.measure("fixture", "LogTemp: Display: ISLELOG Island_0 planted "
                               "palms=18 scrub=118 of 258 tried (missed=0, wrong "

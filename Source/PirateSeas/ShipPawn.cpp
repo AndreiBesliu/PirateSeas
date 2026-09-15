@@ -1,5 +1,7 @@
 #include "ShipPawn.h"
 
+#include "Materials/MaterialInstanceDynamic.h"
+
 #include "BuoyancyComponent.h"
 #include "BuoyancyManager.h"
 #include "TimerManager.h"
@@ -1513,6 +1515,53 @@ void AShipPawn::OnFireStarboard()
 
 void AShipPawn::Tick(float DeltaSeconds)
 {
+	// The wind, into the rig. Masts bend a little, sails breathe, cordage moves
+	// most - each by its own SwayAmount, all from the one wind the sea and the
+	// sails already use, so nothing can disagree about which way it blows.
+	if (HullMesh && RigMaterials.Num() == 0)
+	{
+		const int32 Slots = HullMesh->GetNumMaterials();
+		for (int32 i = 0; i < Slots; ++i)
+		{
+			if (UMaterialInstanceDynamic* M = HullMesh->CreateAndSetMaterialInstanceDynamic(i))
+			{
+				RigMaterials.Add(M);
+			}
+		}
+	}
+	if (RigMaterials.Num() > 0)
+	{
+		float WindMS = 0.f, BearingDeg = 0.f;
+		if (const UWindSubsystem* W = GetWorld()->GetSubsystem<UWindSubsystem>())
+		{
+			WindMS = W->GetWindSpeedMS();
+			BearingDeg = W->GetWindBearingDeg();
+		}
+		// Blowing TOWARDS, which is the way a shroud is pushed.
+		const float Rad = FMath::DegreesToRadians(BearingDeg + 180.f);
+		const float Now = GetWorld()->GetTimeSeconds();
+		for (UMaterialInstanceDynamic* M : RigMaterials)
+		{
+			M->SetScalarParameterValue(TEXT("WindVecX"), FMath::Cos(Rad));
+			M->SetScalarParameterValue(TEXT("WindVecY"), FMath::Sin(Rad));
+			M->SetScalarParameterValue(TEXT("WindSpeedMS"), WindMS);
+			M->SetScalarParameterValue(TEXT("WindTime"), Now);
+		}
+		if (!bRigSwayReported)
+		{
+			bRigSwayReported = true;
+			float Back = -1.f;
+			const bool bTook = RigMaterials[0]->GetScalarParameterValue(
+				TEXT("WindSpeedMS"), Back);
+			UE_LOG(LogTemp, Display,
+				TEXT("SHIPLOG %s rigsway mats=%d wind=%.1f m/s toward %.0f deg "
+					 "(readback %s %.1f)"),
+				*GetName(), RigMaterials.Num(), WindMS,
+				FMath::Fmod(BearingDeg + 180.f, 360.f),
+				bTook ? TEXT("ok") : TEXT("FAILED"), Back);
+		}
+	}
+
 	Super::Tick(DeltaSeconds);
 
 	if (!HullCollision || !HullCollision->IsSimulatingPhysics())

@@ -253,6 +253,16 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Ship")
 	TObjectPtr<UStaticMeshComponent> HullMesh;
 
+	/** One dynamic material per slot of the hull mesh, made on the first tick.
+	 *  They exist to carry the wind into the rig: the master bends masts, sails
+	 *  and cordage by SwayAmount, and until something pushed a wind speed into
+	 *  it that parameter was a knob nobody turned - the same shape of defect as
+	 *  the three dead wake knobs, and just as invisible. */
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<UMaterialInstanceDynamic>> RigMaterials;
+
+	bool bRigSwayReported = false;
+
 	/** EXPERIMENT: does a query-only child box weld into the simulating hull
 	 *  and change its inertia? Measured, not assumed. */
 	/** The fore and main rigs, as things a shot can find. QUERY ONLY, which

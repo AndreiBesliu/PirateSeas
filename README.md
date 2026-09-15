@@ -659,13 +659,45 @@ dar compilatorul din el e `14.44.35228`. Intervalul interzis de Unreal este
 `14.44.0-14.44.35210`, deci pare că îl prinde, dar nu-l prinde. Uită-te la ce
 raportează UBT, nu la numele folderului.
 
+## Vântul, în ce se îndoaie
+
+Marea răspundea la vânt de azi-dimineaţă; plantele şi greementul nu răspundeau
+deloc. Materialul navei mută acum vârfurile cu vântul — `SwayAmount` pe piesă,
+peste `SwayHeightCm` de înălţime proprie — iar C++-ul împinge direcţia, viteza şi
+un ceas în materiale dinamice: insula pentru plantele ei, fiecare navă pentru
+cele şapte sloturi ale ei.
+
+Forma contează mai mult decât amplitudinea. Planta e **îndoită sub vânt întâi**
+şi oscilează în jurul îndoirii; îndoirea creşte cu viteza vântului; o rafală
+lentă o umflă şi o lasă; iar deplasarea e scalată cu înălţimea deasupra originii
+piesei, LA PĂTRAT, deci rădăcina nu se mişcă şi vârful se mişcă cel mai mult. O
+frunză care alunecă lateral din rădăcină nu e vânt, e un mesh care se desface.
+
+Tot greementul se mişcă la fel de mult (`0.10` peste 1800 cm): un sart e legat de
+vârful catargului, deci dacă s-ar mişca de patru ori mai mult — ce dădea o citire
+„parâmele sunt mai flexibile" — s-ar desprinde vizibil de vergă.
+
+**Amplitudinea e fizică, nu grafică.** Şase centimetri pe metru pe secundă: la
+14 m/s, coroana unui palmier de şase metri face vreo optzeci de centimetri. De
+la distanţa de la care e privită insula, ăsta e un pixel-doi — şi asta e
+corect. O versiune intermediară avea 2,2 metri şi arăta ca un ştergător de
+parbriz.
+
+`tools/png_diff.py` a apărut din felia asta: compară o CASETĂ din două capturi şi
+dă un procent. L-am scris fiindcă „palmierii se mişcă în vânt" e exact genul de
+afirmaţie pe care proiectul ăsta o ia greşit uitându-se la ea — şi primul lucru
+pe care l-a spus a fost că nu se mişcă nimic. Avea dreptate: sonda de înălţime
+legată la emissive era de 1,0 într-o scenă luminată cu 110.000 de lux, adică o
+lumânare la amiază. Ridicată la 120.000 de niţi, a arătat că rampa era 1 peste
+toată nava, fiindcă `ObjectBounds` întorcea zero pentru mesh-ul ăla.
+
 ## Ce rămâne de construit
 
 - AI care știe de uscat: să nu se lase prins pe un mal sub vânt e REZOLVAT;
   rămâne că trage prin insulă, ceea ce README-ul de mai sus numește o decizie
   deliberată, nu un gol
 - umbra de vânt în adăpostul insulei
-- nimic nu se mișcă în vânt: palmierii și tufele sunt geometrie rigidă
+- pânza nu fâlfâie: vela se îndoaie cu catargul, dar n-are mişcarea ei proprie
 - cerul e cel implicit al motorului, aceeași oră din zi în fiecare rulare
 - niciun sunet
 - coca nu poartă urme de lovitură: gaura se vede în cifre, nu pe lemn

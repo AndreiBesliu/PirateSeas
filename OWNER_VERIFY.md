@@ -414,7 +414,8 @@ deranjează, nu ordinea în care mi se pare mie că sunt grele.
 vegetaţie, spumă la ţărm" — toate şase există acum (fumul merge, dar l-ai parcat
 tu). Lista onestă de acum, cât o ştiu eu:
 
-- nimic nu se mişcă în vânt: palmierii şi tufele sunt geometrie rigidă;
+- pânza nu FÂLFÂIE: vela se îndoaie odată cu catargul, dar n-are mişcarea ei
+  proprie, rapidă, când e prinsă în vânt;
 - frunzele sunt solide, nu cartonaşe cu decupaj — silueta e mai groasă decât
   trebuie de aproape;
 - cerul e cel implicit al motorului, aceeaşi oră din zi în fiecare rulare;
@@ -501,7 +502,7 @@ retastate, şi câte au fost respinse şi de ce. Dacă dealul arată *locuit* sa
 *decorat* e o judecată de ochi.
 
 **Ce știu deja și n-am ascuns:** e prima treaptă, deliberat — frunzele sunt
-geometrie solidă, nu cartonaşe cu decupaj, şi nimic nu se mişcă în vânt. Şi
+geometrie solidă, nu cartonaşe cu decupaj. Se mişcă în vânt de azi — vezi 23. Şi
 aproape nimic de pe deal nu e destul de abrupt cât să treacă pragul de rocă: în
 scenariul de eşuare, `too steep=1` din 258 de puncte încercate. Practic piatra
 din material nu se arată aproape niciodată pe insula asta.
@@ -533,3 +534,36 @@ direcţia scândurilor din culoare — cadrul se construieşte dintr-un vector f
 nu din axele proiecţiei, fiindcă alinierea la axe se degenerează exact pe cocă
 şi pe punte. La zgomotul fin al texturilor astea nu se vede; pe o textură cu
 dungi clare s-ar vedea.
+
+---
+
+## 23. Vântul în plante şi în greement: viu, sau gelatină?
+
+**Ce te uiți:** Stai lângă insulă cu vânt mare (`-WindSpeed=16`) şi uită-te un
+minut la palmieri, apoi la propriul greement de aproape (`-ShipShotCam=rig`).
+Apoi acelaşi lucru pe vânt mic (`-WindSpeed=5`).
+
+**Cum arată bine:** Palmierii stau ÎNCLINAŢI în bătaia vântului şi se leagănă în
+jurul înclinării, nu se plimbă dintr-o parte în alta pe lângă verticală. Baza nu
+se mişcă deloc; vârful se mişcă cel mai mult. Nu bat toţi la fel, în acelaşi
+ritm. Pe vânt mic abia se simte. Greementul şi catargele se îndoaie ÎMPREUNĂ —
+un sart rămâne prins de catargul lui.
+
+**Cum arată prost:** Palmieri care se unduiesc ca sub apă, sau care se mişcă din
+rădăcină. O întreagă costişă care bate la unison, ca un metronom. Sarturi care se
+desprind de catarg. Sau, în cealaltă direcţie: absolut nimic, pe orice vânt.
+
+**De ce nu pot eu:** Pot măsura că mecanismul funcţionează — la un moment dat,
+1364 de pixeli de pe deal sunt în altă parte decât cu plantele îngheţate, şi 75%
+dintre ei se mai mută încă o dată în jumătate de secundă. Ce NU pot măsura e
+dacă arată a vânt: diferenţa de imagine cadru-cu-cadru la distanţa aia e
+dominată de umbrele norilor, iar netezirea temporală (TAA) chiar face zonele în
+mişcare să pară mai puţin schimbătoare. Am încercat trei instrumente înainte să
+recunosc asta.
+
+**Ce știu deja și n-am ascuns:** amplitudinea e aleasă FIZIC, nu ca să iasă bine
+la o măsurătoare — la 14 m/s vârful unui palmier de şase metri parcurge vreo
+optzeci de centimetri. De la două sute de metri ăsta e un pixel sau doi, şi aşa
+şi trebuie: un palmier care se vede clar mişcând de la distanţa aia ar fi un
+palmier care se mişcă greşit. A fost o versiune cu 2,2 metri — un ştergător de
+parbriz.

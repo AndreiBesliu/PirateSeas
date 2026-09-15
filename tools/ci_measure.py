@@ -280,6 +280,26 @@ def measure(name, text):
     # and the height the MATERIAL says the sand ends at; they are the same
     # number only while nothing scales one of them. Recorded as the gap, because
     # a gap of zero is the whole claim and it reads at a glance.
+    # Did the plants get the wind? The island makes one dynamic material per
+    # plant component and reads the pushed value back; a run where that stops
+    # happening leaves the hillside rigid, which is the state this started from
+    # and is invisible in every other number.
+    sway = re.search(r"ISLELOG \S+ sway mats=(\d+) wind=([0-9.]+) m/s "
+                     r"toward [0-9.]+ deg \(readback (\w+)", text)
+    if sway:
+        m["sway_mats"] = int(sway.group(1))
+        m["sway_wind_ms"] = float(sway.group(2))
+        m["sway_readback_ok"] = 1 if sway.group(3) == "ok" else 0
+
+    # And the SHIP's half of the same wire. The island's plants are only in two
+    # scenarios; the rig is in all nine, so this is the one that would catch the
+    # push going away.
+    rig = re.search(r"SHIPLOG \S+ rigsway mats=(\d+) wind=([0-9.]+) m/s "
+                    r"toward [0-9.]+ deg \(readback (\w+)", text)
+    if rig:
+        m["rig_sway_mats"] = int(rig.group(1))
+        m["rig_sway_readback_ok"] = 1 if rig.group(3) == "ok" else 0
+
     band = re.findall(r"turf from ([0-9.]+) cm \(paint says ([0-9.]+), scale ([0-9.]+)\)", text)
     if band:
         m["turf_band_gap_cm"] = round(max(abs(float(a) - float(b)) for a, b, _ in band), 1)

@@ -31,7 +31,7 @@ JOBS = [
         "asset": "/Game/Meshes/SM_Palm",
         "name": "SM_Palm",
         "fbx": SCRIPTS + r"\SM_Palm.fbx",
-        # Assigned by ship_materials.py, which builds MI_Foliage from the same
+        # Assigned by ship_materials.py, which builds MI_Palm and MI_Scrub from the same
         # master the hull uses. Nothing to attach here.
         "material": None,
         "complex": False,

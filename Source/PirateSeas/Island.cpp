@@ -3,6 +3,8 @@
 #include "Components/HierarchicalInstancedStaticMeshComponent.h"
 #include "Engine/StaticMesh.h"
 #include "Materials/MaterialInterface.h"
+#include "Materials/MaterialInstanceDynamic.h"
+#include "WindSubsystem.h"
 
 #include "Components/StaticMeshComponent.h"
 #include "Engine/StaticMesh.h"
@@ -10,7 +12,9 @@
 
 AIsland::AIsland()
 {
-	PrimaryActorTick.bCanEverTick = false;
+	// Ticks for one reason: to hand the plants the wind. Two scalar pushes per
+	// frame per island.
+	PrimaryActorTick.bCanEverTick = true;
 
 	Rock = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Rock"));
 	SetRootComponent(Rock);
@@ -209,6 +213,64 @@ void AIsland::ScatterVegetation()
 			 "%d of %d numbers read from the material"),
 		*GetName(), Planted[0], Planted[1], Tried, NoHit, TooLow, TooSteep,
 		TurfFromCm, SandTop + 0.5f * SandFade, Scale, MinFlatness, Got, Asked);
+}
+
+void AIsland::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+
+	if (PlantMaterials.Num() == 0)
+	{
+		for (UHierarchicalInstancedStaticMeshComponent* C : { Palms.Get(), Scrub.Get() })
+		{
+			if (C && C->GetStaticMesh())
+			{
+				if (UMaterialInstanceDynamic* M = C->CreateAndSetMaterialInstanceDynamic(0))
+				{
+					PlantMaterials.Add(M);
+				}
+			}
+		}
+	}
+
+	float WindMS = 0.f, BearingDeg = 0.f;
+	if (const UWindSubsystem* W = GetWorld()->GetSubsystem<UWindSubsystem>())
+	{
+		WindMS = W->GetWindSpeedMS();
+		BearingDeg = W->GetWindBearingDeg();
+	}
+	// The bearing the wind blows TOWARDS, which is where a frond is pushed. The
+	// sea takes the same number the other way round, as the direction it comes
+	// FROM, which is why this is spelled out rather than shared.
+	const float Rad = FMath::DegreesToRadians(BearingDeg + 180.f);
+	const float Now = GetWorld()->GetTimeSeconds();
+	for (UMaterialInstanceDynamic* M : PlantMaterials)
+	{
+		if (!M)
+		{
+			continue;
+		}
+		M->SetScalarParameterValue(TEXT("WindVecX"), FMath::Cos(Rad));
+		M->SetScalarParameterValue(TEXT("WindVecY"), FMath::Sin(Rad));
+		M->SetScalarParameterValue(TEXT("WindSpeedMS"), WindMS);
+		M->SetScalarParameterValue(TEXT("WindTime"), Now);
+	}
+
+	if (!bSwayReported && PlantMaterials.Num() > 0)
+	{
+		bSwayReported = true;
+		// Read BACK, because setting a parameter the material does not have is
+		// silently a no-op - the same way the three dead wake knobs were dead.
+		float Back = -1.f;
+		const bool bTook = PlantMaterials[0]->GetScalarParameterValue(
+			TEXT("WindSpeedMS"), Back);
+		UE_LOG(LogTemp, Display,
+			TEXT("ISLELOG %s sway mats=%d wind=%.1f m/s toward %.0f deg "
+				 "(readback %s %.1f)"),
+			*GetName(), PlantMaterials.Num(), WindMS,
+			FMath::Fmod(BearingDeg + 180.f, 360.f),
+			bTook ? TEXT("ok") : TEXT("FAILED"), Back);
+	}
 }
 
 void AIsland::BeginPlay()

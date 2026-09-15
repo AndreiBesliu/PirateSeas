@@ -84,6 +84,12 @@ public:
 	 *  Asking the shipped asset means the two cannot disagree. */
 	void ScatterVegetation();
 
+	/** Hands the plants the wind, every frame: direction, speed and a clock.
+	 *  The material bends them downwind and oscillates about that bend, so all
+	 *  three numbers have to arrive or the hillside stands still - which is
+	 *  exactly what it did until now, in a twelve-metre breeze. */
+	virtual void Tick(float DeltaSeconds) override;
+
 protected:
 	/** The land itself: seen, and solid to round shot. */
 	UPROPERTY(VisibleAnywhere, Category = "Island")
@@ -94,6 +100,16 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, Category = "Island")
 	TObjectPtr<UHierarchicalInstancedStaticMeshComponent> Scrub;
+
+	/** Dynamic instances of the foliage material, one per plant component, made
+	 *  once at BeginPlay. Without them the wind numbers would have to be set on
+	 *  the shipped asset, which would write them into the project. */
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<UMaterialInstanceDynamic>> PlantMaterials;
+
+	/** Reported once, so a run where the plants never got the wind is visible
+	 *  in the log rather than only in a capture nobody took. */
+	bool bSwayReported = false;
 
 	/** Candidate points are laid on a jittered lattice over the island disc.
 	 *  Spacing in centimetres at the AUTHORED size; it scales with the island,
