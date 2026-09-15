@@ -3672,3 +3672,85 @@ număr ca în editor), panoul care desenează, tunurile care trag, ieşirea pe
 `-ShipQuitAfter=`. Şapte din şapte, zero erori fatale.
 
 **Task Completed.**
+
+---
+
+## Task Started — 15.09.2026 (mecanica, commit 8: punga cumpără)
+
+**Prompt:** „continua cu punga sa cumpere"
+**Model:** Claude Opus 5
+
+Portul vinde exact cele două lucruri pe care marea nu le dă înapoi: **oameni**
+(morţii nu se întorc, cei plecaţi cu o pradă sunt plecaţi) şi **cocă** (echipele
+de reparaţii fac cârma şi catargele şi n-au voie la cocă — scria în cod de două
+commit-uri).
+
+Un om 20, un punct de cocă 0,5. O cocă întreagă e 500, mai puţin de jumătate
+dintr-o pradă; echipajul de pradă de doisprezece oameni costă 240 să-l
+înlocuieşti. **Deci o pradă dusă acasă plăteşte de două ori oamenii care au
+luat-o, şi una scufundată nu plăteşte nimic.** Se plăteşte din `Landed`, nu din
+`Purse` — banii ajunşi la chei, nu cei revendicaţi.
+
+Şi nu e instantaneu: un om sau douăzeci de puncte la fiecare jumătate de secundă
+în radă. Banii sunt un cost, ceasul misiunii e celălalt.
+
+### Bucla se închide
+
+`prăzile costă oameni → portul face banii reali → banii cumpără oamenii înapoi`
+
+Măsurat cap-coadă, într-o singură rulare: pradă luată la 138 s, acasă la 359 cu
+1200 în vistierie, căpitanul bate spre port, ajunge la 764, cumpără **20 de
+oameni şi 400 de puncte de cocă pentru 600**, iese în larg la 776 cu 600 rămaşi.
+Aritmetica e pe linia de log şi fixtura o verifică: 20×20 + 400×0,5 = 600.
+
+### Regula care a lipsit prima dată
+
+Prima versiune a doctrinei spunea „eşti lovit → du-te în port". Măsurat: o navă
+care pleca lovită bătea spre port **în primele secunde**, înainte să fi câştigat
+un ban, şi stătea într-o radă goală toată partida — fără să vâneze, fără să
+câştige, fără să cumpere. Regula corectă e evidentă odată văzută: **te duci în
+port când eşti lovit ŞI ai cu ce plăti.** O călătorie pe care n-o poţi plăti e o
+călătorie pierdută.
+
+Mutaţia B o pune la loc şi o dovedeşte: fără ea, raider-ul petrece **47.971 din
+48.000 de ticuri** ale rulării într-o radă goală.
+
+### Un defect vechi scos la iveală de scenariu
+
+Regula de renunţare la o pradă cerea să fie *alături* de ea. Într-o rulare a
+stat **305 secunde** — jumătate de partidă — lângă o pradă la care nu putea
+ajunge, în timp ce portul unde avea bani de cheltuit rămânea nevizitat. Acum
+renunţă şi după 180 de secunde de încercare totală, indiferent dacă a ajuns
+vreodată alături. Trei minute e mai mult decât orice luare reuşită măsurată
+vreodată aici (cea mai lentă: 142 s), deci nu poate întrerupe una.
+
+### Un flag care însemna altceva decât părea
+
+`-EnemyHands=N` seta şi COMPLEMENTUL navei, nu doar câţi sunt la bord — deci era
+o navă mică, nu una cu echipaj incomplet, şi `GetHandsShort()` ieşea zero. Cu
+asta, `handsBought` era o cheie care nu putea ieşi nenulă în niciun scenariu.
+Acum înseamnă câţi sunt la bord, complementul rămâne 60, şi portul are ce
+completa. Verificat: nu mişcă niciun număr din `prize_shorthanded`, care
+foloseşte flag-ul pentru cu totul altceva.
+
+### Dimensionarea, din cronologie măsurată
+
+Scenariile rulează 800 s fiindcă am citit cronologia o dată, nu fiindcă sună
+bine: 359 acasă, 539 renunţă la a doua pradă, 764 ajunge în radă, 776 gata. Mai
+scurt, şi rularea s-ar termina cu ea încă pe drum — ceea ce s-ar citi ca „refitul
+nu face nimic".
+
+### Mutaţii şi suită
+
+(A) nimeni nu poate fi recrutat — oamenii cumpăraţi cad la 0 dar coca rămâne
+400, ceea ce **separă cele două cumpărături**; (B) fără regula vistieriei — vezi
+mai sus; (C) pristin — 600 / 20 / 400 / 600 din nou.
+
+Perechea `refit_on` / `refit_off`, un singur flag: 600 cheltuiţi contra 0, 20 de
+oameni contra 0, 400 de cocă contra 0, vistierie 600 contra 1200. Iar ce NU
+trebuia să difere nu diferă: `purse_end` 2400 şi `purse_landed` 1200 în ambele —
+câştigă la fel, doar una cheltuie.
+
+**Suita: zero numere mutate** în cele 20 de scenarii existente.
+
+**Task Completed.**

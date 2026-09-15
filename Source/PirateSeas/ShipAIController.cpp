@@ -65,6 +65,14 @@ void AShipAIController::OnPossess(APawn* InPawn)
 			(AimHigh != 0) ? TEXT("HIGH") : TEXT("LOW"));
 	}
 
+	int32 Refit = -1;
+	if (FParse::Value(FCommandLine::Get(), TEXT("AIRefit="), Refit) && Refit >= 0)
+	{
+		bRefitsInPort = Refit != 0;
+		UE_LOG(LogTemp, Display, TEXT("AILOG refits in port: %s"),
+			bRefitsInPort ? TEXT("yes") : TEXT("no"));
+	}
+
 	int32 Prize = -1;
 	if (FParse::Value(FCommandLine::Get(), TEXT("AIPrize="), Prize) && Prize >= 0)
 	{
@@ -99,6 +107,13 @@ void AShipAIController::HandleOwnShipSunk(AShipPawn* Ship, AActor* Causer)
 AShipPawn* AShipAIController::GetShip() const
 {
 	return Cast<AShipPawn>(GetPawn());
+}
+
+void AShipAIController::SetPort(const FVector& Where, float RadiusCm)
+{
+	PortWhere = Where;
+	PortRadius = RadiusCm;
+	bKnowsPort = true;
 }
 
 void AShipAIController::SetDestination(const FVector& Where)
@@ -572,10 +587,12 @@ void AShipAIController::Tick(float DeltaSeconds)
 			PrizeToMan = nullptr;
 			bPrizeLogged = false;
 			PrizeAlongsideSeconds = 0.f;
+			PrizeChaseSeconds = 0.f;
 		}
 		else
 		{
 			++PrizeTicks;
+			PrizeChaseSeconds += DeltaSeconds;
 			const FVector ToHer = PrizeToMan->GetActorLocation() - Me->GetActorLocation();
 			const float PrizeRangeM = ToHer.Size2D() * 0.01f;
 			const UWindSubsystem* PrizeWind = GetWorld()->GetSubsystem<UWindSubsystem>();
@@ -606,14 +623,17 @@ void AShipAIController::Tick(float DeltaSeconds)
 			// means she cannot spare the men: make sail and get on with the
 			// cruise. The prize stays struck and stays counted; she is simply
 			// nobody's.
-			if (PrizeAlongsideSeconds >= PrizeGiveUpSeconds)
+			if (PrizeAlongsideSeconds >= PrizeGiveUpSeconds
+				|| PrizeChaseSeconds >= PrizeAbandonSeconds)
 			{
 				UE_LOG(LogTemp, Display,
-					TEXT("AILOG %s gives up %s after %.0f s alongside: no men to spare"),
-					*Me->GetName(), *PrizeToMan->GetName(), PrizeAlongsideSeconds);
+					TEXT("AILOG %s gives up %s after %.0f s alongside, %.0f s in all"),
+					*Me->GetName(), *PrizeToMan->GetName(), PrizeAlongsideSeconds,
+					PrizeChaseSeconds);
 				PrizeToMan = nullptr;
 				bPrizeLogged = false;
 				PrizeAlongsideSeconds = 0.f;
+				PrizeChaseSeconds = 0.f;
 			}
 			else
 			{
@@ -693,6 +713,57 @@ void AShipAIController::Tick(float DeltaSeconds)
 		Me->SetSteerInput(0.f);
 		bWearing = false;
 		return;
+	}
+
+	// MAKING FOR PORT. After the prize block on purpose: a ship standing by a
+	// prize has already paid the men, and leaving before the boats go across
+	// would waste them. Before the fight, because a refit is a decision to
+	// stop fighting.
+	if (bRefitsInPort && bKnowsPort)
+	{
+		const float HullFrac = Me->GetHullIntegrity()
+			/ FMath::Max(1.f, Me->GetMaxHullIntegrity());
+		// What is in the coffers decides whether the trip is worth making.
+		const ASeaGameMode* Sea = GetWorld()
+			? GetWorld()->GetAuthGameMode<ASeaGameMode>() : nullptr;
+		const int32 Coffers = Sea ? Sea->GetCoffers() : 0;
+		const bool bWants = (Me->GetHandsShort() >= RefitWhenShort
+			|| HullFrac < RefitBelowHull) && Coffers >= RefitNeedsCoffers;
+		const float ToPortM = FVector::Dist2D(Me->GetActorLocation(), PortWhere) * 0.01f;
+		if (bWants)
+		{
+			++PortTicks;
+			if (!bPortLogged)
+			{
+				bPortLogged = true;
+				UE_LOG(LogTemp, Display,
+					TEXT("AILOG %s bears away for the port: %d hands short, hull %.0f%%, %.0f m, coffers %d"),
+					*Me->GetName(), Me->GetHandsShort(), HullFrac * 100.f, ToPortM,
+					Coffers);
+			}
+			const UWindSubsystem* PortWind = GetWorld()->GetSubsystem<UWindSubsystem>();
+			const float PortWindFrom = PortWind
+				? FMath::UnwindDegrees(PortWind->GetWindBearingDeg() + 180.f) : 0.f;
+			const FVector ToIt = PortWhere - Me->GetActorLocation();
+			float PortCourse = ToIt.GetSafeNormal2D().Rotation().Yaw;
+			PortCourse = CourseClearOfLand(Me, PortCourse, PortWindFrom, DeltaSeconds,
+				ToIt.Size2D());
+			PortCourse = ResolveSailableHeading(PortCourse, PortWindFrom,
+				Me->GetNoGoAngleDeg(), DeltaSeconds);
+			const float PortErr = FMath::FindDeltaAngleDegrees(
+				Me->GetActorRotation().Yaw, PortCourse);
+			Me->SetSteerInput(FMath::Clamp(PortErr / FullRudderErrorDeg, -1.f, 1.f));
+			// Inside the roadstead she lies to and lets the port work on her.
+			Me->SetSailTrimInput(ToIt.Size2D() <= PortRadius ? -1.f : 1.f);
+			return;
+		}
+		if (bPortLogged)
+		{
+			bPortLogged = false;
+			UE_LOG(LogTemp, Display,
+				TEXT("AILOG %s is refitted and stands out again t=%.1f"),
+				*Me->GetName(), GetWorld()->GetTimeSeconds());
+		}
 	}
 
 	const FVector MyLoc = Me->GetActorLocation();

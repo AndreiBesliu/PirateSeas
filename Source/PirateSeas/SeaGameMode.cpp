@@ -685,6 +685,14 @@ AShipPawn* ASeaGameMode::SpawnOneEnemy(const FVector& Where, const FRotator& Hea
 	{
 		Squadron.Add(Ship);
 		BindShip(Ship);
+		// A captain cannot make for a port she has never been told about.
+		if (bHasPort)
+		{
+			if (AShipAIController* AI = Cast<AShipAIController>(Ship->GetController()))
+			{
+				AI->SetPort(PortLocation, PortRadiusCm);
+			}
+		}
 	}
 	return Ship;
 }
@@ -999,6 +1007,8 @@ void ASeaGameMode::ReadConvoyFlags()
 	if (bHasPort)
 	{
 		FParse::Value(FCommandLine::Get(), TEXT("PortOffingM="), PortOffingM);
+		FParse::Value(FCommandLine::Get(), TEXT("HandCost="), HandCost);
+		FParse::Value(FCommandLine::Get(), TEXT("HullPointCost="), HullPointCost);
 		float PortRadiusM = PortRadiusCm * 0.01f;
 		if (FParse::Value(FCommandLine::Get(), TEXT("PortRadiusM="), PortRadiusM))
 		{
@@ -1095,8 +1105,70 @@ void ASeaGameMode::SpawnConvoy()
 		&ASeaGameMode::SamplePrizes, 0.5f, true);
 }
 
+void ASeaGameMode::RefitInPort()
+{
+	if (!bHasPort)
+	{
+		return;
+	}
+	for (TActorIterator<AShipPawn> It(GetWorld()); It; ++It)
+	{
+		AShipPawn* Ship = *It;
+		if (!IsValid(Ship) || Ship->GetAllegiance() == EShipAllegiance::Merchant
+			|| Ship->IsSunk())
+		{
+			continue;
+		}
+		if (FVector::Dist2D(Ship->GetActorLocation(), PortLocation) > PortRadiusCm)
+		{
+			continue;
+		}
+
+		const int32 Coffers = GetCoffers();
+		bool bBought = false;
+
+		// Men first. A ship with no crew cannot use a sound hull, and the
+		// cheaper thing should be the one she gets when the money is short.
+		if (Ship->GetHandsShort() > 0 && Coffers >= HandCost && Ship->RecruitHand())
+		{
+			Spent += HandCost;
+			++HandsBought;
+			bBought = true;
+		}
+		else
+		{
+			const float Wanted = FMath::Min(
+				HullPointsPerTick,
+				(GetCoffers()) / FMath::Max(0.01f, HullPointCost));
+			const float Put = Ship->RepairHull(Wanted);
+			if (Put > 0.f)
+			{
+				const int32 Cost = FMath::RoundToInt(Put * HullPointCost);
+				Spent += Cost;
+				HullBought += Put;
+				bBought = true;
+			}
+		}
+
+		if (bBought)
+		{
+			RefitSeconds += 0.5f;
+			if (!bRefitLogged)
+			{
+				bRefitLogged = true;
+				UE_LOG(LogTemp, Display,
+					TEXT("PORTLOG %s begins to refit t=%.1f coffers=%d short=%d hull=%.0f"),
+					*Ship->GetName(), GetWorld()->GetTimeSeconds(), Coffers,
+					Ship->GetHandsShort(), Ship->GetHullIntegrity());
+			}
+		}
+	}
+}
+
 void ASeaGameMode::SamplePrizes()
 {
+	RefitInPort();
+
 	// PRIZES COMING HOME, and note WHERE this lives. It was written first
 	// inside SampleWeatherGauge, next to the merchants' own landfall, because
 	// it is the same question asked of the other side. It never ran: that
@@ -1188,9 +1260,12 @@ void ASeaGameMode::SamplePrizes()
 		// Time spent within hail, ACCUMULATED. See PrizeBoatSeconds for why
 		// this does not reset: a continuous dwell would be a rule satisfied
 		// only by station-keeping nobody has ever asked this captain for.
-		float& Spent = PrizeBoatTime.FindOrAdd(Prize);
-		Spent += 0.5f;
-		if (Spent < PrizeBoatSeconds)
+		// Alongside, not Spent: the game mode now has money called Spent, and a
+		// local of that name hides it. Two meanings, one word, and the compiler
+		// is set to refuse that here.
+		float& Alongside = PrizeBoatTime.FindOrAdd(Prize);
+		Alongside += 0.5f;
+		if (Alongside < PrizeBoatSeconds)
 		{
 			continue;
 		}
@@ -1226,7 +1301,7 @@ void ASeaGameMode::SamplePrizes()
 			UE_LOG(LogTemp, Display,
 				TEXT("PRIZELOG %s manned by=%s crew=%d closest=%.0fm spent=%.1f t=%.1f manned=%d handsSent=%d"),
 				*Prize->GetName(), *Taker->GetName(), PrizeCrewHands, BestM,
-				Spent, Now, PrizesManned, HandsOutInPrizes);
+				Alongside, Now, PrizesManned, HandsOutInPrizes);
 		}
 		else if (!RefusedPrizes.Contains(Prize))
 		{
@@ -1461,10 +1536,10 @@ void ASeaGameMode::QuitNow()
 		if (const AShipAIController* AI = Cast<AShipAIController>(It->GetController()))
 		{
 			UE_LOG(LogTemp, Display,
-				TEXT("SEALOG %s landTicks=%d clawOffs=%d rejoinTicks=%d avoidTicks=%d pursuitTicks=%d prizeTicks=%d"),
+				TEXT("SEALOG %s landTicks=%d clawOffs=%d rejoinTicks=%d avoidTicks=%d pursuitTicks=%d prizeTicks=%d portTicks=%d"),
 				*It->GetName(), AI->GetLandTicks(), AI->GetClawOffs(),
 				AI->GetRejoinTicks(), AI->GetAvoidTicks(), AI->GetPursuitTicks(),
-				AI->GetPrizeTicks());
+				AI->GetPrizeTicks(), AI->GetPortTicks());
 		}
 	}
 	for (TActorIterator<AShipPawn> It(GetWorld()); It; ++It)
@@ -1486,6 +1561,12 @@ void ASeaGameMode::QuitNow()
 		Purse, PrizesTaken, PrizeValueMax, ConvoyCargo, PrizesManned,
 		PrizesRefused, HandsOutInPrizes, PrizeClosestM, PrizesLanded, Landed,
 		HandsHome);
+	// What the money BOUGHT, on its own line and always, convoy or not: a
+	// counted zero. spent and coffers are printed together because one without
+	// the other cannot be told from a ship that had nothing to spend.
+	UE_LOG(LogTemp, Display,
+		TEXT("PORTLOG REFIT spent=%d coffers=%d handsBought=%d hullBought=%d refitSeconds=%.1f"),
+		Spent, GetCoffers(), HandsBought, GetHullBought(), RefitSeconds);
 	UE_LOG(LogTemp, Display, TEXT("SEALOG quitting at t=%.1fs"),
 		GetWorld()->GetTimeSeconds());
 	if (GEngine)

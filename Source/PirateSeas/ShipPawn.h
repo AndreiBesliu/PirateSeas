@@ -192,6 +192,18 @@ public:
 	int32 GetHandsInPrizes() const { return HandsInPrizes; }
 	int32 GetMinHandsAboard() const { return MinHandsAboard; }
 
+	/** How many men she is short of a full complement, for whatever reason -
+	 *  killed, or away in a prize. A port sells men; it does not ask which. */
+	int32 GetHandsShort() const { return FMath::Max(0, HandsMax - Hands); }
+
+	/** Signing on one man in port. Returns true if there was room for him. */
+	bool RecruitHand();
+
+	/** Timber and tar: hull integrity the SEA cannot give back. Returns how
+	 *  much was actually put in, which is less than asked for when she is
+	 *  nearly whole. */
+	float RepairHull(float Points);
+
 	/** Sends men away to a prize. Refuses, and says so, if it would leave
 	 *  fewer than MinHandsAboard to work this ship.
 	 *

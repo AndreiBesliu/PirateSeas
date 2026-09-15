@@ -468,6 +468,40 @@ flag (`-AIAimHigh=`) şi dă fix cifrele astea, la 70,9 s şi 83,1 s.
 Punga se vede în panou sub rândul CONVOY şi se scrie la sfârşitul fiecărei
 rulări (`PRIZELOG PURSE`), inclusiv într-o rulare fără convoi — un zero numărat.
 
+### Ce cumpara punga
+
+Portul vinde exact cele doua lucruri pe care marea nu ti le da inapoi:
+
+| | pret | de ce nu se repara singur |
+|---|---|---|
+| un om | 20 | mortii nu se intorc, iar cei plecati cu o prada sunt plecati |
+| un punct de coca | 0,5 | echipele de reparatii fac carma si catargele, **coca niciodata** |
+
+O coca intreaga costa 500, adica mai putin de jumatate dintr-o prada (1200).
+Echipajul de prada care ti-a luat-o - doisprezece oameni - costa 240 ca sa-l
+inlocuiesti. Deci o prada dusa acasa plateste de doua ori oamenii care au
+luat-o si mai ramane pentru jumatate de coca; o prada **scufundata** nu
+plateste nimic.
+
+Se plateste din **LANDED**, nu din PURSE: banii care au ajuns la chei, nu cei
+pe care i-ai revendicat. Panoul arata `COFFERS`, adica ce a mai ramas.
+
+Refitul **nu e instantaneu**: un om sau douazeci de puncte de coca la fiecare
+jumatate de secunda petrecuta in rada. O nava ciuruita sta acolo vreo douazeci
+de secunde - timp in care convoiul fuge. Banii sunt un cost, ceasul misiunii e
+celalalt, si al doilea e cel care face din plecatul devreme o decizie.
+
+Capitanul inamic are aceeasi doctrina cu `-AIRefit=1` (implicit STINSA): pleaca
+spre port cand e cu doisprezece oameni sub complet sau sub 70% coca - **si are
+cu ce plati**. Regula aia din urma nu e decorativa: masurat fara ea, o nava
+lovita pornea spre port in primele secunde, inainte sa fi castigat un ban, si
+statea intr-o rada goala toata partida fara sa vaneze nimic.
+
+Masurat cap-coada, cu `refit_on`: prada luata la 138 s, acasa la 359 (1200 in
+vistierie), pleaca spre port, ajunge la 764, cumpara **20 de oameni si 400 de
+puncte de coca pentru 600**, si iese din nou in larg la 776 cu 600 ramasi.
+
+
 ### Portul: unde o pradă devine bani şi oamenii se întorc
 
 `-Port=1` pune o radă prietenă pe apă. O pradă cu echipajul tău la bord **face
@@ -681,7 +715,10 @@ pereche de rulări citea împrăștiere și credea că citește semnal.
 | `-PrizeCrew=N` | câți oameni pleacă la o pradă (implicit 12 — exact cei de prisos peste tunuri) |
 | `-PrizeRangeM=N` | de la ce distanță pot ajunge bărcile (implicit 150 m) |
 | `-PrizeBoatSeconds=N` | câte secunde lângă pradă le ia bărcilor (implicit 20, CUMULATE) |
-| `-EnemyHands=N` | inamicul pornește cu N oameni (doar navele Coroanei, nu negustorii) |
+| `-EnemyHands=N` | inamicul porneste cu N oameni ABOARD, complementul ramane 60 (doar navele Coroanei) |
+| `-EnemyHull=N` | inamicul porneste cu N din 1000 coca (doar navele Coroanei) |
+| `-AIRefit=1` | capitanul inamic pleaca spre port sa se refaca, daca are bani (implicit NU) |
+| `-HandCost=N -HullPointCost=x` | preturile din port (implicit 20 si 0,5) |
 | `-Port=1` | pune o radă prietenă unde prăzile se duc acasă (implicit NU există) |
 | `-PortOffingM=N` | la câți metri SUB VÂNTUL convoiului e rada (implicit 900) |
 | `-PortX= -PortY=` | poziția exactă a radei, dacă nu vrei una sub vânt |
@@ -948,9 +985,11 @@ toată nava, fiindcă `ObjectBounds` întorcea zero pentru mesh-ul ăla.
 - echipajul e o singură rezervă împărțită între tunuri și reparații: manevra
   velelor nu e încă o stație, coca nu se repară pe mare, nimeni nu se
   recrutează și nimeni nu se plătește
-- punga tot nu CUMPĂRĂ nimic: portul face banii reali și aduce oamenii înapoi,
-  dar n-ai de unde lua tunuri, oameni noi sau reparații de cocă pe bani, și
-  nimic nu trece dintr-o rulare în alta
+- punga cumpara oameni si coca, dar NU tunuri (n-au munitie de cumparat
+  inca), nu nave mai bune, si nimic nu trece dintr-o rulare in alta - nu
+  exista salvare
+- preturile sunt alese ca sa se raporteze la valoarea unei prazi, nu masurate
+  din ceva real
 - nimeni nu recapturează o pradă care merge singură spre radă
 - abordajul e AMÂNAT explicit de owner; echipajul + reparaţiile şi economia +
   progresia sunt următoarele ateliere, în ordinea asta

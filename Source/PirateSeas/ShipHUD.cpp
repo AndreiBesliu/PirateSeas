@@ -401,6 +401,15 @@ void AShipHUD::DrawGuns(AShipPawn* Ship)
 					Sea->GetPrizesLanded() == 1 ? TEXT("") : TEXT("s")),
 					Sea->GetLanded() > 0 ? Good : Faint, X, Y, Small, Scale);
 				Y += Line * 0.95f;
+				// What is left to spend, and what it has bought. Coffers is the
+				// number a captain steers by.
+				DrawText(Sea->GetSpent() > 0
+					? FString::Printf(TEXT("COFFERS %d  spent %d: %d hands, %d hull"),
+						Sea->GetCoffers(), Sea->GetSpent(), Sea->GetHandsBought(),
+						Sea->GetHullBought())
+					: FString::Printf(TEXT("COFFERS %d"), Sea->GetCoffers()),
+					Sea->GetCoffers() > 0 ? Good : Faint, X, Y, Small, Scale);
+				Y += Line * 0.95f;
 			}
 			DrawText(Away > 0
 				? FString::Printf(TEXT("PURSE  %d  from %d prize%s, %d manned, %d hands away"),

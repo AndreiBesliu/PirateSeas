@@ -69,6 +69,13 @@ public:
 	int32 GetLanded() const { return Landed; }
 	int32 GetPrizesLanded() const { return PrizesLanded; }
 	bool HasPort() const { return bHasPort; }
+	/** Money LANDED is what has been earned; SPENT is what has been laid out.
+	 *  Both cumulative, so neither can be read backwards, and what is actually
+	 *  in the coffers is the difference. */
+	int32 GetSpent() const { return Spent; }
+	int32 GetCoffers() const { return Landed - Spent; }
+	int32 GetHandsBought() const { return HandsBought; }
+	int32 GetHullBought() const { return FMath::RoundToInt(HullBought); }
 
 protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Sea")
@@ -225,6 +232,32 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Port")
 	float PortRadiusCm = 15000.f;
 
+	/** --- the price list --------------------------------------------------
+	 *
+	 *  What the purse BUYS, and the two things it buys are exactly the two the
+	 *  sea will not give back: men who were killed or sent away in a prize,
+	 *  and hull, which TickRepairs is forbidden to touch.
+	 *
+	 *  The prices are set against the one number the economy already has. A
+	 *  whole prize is 1200. Twelve men - the prize crew that took her - cost
+	 *  240, a fifth of her. Her whole hull, a thousand points, costs 500.
+	 *  So one prize brought home pays for the crew that took her twice over,
+	 *  with enough left for half a hull, and a prize SUNK instead of taken
+	 *  pays for none of it. */
+	UPROPERTY(EditDefaultsOnly, Category = "Port")
+	int32 HandCost = 20;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Port")
+	float HullPointCost = 0.5f;
+
+	/** A refit is not instant. One man or this much hull per half-second in
+	 *  the roadstead, so a full refit of a shot-up ship is about a minute of
+	 *  lying there - a minute the convoy spends running. Money is one cost;
+	 *  the mission clock is the other, and this is the one that makes leaving
+	 *  early a decision rather than an oversight. */
+	UPROPERTY(EditDefaultsOnly, Category = "Port")
+	float HullPointsPerTick = 20.f;
+
 	/** How far off the convoy -RaiderSide= puts the raider, in metres, along
 	 *  the wind. -RaiderOffingM=. */
 	UPROPERTY(EditDefaultsOnly, Category = "Convoy")
@@ -359,6 +392,12 @@ private:
 	UFUNCTION()
 	void SamplePrizes();
 
+	/** What the money buys, on the same timer as the prizes because it is the
+	 *  same circle on the water. Any hull that is not a merchant and is lying
+	 *  in the roadstead signs on men and takes in timber, while the coffers
+	 *  last. */
+	void RefitInPort();
+
 	/** -ConvoyStrikeTest=N: the first merchant still running strikes at N
 	 *  seconds, through Strike() and nothing else, so the whole path from a
 	 *  strike to a finished mission can be proved without a single shot. */
@@ -434,6 +473,12 @@ private:
 	int32 HandsOutInPrizes = 0;
 	int32 PrizesLanded = 0;
 	int32 Landed = 0;
+	int32 Spent = 0;
+	int32 HandsBought = 0;
+	float HullBought = 0.f;
+	/** Latched: seconds any hull spent refitting, over the run. */
+	float RefitSeconds = 0.f;
+	bool bRefitLogged = false;
 	int32 HandsHome = 0;
 	FVector PortLocation = FVector::ZeroVector;
 	/** Closest any hunter came to a struck prize, in metres, over the run.

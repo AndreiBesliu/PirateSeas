@@ -729,3 +729,30 @@ condusă de doisprezece oameni, sunt judecăţi de ochi.
 vedea acolo. Nimeni nu încearcă să-ţi recaptureze prada pe drum. Punga tot nu
 cumpără nimic. Şi din două prăzi luate, în cinci sute de secunde doar una
 ajunge — a doua rămâne pe mare când se termină partida.
+
+## 30. Refitul: se simte ca banii cumpara ceva?
+
+**Ce te uiti:** `-Convoy=2 -EnemyCount=0 -Port=1 -ShipHullTest=600`. Pornesti cu
+coca la 60%. Iei o prada, o lasi sa ajunga in rada, apoi intri si tu in rada si
+stai acolo. Uita-te la randurile PURSE / LANDED / COFFERS si la bara HULL.
+
+**Cum arata bine:** Cat prada e pe drum, LANDED e 0 si COFFERS e 0 - n-ai ce
+cheltui. Cand ea intra in rada, LANDED sare la 1200 si COFFERS la fel. Cand
+intri TU in rada, bara HULL urca vizibil, randul COFFERS scade, si textul de
+langa el spune ce ai cumparat (spent 600: 20 hands, 400 hull). Se opreste
+singur cand esti intreg sau cand ai ramas fara bani.
+
+**Cum arata prost:** Bara HULL urca fara sa fi ajuns nicio prada acasa, adica pe
+gratis. Sau nu urca deloc cat stai in rada. Sau COFFERS scade fara sa se schimbe
+nimic pe nava. Sau cele patru randuri se suprapun peste ce e sub ele - am
+adaugat doua randuri noi in coltul ala.
+
+**De ce nu pot eu:** Pot masura fiecare cifra - cat s-a cheltuit, cati oameni,
+cata coca, in cate secunde - si le-am masurat: 20 de oameni si 400 de puncte
+pentru 600, in 20 de secunde. Daca "ma intorc in port sa ma refac" se simte ca o
+decizie sau ca o corvoada, nu pot sti.
+
+**Ce stiu deja si n-am ascuns:** preturile (20 pe om, 0,5 pe punct de coca) sunt
+alese ca sa aiba sens fata de o prada de 1200, nu masurate din ceva real. Punga
+nu supravietuieste rularii. Nu se cumpara tunuri, munitie sau nave. Si rada e
+tot un cerc pe apa, nu un oras.

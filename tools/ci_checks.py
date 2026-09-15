@@ -532,6 +532,40 @@ def check_comparison():
     if got != want:
         fail("the refusal lines read %s, wanted %s" % (got, want))
 
+    # What the money bought, off the real run. The arithmetic is checkable from
+    # the line itself and the fixture checks it: twenty men at twenty apiece is
+    # four hundred, four hundred points of hull at a half is two hundred, six
+    # hundred spent, six hundred left of twelve hundred landed. A reader that
+    # confused spent with coffers would pass a single-number check and fail
+    # this one.
+    rf = ci_measure.measure("fixture",
+        "LogTemp: Display: PORTLOG REFIT spent=600 coffers=600 handsBought=20 "
+        "hullBought=400 refitSeconds=20.0" + chr(10) +
+        "LogTemp: Display: SEALOG EnemyShipPawn_0 landTicks=0 clawOffs=0 "
+        "rejoinTicks=0 avoidTicks=0 pursuitTicks=2620 prizeTicks=8500 "
+        "portTicks=4200" + chr(10))
+    want = {"refit_spent": 600, "refit_coffers_end": 600,
+            "refit_hands_bought": 20, "refit_hull_bought": 400,
+            "refit_seconds": 20.0, "port_ticks_max": 4200,
+            "prize_ticks_max": 8500, "pursuit_ticks_max": 2620}
+    got = {k: rf.get(k) for k in want}
+    if got != want:
+        fail("the refit lines read %s, wanted %s" % (got, want))
+    if rf["refit_hands_bought"] * 20 + rf["refit_hull_bought"] // 2 != rf["refit_spent"]:
+        fail("the refit line does not add up: %d men and %d hull are not %d"
+             % (rf["refit_hands_bought"], rf["refit_hull_bought"], rf["refit_spent"]))
+
+    # A ship that bought nothing must read zeros, not absence: the line is
+    # printed in every run, convoy or none.
+    rz = ci_measure.measure("fixture",
+        "LogTemp: Display: PORTLOG REFIT spent=0 coffers=0 handsBought=0 "
+        "hullBought=0 refitSeconds=0.0" + chr(10))
+    if (rz.get("refit_spent"), rz.get("refit_hands_bought"),
+            rz.get("refit_seconds")) != (0, 0, 0.0):
+        fail("a run that bought nothing read %s"
+             % ((rz.get("refit_spent"), rz.get("refit_hands_bought"),
+                 rz.get("refit_seconds")),))
+
     # The enemy's gun crew, read BY NAME off her own line. The convoy runs
     # prove why: gun_crew_min is 0.25 in both halves because a merchant
     # carries 14 hands and sits on MinGunCrewFactor, so a min over hulls can
@@ -565,7 +599,8 @@ LogTemp: Display: SHIPLOG ShipPawn_0 sink=foundering draught=120
         fail("ships_sunk read %d from a log holding exactly one SUNK line" % sunk)
     if len(FAILS) == before:
         ok("the measurement gate reports matches, moves, new and missing numbers, "
-           "and reads the convoy, crew, prize, possession and pursuit lines")
+           "and reads the convoy, crew, prize, possession, refit and pursuit "
+           "lines")
 
 
 def main():

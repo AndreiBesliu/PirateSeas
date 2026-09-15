@@ -244,6 +244,46 @@ SCENARIOS = {
                      "-ConvoyRangeM=1200", "-EnemyCount=1", "-RaiderSide=weather",
                      "-RaiderOffingM=600", "-ConvoyCargo=1200", "-AIAimHigh=1",
                      "-AIPrize=1", "-ShipQuitAfter=500"],
+    # THE PURSE BUYING SOMETHING. A raider who sails hurt (hull 600 of 1000)
+    # and twenty hands short of her complement, with a port to spend in. One
+    # flag apart: -AIRefit=. With the doctrine on she hunts, sends two prizes
+    # home, and only THEN - money in the coffers - bears away and buys back
+    # men and timber, the two things the sea will not return. With it off she
+    # earns exactly the same money and spends none of it.
+    #
+    # Keys that must differ: refit_spent, refit_hands_bought,
+    # refit_hull_bought, refit_coffers_end, port_ticks_max. Keys that must NOT:
+    # purse_end and purse_landed - she earns the same either way, and a refit
+    # that changed what a prize was worth would mean the money was never banked
+    # where the commits before this one say it was.
+    #
+    # And the arithmetic is on the line so it can be read: twenty men at twenty
+    # apiece is four hundred, four hundred points of hull at a half is two
+    # hundred, six hundred spent out of twelve hundred landed, six hundred
+    # left.
+    #
+    # EIGHT HUNDRED SECONDS, and the number comes from a timeline that was
+    # read rather than guessed. Measured once end to end: prize manned at 138,
+    # home at 359, the captain bears away at 359, gives up a second prize she
+    # cannot reach at 539, reaches the roadstead and begins to refit at 764,
+    # and is done at 776. Anything shorter and the run ends with her still on
+    # her way, which would read as "the refit does nothing".
+    #
+    # GUARD: prizes_landed must be 1 in BOTH halves. The whole point is that
+    # she can only spend what she has actually landed, so a half where nothing
+    # came home is not a comparison, it is a ship with an empty purse.
+    "refit_on": ["-WindBearing=0", "-WindSpeed=12", "-Convoy=2",
+                 "-ConvoyX=120000", "-ConvoyY=150000", "-ConvoyWindAngle=90",
+                 "-ConvoyRangeM=1200", "-EnemyCount=1", "-RaiderSide=weather",
+                 "-RaiderOffingM=600", "-ConvoyCargo=1200", "-AIAimHigh=1",
+                 "-AIPrize=1", "-Port=1", "-EnemyHull=600", "-EnemyHands=40",
+                 "-AIRefit=1", "-ShipQuitAfter=800"],
+    "refit_off": ["-WindBearing=0", "-WindSpeed=12", "-Convoy=2",
+                  "-ConvoyX=120000", "-ConvoyY=150000", "-ConvoyWindAngle=90",
+                  "-ConvoyRangeM=1200", "-EnemyCount=1", "-RaiderSide=weather",
+                  "-RaiderOffingM=600", "-ConvoyCargo=1200", "-AIAimHigh=1",
+                  "-AIPrize=1", "-Port=1", "-EnemyHull=600", "-EnemyHands=40",
+                  "-AIRefit=0", "-ShipQuitAfter=800"],
 }
 
 
@@ -558,6 +598,24 @@ def measure(name, text):
     pursuit = [int(v) for v in re.findall(r"SEALOG \S+ landTicks=.*?pursuitTicks=(\d+)", text)]
     if pursuit:
         m["pursuit_ticks_max"] = max(pursuit)
+    # What the money BOUGHT. Printed at every quit whether there is a port or
+    # not, so these are counted zeros rather than absences - and spent beside
+    # coffers, because either one alone cannot be told from a ship that had
+    # nothing to spend in the first place.
+    refit = re.search(r"PORTLOG REFIT spent=(\d+) coffers=(-?\d+) handsBought=(\d+) "
+                      r"hullBought=(\d+) refitSeconds=([0-9.]+)", text)
+    if refit:
+        m["refit_spent"] = int(refit.group(1))
+        m["refit_coffers_end"] = int(refit.group(2))
+        m["refit_hands_bought"] = int(refit.group(3))
+        m["refit_hull_bought"] = int(refit.group(4))
+        m["refit_seconds"] = round(float(refit.group(5)), 1)
+    # Ticks a captain spent making for the port instead of hunting.
+    port_ticks = [int(v) for v in
+                  re.findall(r"SEALOG \S+ landTicks=.*?portTicks=(\d+)", text)]
+    if port_ticks:
+        m["port_ticks_max"] = max(port_ticks)
+
     # Ticks a captain spent standing by a prize instead of fighting. Zero in
     # every scenario that does not turn the doctrine on, which is all but two.
     prize_ticks = [int(v) for v in

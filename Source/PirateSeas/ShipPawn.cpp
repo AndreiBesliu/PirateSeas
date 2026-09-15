@@ -432,10 +432,16 @@ void AShipPawn::BeginPlay()
 				&& FParse::Value(FCommandLine::Get(), TEXT("EnemyHands="), EnemyHands)
 				&& EnemyHands > 0)
 			{
-				HandsMax = EnemyHands;
-				Hands = EnemyHands;
-				UE_LOG(LogTemp, Display, TEXT("CREWLOG %s sails short-handed: %d hands"),
-					*GetName(), Hands);
+				// HOW MANY ARE ABOARD, leaving her complement where it is: she
+				// sails SHORT of a full crew, with berths a port can fill. It
+				// used to set the complement too, which made her a small ship
+				// rather than an undermanned one - and then GetHandsShort() was
+				// zero, so recruiting could never be measured anywhere and
+				// handsBought was a counter nailed to zero in every scenario.
+				Hands = FMath::Min(EnemyHands, HandsMax);
+				UE_LOG(LogTemp, Display,
+					TEXT("CREWLOG %s sails short-handed: %d of %d hands"),
+					*GetName(), Hands, HandsMax);
 			}
 
 			float EnemyRig = -1.f, EnemyRudder = -1.f;
@@ -464,6 +470,26 @@ void AShipPawn::BeginPlay()
 	}
 
 	HullIntegrity = MaxHullIntegrity;
+
+	// -EnemyHull=N starts a CROWN ship hurt. It has to be written HERE, after
+	// the line above, and not with the other enemy damage flags forty lines
+	// up: set there it was quietly overwritten, and the run printed
+	// "sails hurt: hull 600/1000" and then a captain reporting hull 100% in
+	// the very next line. Two log lines disagreeing was the only sign.
+	//
+	// It exists because a raider who hunts merchants is never shot at, so
+	// there is otherwise no way to measure a hull being BOUGHT back. The flag
+	// sets the starting condition; the measured key is what the refit put in.
+	float EnemyHull = 0.f;
+	if (Allegiance == EShipAllegiance::Crown
+		&& FParse::Value(FCommandLine::Get(), TEXT("EnemyHull="), EnemyHull)
+		&& EnemyHull > 0.f)
+	{
+		HullIntegrity = FMath::Min(EnemyHull, MaxHullIntegrity);
+		UE_LOG(LogTemp, Display, TEXT("CREWLOG %s sails hurt: hull %.0f/%.0f"),
+			*GetName(), HullIntegrity, MaxHullIntegrity);
+	}
+
 	// -ShipHullTest=N starts the PLAYER's first ship with N integrity, so a
 	// sinking by real gunfire can be measured in a couple of broadsides
 	// instead of seventeen hits. The enemy is never weakened.
@@ -1144,6 +1170,31 @@ bool AShipPawn::DetachPrizeCrew(int32 Count)
 		TEXT("CREWLOG %s sent %d hands away to a prize, %d/%d left aboard (%d away in all)"),
 		*GetName(), Count, Hands, HandsMax, HandsInPrizes);
 	return true;
+}
+
+bool AShipPawn::RecruitHand()
+{
+	if (Hands >= HandsMax || IsSinking())
+	{
+		return false;
+	}
+	++Hands;
+	return true;
+}
+
+float AShipPawn::RepairHull(float Points)
+{
+	// The one thing the repair parties at sea are explicitly not allowed to
+	// touch: TickRepairs does the rudder and the masts and leaves the hull
+	// alone, because knotting and splicing is not shipwrighting. This is the
+	// only place a hull comes back, and it costs money.
+	if (Points <= 0.f || IsSinking())
+	{
+		return 0.f;
+	}
+	const float Put = FMath::Min(Points, MaxHullIntegrity - HullIntegrity);
+	HullIntegrity += Put;
+	return Put;
 }
 
 int32 AShipPawn::TakeBackPrizeCrew(int32 Count)

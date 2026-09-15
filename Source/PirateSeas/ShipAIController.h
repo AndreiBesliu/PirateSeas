@@ -57,6 +57,12 @@ public:
 	/** Ticks spent standing by a prize instead of fighting. Zero in every
 	 *  scenario that does not turn the doctrine on. */
 	int32 GetPrizeTicks() const { return PrizeTicks; }
+	/** Ticks spent making for the port. Zero wherever the doctrine is off. */
+	int32 GetPortTicks() const { return PortTicks; }
+
+	/** Where the port is, told to her by the game mode. Without this she has
+	 *  no idea one exists. */
+	void SetPort(const FVector& Where, float RadiusCm);
 
 protected:
 	/** Beyond this the enemy just closes the distance. */
@@ -368,6 +374,43 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Prize")
 	float PrizeGiveUpSeconds = 40.f;
 
+	/** And the whole attempt, approach included. The rule above only counts
+	 *  time spent ALONGSIDE, which is right for "I got there and could not
+	 *  spare the men" and useless for "I never got there at all": measured,
+	 *  a raider spent 305 seconds - half the run - standing by a prize she
+	 *  could not reach, while the port she had money to refit at went
+	 *  unvisited. Three minutes is longer than any take that has ever
+	 *  worked here (the slowest measured 142 s), so this cannot interrupt
+	 *  one. */
+	UPROPERTY(EditAnywhere, Category = "Prize")
+	float PrizeAbandonSeconds = 180.f;
+
+	/** Whether she breaks off and runs for the port to refit. DEFAULT OFF, for
+	 *  the same reason the prize doctrine is: a captain who suddenly leaves
+	 *  the fight would move every scenario that measures the fight.
+	 *  -AIRefit=1 turns it on. */
+	UPROPERTY(EditAnywhere, Category = "Port")
+	bool bRefitsInPort = false;
+
+	/** She goes when she is short this many men, or her hull is under this
+	 *  fraction. Twelve is one prize crew: the ship that has just given away
+	 *  a dozen men is exactly the ship with a reason to go and buy them back,
+	 *  and the money to do it with. */
+	UPROPERTY(EditAnywhere, Category = "Port")
+	int32 RefitWhenShort = 12;
+
+	UPROPERTY(EditAnywhere, Category = "Port")
+	float RefitBelowHull = 0.7f;
+
+	/** And she does not go unless she can pay for something when she gets
+	 *  there. Measured without this rule: a raider who sailed hurt bore away
+	 *  for the port in the first seconds, before she had taken anything, and
+	 *  lay in an empty roadstead with a purse of nothing for the whole run -
+	 *  never hunting, never earning, never refitting. A voyage to port you
+	 *  cannot pay for is a voyage wasted, and the captain now knows it. */
+	UPROPERTY(EditAnywhere, Category = "Port")
+	int32 RefitNeedsCoffers = 100;
+
 private:
 	/** Nearest heading we can actually sail that is closest to what we want. */
 	float ResolveSailableHeading(float DesiredYawDeg, float WindFromBearingDeg,
@@ -460,7 +503,14 @@ private:
 	UPROPERTY(Transient)
 	TObjectPtr<AShipPawn> PrizeToMan;
 	int32 PrizeTicks = 0;
+	int32 PortTicks = 0;
 	bool bPrizeLogged = false;
+	bool bPortLogged = false;
+	FVector PortWhere = FVector::ZeroVector;
+	float PortRadius = 0.f;
+	bool bKnowsPort = false;
 	/** Seconds spent actually alongside this prize. */
 	float PrizeAlongsideSeconds = 0.f;
+	/** Total time on this prize, approach included. */
+	float PrizeChaseSeconds = 0.f;
 };

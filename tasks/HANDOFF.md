@@ -175,9 +175,17 @@ Livrat:
    prăzi ajunse, 1200 contra 0 la chei, 12 contra 0 oameni întorşi — şi
    `purse_end` IDENTIC, fiindcă valoarea se stabileşte la pavilion.
 
-Următorul: **punga să CUMPERE** (reparaţii de cocă, oameni, muniţie — cocă e
-singurul lucru pe care marea nu-l repară), apoi magazia (muniţie finită).
-**Abordajul rămâne AMÂNAT.**
+7. **Refitul in port**: punga CUMPARA. Un om 20, un punct de coca 0,5, platit
+   din `Landed` (banii ajunsi la chei), un om sau 20 de puncte la fiecare
+   jumatate de secunda petrecuta in rada. Doctrina `-AIRefit=1` (implicit
+   STINSA) cere si bani in vistierie, nu doar avarii: fara regula asta o nava
+   lovita pleca spre port in primele secunde si nu mai vana niciodata.
+   Perechea `refit_on`/`refit_off`, dimensionata dintr-o cronologie MASURATA
+   (prada acasa la 359, rada la 764, gata la 776 - de aia ruleaza 800 s):
+   600 cheltuiti contra 0, 20 de oameni si 400 de coca contra nimic.
+
+Urmatorul: magazia (munitie finita) - singurul lucru pe care portul ar putea
+sa-l vanda si inca nu exista. **Abordajul ramane AMANAT.**
 
 ## Ce aşteaptă ochiul owner-ului
 
