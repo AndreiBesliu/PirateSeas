@@ -659,6 +659,25 @@ dar compilatorul din el e `14.44.35228`. Intervalul interzis de Unreal este
 `14.44.0-14.44.35210`, deci pare că îl prinde, dar nu-l prinde. Uită-te la ce
 raportează UBT, nu la numele folderului.
 
+## Ora din zi
+
+`-Hour=17.5` mută soarele unde l-ar pune ora aia, şi ia cu el culoarea, puterea,
+lumina cerului şi banda de expunere. Fără flag nu rulează nimic din toate astea
+şi nivelul îşi păstrează lumina cu care a fost scris — felia e **opt-in**
+dinadins: o oră care ar fi mutat pe tăcute aspectul livrat şi fiecare număr din
+linia de bază ar fi fost o schimbare de lumină deghizată în funcţionalitate.
+
+Soarele urcă după un sinus între răsărit şi apus şi mătură de la est la vest. Nu
+e efemeridă, dar are cele două proprietăţi care contează: lumina rade pe apă la
+capetele zilei şi vine din alt cadran la fiecare oră.
+
+**Banda de expunere e ANCORATĂ în punctul măsurat, nu calculată.** Aspectul
+livrat e 110.000 lux într-o bandă de 12,5–16 EV, obţinută prin baleiere şi
+uitat la capturi; orice altă oră e banda aia mutată cu exact atâţia paşi cu câţi
+s-a mutat lumina. O bandă calculată din principii — ce am scris prima dată — a
+pus apusul cu două stopuri şi jumătate prea sus şi a transformat un asfinţit
+corect colorat într-o siluetă. Aritmetica era bună; ancora era inventată.
+
 ## Vântul, în ce se îndoaie
 
 Marea răspundea la vânt de azi-dimineaţă; plantele şi greementul nu răspundeau
@@ -698,7 +717,9 @@ toată nava, fiindcă `ObjectBounds` întorcea zero pentru mesh-ul ăla.
   deliberată, nu un gol
 - umbra de vânt în adăpostul insulei
 - pânza nu fâlfâie: vela se îndoaie cu catargul, dar n-are mişcarea ei proprie
-- cerul e cel implicit al motorului, aceeași oră din zi în fiecare rulare
+- cerul e tot cel implicit al motorului (`-Hour=` mută soarele şi expunerea,
+  dar norii şi atmosfera rămân cum sunt), şi timpul nu curge în timpul unei
+  partide
 - niciun sunet
 - coca nu poartă urme de lovitură: gaura se vede în cifre, nu pe lemn
 

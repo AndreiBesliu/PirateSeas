@@ -418,7 +418,9 @@ tu). Lista onestă de acum, cât o ştiu eu:
   proprie, rapidă, când e prinsă în vânt;
 - frunzele sunt solide, nu cartonaşe cu decupaj — silueta e mai groasă decât
   trebuie de aproape;
-- cerul e cel implicit al motorului, aceeaşi oră din zi în fiecare rulare;
+- cerul e tot cel implicit al motorului: `-Hour=` mută soarele, culoarea şi
+  expunerea, dar norii şi atmosfera rămân aceiaşi, şi timpul nu curge în timpul
+  unei partide;
 - nu există sunet, deloc;
 - coca nu poartă urme de lovitură: gaura se vede în cifre, nu pe lemn;
 - nu există echipaj, nici interior.
@@ -567,3 +569,29 @@ optzeci de centimetri. De la două sute de metri ăsta e un pixel sau doi, şi a
 şi trebuie: un palmier care se vede clar mişcând de la distanţa aia ar fi un
 palmier care se mişcă greşit. A fost o versiune cu 2,2 metri — un ştergător de
 parbriz.
+
+---
+
+## 24. Ora din zi: e apus, sau doar portocaliu?
+
+**Ce te uiți:** Aceeaşi scenă la `-Hour=6.5`, `-Hour=12` şi `-Hour=17.5`. Uită-te
+la unde cad umbrele, la culoarea lemnului şi la cât vezi în umbră.
+
+**Cum arată bine:** La 6:30 şi la 17:30 lumina rade pe apă şi umbrele greementului
+se întind lung PE MARE, în direcţii opuse între cele două. Lemnul e cald, nu
+spălat. Se vede în umbră: nava nu e siluetă. La prânz umbrele sunt scurte şi sub
+cocă, iar totul e mai plat — aşa şi trebuie.
+
+**Cum arată prost:** Apus portocaliu în care nava e o siluetă neagră (banda de
+expunere n-a coborât cu lumina). Sau invers, un prânz spălat. Sau umbre care cad
+în aceeaşi direcţie la 6:30 şi la 17:30.
+
+**De ce nu pot eu:** Pot măsura unde e soarele, câţi lux dă, la ce temperatură de
+culoare şi ce bandă de expunere a primit — toate sunt în `SKYLOG` şi în linia de
+bază. Dacă un apus ARATĂ a apus e altceva.
+
+**Ce știu deja și n-am ascuns:** norii şi atmosfera sunt cele implicite ale
+motorului şi nu se schimbă cu ora — doar soarele, culoarea lui, lumina cerului şi
+expunerea. Şi timpul nu curge în timpul unei partide: ora se alege la pornire.
+Prima versiune a benzii de expunere chiar a produs silueta de la „cum arată
+prost"; se vede în DEVLOG de ce.

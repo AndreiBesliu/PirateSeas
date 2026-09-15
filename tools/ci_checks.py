@@ -364,6 +364,15 @@ def check_comparison():
         fail("the rig sway line read %s from a line holding (7, 1)"
              % ((rg.get("rig_sway_mats"), rg.get("rig_sway_readback_ok")),))
 
+    sk = ci_measure.measure("fixture", "LogTemp: Display: SKYLOG hour=17.5 "
+                            "elev=8.1 azim=262 lux=30756 K=3461 ev=[10.7,14.2] "
+                            "suns=1 skies=1 volumes=1" + chr(10))
+    if (sk.get("sun_elev_deg"), sk.get("sun_lux"), sk.get("sun_kelvin"),
+            sk.get("exposure_ev_min")) != (8.1, 30756.0, 3461.0, 10.7):
+        fail("the sky line read %s from a line holding (8.1, 30756, 3461, 10.7)"
+             % ((sk.get("sun_elev_deg"), sk.get("sun_lux"), sk.get("sun_kelvin"),
+                 sk.get("exposure_ev_min")),))
+
     # And the island band, where the whole point is that the two numbers agree.
     isle = ci_measure.measure("fixture", "LogTemp: Display: ISLELOG Island_0 planted "
                               "palms=18 scrub=118 of 258 tried (missed=0, wrong "

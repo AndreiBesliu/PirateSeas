@@ -11,6 +11,11 @@
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
 #include "ShipHUD.h"
+#include "Engine/DirectionalLight.h"
+#include "Components/DirectionalLightComponent.h"
+#include "Engine/SkyLight.h"
+#include "Components/SkyLightComponent.h"
+#include "Engine/PostProcessVolume.h"
 #include "ShipAIController.h"
 #include "ShipPawn.h"
 #include "TimerManager.h"
@@ -84,6 +89,7 @@ void ASeaGameMode::BeginPlay()
 
 	DumpOceanCollision();
 	SetSeaState();
+	SetTimeOfDay();
 	SpawnOceanSurface();
 	// The squadron's size AND its position are read BEFORE the island is
 	// placed, because the island has to be checked against every station a
@@ -139,6 +145,97 @@ void ASeaGameMode::BeginPlay()
 		GetWorldTimerManager().SetTimer(EnemySinkTestTimer, this,
 			&ASeaGameMode::ScuttleEnemyForTest, EnemySinkTestAt, false);
 	}
+}
+
+void ASeaGameMode::SetTimeOfDay()
+{
+	FParse::Value(FCommandLine::Get(), TEXT("Hour="), HourOfDay);
+	if (HourOfDay < 0.f)
+	{
+		// Not asked for. The level keeps the light it was authored with, which
+		// is the point: this must not move a single baselined number unless
+		// somebody asks for an hour.
+		return;
+	}
+	HourOfDay = FMath::Fmod(FMath::Max(0.f, HourOfDay), 24.f);
+
+	// Where the sun is. A sine between sunrise and sunset for the height, and a
+	// sweep from east to west for the bearing - not an ephemeris, but it has
+	// the two properties that matter: the light rakes along the water at the
+	// ends of the day and comes from a different quarter at each hour.
+	const float Day = FMath::Max(1.f, SunsetHour - SunriseHour);
+	const float T = (HourOfDay - SunriseHour) / Day;          // 0 at sunrise, 1 at sunset
+	const bool bDaylight = (T >= 0.f && T <= 1.f);
+	const float ElevDeg = bDaylight
+		? NoonElevationDeg * FMath::Sin(PI * T)
+		: -12.f;                                              // well under the horizon
+	const float AzimuthDeg = 90.f + 180.f * FMath::Clamp(T, -0.2f, 1.2f);
+
+	// How strong, and what colour. Both follow the height, because that is what
+	// makes a low sun read as a low sun: less of it, and redder. The floor is
+	// not moonlight - it is "enough to sail by", because a black frame is a
+	// thing this project has shipped before and had to measure its way out of.
+	const float SinElev = FMath::Sin(FMath::DegreesToRadians(FMath::Max(ElevDeg, 0.f)));
+	const float Lux = bDaylight
+		? FMath::Max(1500.f, 110000.f * FMath::Pow(SinElev, 0.65f))
+		: 260.f;
+	const float Kelvin = bDaylight
+		? FMath::Lerp(2100.f, 5800.f, FMath::Clamp(ElevDeg / 22.f, 0.f, 1.f))
+		: 11000.f;
+	// The exposure band has to travel with the light or the frame goes white at
+	// noon and black at dusk.
+	//
+	// ANCHORED TO THE POINT THAT WAS MEASURED, not to a formula. The shipped
+	// look is 110,000 lux inside a band of 12.5 to 16 EV, arrived at by sweeping
+	// and looking; every other hour is that band moved by however many stops the
+	// light has moved. A band computed from first principles instead put dusk
+	// two and a half stops too high and turned a correctly coloured sunset into
+	// a silhouette - the arithmetic was fine and the anchor was invented.
+	const float Stops = FMath::Log2(FMath::Max(Lux, 1.f) / 110000.f);
+	const float EvMin = 12.5f + Stops, EvMax = 16.f + Stops;
+
+	int32 Suns = 0, Skies = 0, Volumes = 0;
+	for (TActorIterator<ADirectionalLight> It(GetWorld()); It; ++It)
+	{
+		ADirectionalLight* Sun = *It;
+		Sun->SetActorRotation(FRotator(-ElevDeg, AzimuthDeg, 0.f));
+		if (UDirectionalLightComponent* Comp =
+			Cast<UDirectionalLightComponent>(Sun->GetLightComponent()))
+		{
+			Comp->SetIntensity(Lux);
+			Comp->SetTemperature(Kelvin);
+			Comp->SetUseTemperature(true);
+			++Suns;
+		}
+	}
+	for (TActorIterator<ASkyLight> It(GetWorld()); It; ++It)
+	{
+		if (USkyLightComponent* Comp = It->GetLightComponent())
+		{
+			// The sky itself is what lights the shadows, and at dusk it is
+			// nearly all of the light there is.
+			Comp->SetIntensity(bDaylight ? 1.f : 2.6f);
+			Comp->RecaptureSky();
+			++Skies;
+		}
+	}
+	for (TActorIterator<APostProcessVolume> It(GetWorld()); It; ++It)
+	{
+		It->Settings.bOverride_AutoExposureMinBrightness = true;
+		It->Settings.bOverride_AutoExposureMaxBrightness = true;
+		It->Settings.AutoExposureMinBrightness = EvMin;
+		It->Settings.AutoExposureMaxBrightness = EvMax;
+		++Volumes;
+	}
+
+	// Counted, because "the hour did nothing" and "the hour is wrong" look the
+	// same in a capture, and a level with no directional light would give the
+	// first while every number below still read perfectly.
+	UE_LOG(LogTemp, Display,
+		TEXT("SKYLOG hour=%.1f elev=%.1f azim=%.0f lux=%.0f K=%.0f ev=[%.1f,%.1f] "
+			 "suns=%d skies=%d volumes=%d"),
+		HourOfDay, ElevDeg, AzimuthDeg, Lux, Kelvin, EvMin, EvMax,
+		Suns, Skies, Volumes);
 }
 
 void ASeaGameMode::SetSeaState()

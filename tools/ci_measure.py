@@ -112,6 +112,12 @@ SCENARIOS = {
     "loose_shot": ["-WindBearing=120", "-WindSpeed=11", "-EnemyX=9000",
                    "-EnemyY=1500", "-ShipRudderTest=2", "-ShipFireTest=20",
                    "-ShipQuitAfter=30", "-ShipLead=1", "-ShipInheritVel=0"],
+    # An hour of the day other than the one the level was authored at. The sun,
+    # its colour and the exposure band all move with it, and none of that is in
+    # any other scenario - without this the whole feature could be deleted and
+    # every number here would still match.
+    "dusk": ["-WindBearing=280", "-WindSpeed=12", "-Islands=1", "-Hour=17.5",
+             "-ShipRudderTest=2", "-ShipQuitAfter=30"],
     "lee_shore": ["-WindBearing=0", "-WindSpeed=12", "-Islands=3",
                   "-IsleX=-35000", "-IsleY=0", "-IsleRadius=14000",
                   "-EnemyX=-75000", "-EnemyY=0", "-ShipQuitAfter=40"],
@@ -290,6 +296,17 @@ def measure(name, text):
         m["sway_mats"] = int(sway.group(1))
         m["sway_wind_ms"] = float(sway.group(2))
         m["sway_readback_ok"] = 1 if sway.group(3) == "ok" else 0
+
+    # The hour of the day, when one was asked for. lux and the exposure band
+    # move together on purpose: a band that stopped following the light would
+    # show up here as one moving without the other.
+    sky = re.search(r"SKYLOG hour=([0-9.]+) elev=(-?[0-9.]+) azim=([0-9.]+) "
+                    r"lux=([0-9.]+) K=([0-9.]+) ev=\[(-?[0-9.]+),", text)
+    if sky:
+        m["sun_elev_deg"] = float(sky.group(2))
+        m["sun_lux"] = float(sky.group(4))
+        m["sun_kelvin"] = float(sky.group(5))
+        m["exposure_ev_min"] = float(sky.group(6))
 
     # And the SHIP's half of the same wire. The island's plants are only in two
     # scenarios; the rig is in all nine, so this is the one that would catch the

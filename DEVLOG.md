@@ -3067,3 +3067,63 @@ are e tăcut un no-op, exact cum erau cele trei butoane moarte de siaj. Fixtură
 `ci_checks.py` pe linia reală, inclusiv pe cazul `readback FAILED`.
 
 **Task Completed.**
+
+---
+
+## Task Started — 15.09.2026 (ora din zi)
+
+**Prompt:** „continua"
+**Model:** Claude Opus 5
+
+Al doilea gol de pe lista onestă: cerul era mereu aceeaşi oră. `-Hour=17.5` mută
+acum soarele unde l-ar pune ora aia şi ia cu el culoarea, puterea, lumina cerului
+şi banda de expunere.
+
+**Opt-in dinadins.** Fără flag nu rulează nimic şi nivelul îşi păstrează lumina
+cu care a fost scris — o oră care ar fi mutat pe tăcute aspectul livrat şi
+fiecare număr din linia de bază ar fi fost o schimbare de lumină deghizată în
+funcţionalitate.
+
+### Ancora, nu formula
+
+Prima bandă de expunere am calculat-o din principii: luminanţa medie a unei scene
+cu albedo 0,2 sub atâţia lux, convertită în EV100. Aritmetica era corectă. Apusul
+a ieşit **siluetă neagră pe cer portocaliu** — corect colorat, subexpus cu vreo
+două stopuri şi jumătate.
+
+Ce lipsea era ancora. Aspectul livrat e 110.000 lux într-o bandă de 12,5–16 EV,
+obţinută acum trei zile prin baleiere şi uitat la capturi. Orice altă oră trebuie
+să fie banda AIA mutată cu exact atâţia paşi cu câţi s-a mutat lumina:
+
+    Stops = log2(lux / 110000);  EvMin = 12.5 + Stops;  EvMax = 16 + Stops;
+
+La 17:30 asta dă [10,7 , 14,2] în loc de [14,2 , 16,7] — trei stopuri şi jumătate
+diferenţă, şi diferenţa dintre un asfinţit şi o siluetă. **O valoare măsurată
+bate o valoare derivată, chiar când derivarea e corectă**, fiindcă derivarea
+presupune lucruri despre restul lanţului (tone mapping, expunere, albedo mediu)
+pe care nimeni nu le-a măsurat.
+
+### Ce face şi ce nu
+
+Soarele urcă după un sinus între răsărit şi apus şi mătură de la est la vest — nu
+e efemeridă, dar are cele două proprietăţi care contează: lumina rade pe apă la
+capetele zilei şi vine din alt cadran la fiecare oră. Puterea şi temperatura de
+culoare urmează înălţimea (2100 K la orizont, 5800 K sus), fiindcă asta face un
+soare jos să se citească drept soare jos.
+
+Sub orizont există o podea: 260 lux şi 11.000 K. Nu e lumină de lună — e „destul
+cât să navighezi", fiindcă un cadru negru e ceva ce proiectul ăsta a livrat deja
+o dată şi a trebuit să-şi măsoare drumul afară din el.
+
+Norii şi atmosfera rămân cele implicite ale motorului, iar timpul nu curge în
+timpul unei partide. Scris în README şi în OWNER_VERIFY 24, ca să nu pară mai
+mult decât e.
+
+### Măsurători
+
+Un al zecelea scenariu, `dusk`, fiindcă altfel toată felia s-ar putea şterge şi
+fiecare număr din suită ar rămâne identic. Chei noi: `sun_elev_deg`, `sun_lux`,
+`sun_kelvin`, `exposure_ev_min` — ultimele două împreună, fiindcă o bandă care
+încetează să urmeze lumina se vede aici ca una care se mişcă fără cealaltă.
+
+**Task Completed.**

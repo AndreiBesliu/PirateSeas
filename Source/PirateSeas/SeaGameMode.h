@@ -128,6 +128,32 @@ private:
 	 *  and the waves the hulls feel are the same waves. */
 	void SetSeaState();
 
+	/** Puts the sun where that hour of the day would put it, and takes the
+	 *  colour, the strength, the sky and the exposure band with it.
+	 *
+	 *  OPT-IN. Without -Hour= nothing here runs and the level keeps the light it
+	 *  was authored with, so the shipped look and every baselined number are
+	 *  exactly as they were. A time of day that quietly moved them would make
+	 *  this a lighting change pretending to be a feature. */
+	void SetTimeOfDay();
+
+	/** Hours since midnight, 0 to 24. Negative means "leave the level alone",
+	 *  which is the default and what every scenario but the new one uses. */
+	UPROPERTY(EditDefaultsOnly, Category = "Sky")
+	float HourOfDay = -1.f;
+
+	/** How high the sun gets at noon, in degrees. Sixty-two is a low-latitude
+	 *  summer; the Caribbean this is meant to evoke is about that. */
+	UPROPERTY(EditDefaultsOnly, Category = "Sky")
+	float NoonElevationDeg = 62.f;
+
+	/** Sunrise and sunset, in hours. The day is stretched between them. */
+	UPROPERTY(EditDefaultsOnly, Category = "Sky")
+	float SunriseHour = 6.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Sky")
+	float SunsetHour = 18.f;
+
 	/** Number of Gerstner waves in the swell. Six, because the sea material
 	 *  draws six: any more would be felt by the hulls and not seen. */
 	UPROPERTY(EditDefaultsOnly, Category = "Sea")
