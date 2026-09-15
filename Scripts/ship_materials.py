@@ -46,27 +46,39 @@ IN1 = ["", "Input", "VectorInput"]
 #               roughness floor, roughness ceiling, metallic, normal strength)
 PARTS = {
     # albedo, normal, roughness (or None), tint, cm per tile, roughness floor,
-    # roughness ceiling, metallic, normal strength, TOP-PROJECTION WEIGHT,
-    # SIDE-PLANE SWAP (1 = project with (y,z), for anything lying in Y-Z),
+    # roughness ceiling, metallic, normal strength,
+    # PLANE WEIGHTS X, Y, Z  (which of the three projections this part uses),
     # ROPE COLLAPSE (1 = shrink to a point at distance; only the cordage).
-    # The last one is 0 for anything curved: on a bulged surface the biplanar
-    # seam is a closed curve, and a closed curve on a sail is a ring.
+    #
+    # The weights replace the old TopWeight/SideSwap pair. There are three
+    # planes now, not two: with only (x, z) and (x, y) every surface lying in a
+    # plane of constant x - the transom, the bow cap, the cabin ends, the whole
+    # side of a mast facing forward - took its u from x and sampled ONE COLUMN
+    # of texels, stretched along the piece. A 1 here means "this part may use
+    # the plane whose axis is this one".
+    #
+    # A sail is (1, 0, 0) deliberately: it is modelled in the Y-Z plane, so x is
+    # its BULGE, and any projection that uses x as a coordinate draws the
+    # contour lines of the bulge - a set of concentric RINGS on every sail. That
+    # cost three runs to diagnose once; it is not being reintroduced for the
+    # sake of symmetry.
     "M_Hull":     ("T_Timber_C", "T_Timber_N", "T_Timber_R",
-                   (0.72, 0.62, 0.58), 520.0, 0.45, 0.88, 0.0, 1.0, 1.0, 0.0, 0.0),
+                   (0.72, 0.62, 0.58), 520.0, 0.45, 0.88, 0.0, 1.0, 1.0, 1.0, 1.0, 0.0),
     "M_Deck":     ("T_Timber_C", "T_Timber_N", "T_Timber_R",
-                   (1.55, 1.42, 1.18), 330.0, 0.60, 0.95, 0.0, 1.2, 1.0, 0.0, 0.0),
+                   (1.55, 1.42, 1.18), 330.0, 0.60, 0.95, 0.0, 1.2, 1.0, 1.0, 1.0, 0.0),
+    # Masts and yards: round in XY, and nobody sees the top of a mast.
     "M_Wood":     ("T_Timber_C", "T_Timber_N", "T_Timber_R",
-                   (1.05, 0.92, 0.74), 240.0, 0.55, 0.90, 0.0, 0.8, 0.0, 0.0, 0.0),
+                   (1.05, 0.92, 0.74), 240.0, 0.55, 0.90, 0.0, 0.8, 1.0, 1.0, 0.0, 0.0),
     "M_DarkWood": ("T_Timber_C", "T_Timber_N", "T_Timber_R",
-                   (0.42, 0.36, 0.33), 300.0, 0.40, 0.80, 0.0, 1.0, 1.0, 0.0, 0.0),
+                   (0.42, 0.36, 0.33), 300.0, 0.40, 0.80, 0.0, 1.0, 1.0, 1.0, 1.0, 0.0),
     "M_Sail":     ("T_Canvas_C", "T_Canvas_N", None,
-                   (1.0, 1.0, 1.0), 900.0, 0.78, 0.96, 0.0, 1.0, 0.0, 1.0, 0.0),
+                   (1.0, 1.0, 1.0), 900.0, 0.78, 0.96, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0),
     "M_Iron":     ("T_Iron_C", "T_Iron_N", None,
-                   (1.0, 1.0, 1.0), 90.0, 0.32, 0.62, 0.82, 1.0, 0.0, 0.0, 0.0),
+                   (1.0, 1.0, 1.0), 90.0, 0.32, 0.62, 0.82, 1.0, 1.0, 1.0, 1.0, 0.0),
     # Tarred hemp, tiled small: a rope is a few centimetres across and the lay
     # has to be visible at that size or the rigging reads as wire.
     "M_Rope":     ("T_Rope_C", "T_Rope_N", None,
-                   (1.0, 1.0, 1.0), 45.0, 0.74, 0.94, 0.0, 1.1, 0.0, 0.0, 1.0),
+                   (1.0, 1.0, 1.0), 45.0, 0.74, 0.94, 0.0, 1.1, 1.0, 1.0, 0.0, 1.0),
 }
 
 
@@ -189,6 +201,14 @@ def build_master():
         link(src, so, n, IN1)
         return n
 
+    def app(a, b, x, y, ao="", bo=""):
+        """(float2 or float, float) -> one vector. Three scalars into a float3
+        takes two of these; there is no three-input version."""
+        n = expr(unreal.MaterialExpressionAppendVector, x, y)
+        link(a, ao, n, A_IN)
+        link(b, bo, n, B_IN)
+        return n
+
     def vec3(c, x, y):
         n = expr(unreal.MaterialExpressionConstant3Vector, x, y)
         sp(n, "constant", c)
@@ -209,68 +229,99 @@ def build_master():
                unreal.MaterialSamplerType.SAMPLERTYPE_LINEAR_GRAYSCALE)
         return n
 
-    # ------------------------------------------------- the two projections
-    # Local space: the texture must travel WITH the hull, not stand still in
-    # the world while she sails through it.
+    # ----------------------------------------------- the three projections
+    # INSTANCE space, not local. For an ordinary mesh the two are the same
+    # thing, but the island's palms and scrub are drawn from this master as
+    # HIERARCHICAL INSTANCED meshes, and for those the shader's "local" is the
+    # COMPONENT's frame - one frame shared by every plant on the hill. Each palm
+    # is planted with its own yaw, lean and scale, and in local space none of
+    # that reached the projection: the texture stood still in the island's frame
+    # while the plants turned inside it. Instance space is per-plant, and for a
+    # non-instanced mesh the engine falls back to the primitive transform, so
+    # the ship is unchanged.
     wp = expr(unreal.MaterialExpressionWorldPosition, -2600, 0)
     lp = expr(unreal.MaterialExpressionTransformPosition, -2400, 0)
     sp(lp, "transform_source_type",
        unreal.MaterialPositionTransformSource.TRANSFORMPOSSOURCE_WORLD)
     sp(lp, "transform_type",
-       unreal.MaterialPositionTransformSource.TRANSFORMPOSSOURCE_LOCAL)
+       unreal.MaterialPositionTransformSource.TRANSFORMPOSSOURCE_INSTANCE)
     link(wp, "", lp, IN1)
+    if lp.get_editor_property("transform_type") != \
+            unreal.MaterialPositionTransformSource.TRANSFORMPOSSOURCE_INSTANCE:
+        raise RuntimeError("M_ShipMaster: the position transform did not take "
+                           "instance space, so the foliage would project in the "
+                           "island's frame")
 
     scale = scalar("TexScaleCm", 400.0, -2600, 160)
     luv = div(lp, scale, -2200, 0)
-    # Which vertical plane the "side" projection uses. (x, z) is right for a
-    # hull, whose length runs along X. It is WRONG for a sail: a sail is
-    # modelled in the Y-Z plane, so X is its BULGE - and projecting with the
-    # bulge as a texture coordinate draws the contour lines of the bulge, which
-    # on a pillow-shaped sail is a set of concentric RINGS. That ring was
-    # visible on all four sails from the first textured capture and I blamed it
-    # on the mast's shadow, then on the biplanar seam, then on shadow bias.
-    # Three runs. It was the coordinate.
-    side_xz = mask(luv, -2000, -180, True, False, True)
-    side_yz = mask(luv, -2000, -60, False, True, True)
-    swap = scalar("SideSwap", 0.0, -2000, 60)
-    side_uv = lerp(side_xz, side_yz, swap, -1820, -120)
-    top_uv = mask(luv, -2000, 180, True, True, False)     # (x, y)
+    # One plane per axis, each using the OTHER two coordinates. The plane is
+    # named for the axis it is projected ALONG.
+    uv_x = mask(luv, -2000, -240, False, True, True)    # (y, z)
+    uv_y = mask(luv, -2000, -80, True, False, True)     # (x, z)
+    uv_z = mask(luv, -2000, 80, True, True, False)      # (x, y)
 
-    # The blend: a vertex normal taken into local space too, so a hull that
-    # rolls does not have her planking slide from side projection to top.
+    # The blend: the vertex normal in the same instance space, so a hull that
+    # rolls does not have her planking slide from one projection to another.
     vn = expr(unreal.MaterialExpressionVertexNormalWS, -2600, 320)
-    ln = expr(unreal.MaterialExpressionTransform, -2400, 320)
-    sp(ln, "transform_source_type",
+    ln_raw = expr(unreal.MaterialExpressionTransform, -2400, 320)
+    sp(ln_raw, "transform_source_type",
        unreal.MaterialVectorCoordTransformSource.TRANSFORMSOURCE_WORLD)
-    sp(ln, "transform_type",
-       unreal.MaterialVectorCoordTransform.TRANSFORM_LOCAL)
-    link(vn, "", ln, IN1)
-    nz = absn(mask(ln, -2200, 320, False, False, True), -2050, 320)
-    sharp = scalar("ProjectionSharpness", 6.0, -2200, 430)
-    # Raising |n.z| to a power makes the changeover between the two
-    # projections a narrow band instead of a long smear across the bilge.
-    pw = expr(unreal.MaterialExpressionPower, -1900, 400)
-    link(nz, "", pw, ["Base"])
-    link(sharp, "", pw, ["Exponent", "Exp"])
-    # TopWeight kills the second projection where it does more harm than good.
-    # On a BULGED surface - a sail, a rope - the locus where the normal crosses
-    # the blend threshold is a closed CURVE, so the seam draws a visible RING on
-    # every sail in the ship. I spent a capture blaming that on the mast's
-    # shadow. A sail is flat-ish and vertical; it only ever needed the side one.
-    top_cap = scalar("TopWeight", 1.0, -1900, 540)
-    blend = sat(mul(pw, "", top_cap, "", -1750, 400), -1600, 400)
+    sp(ln_raw, "transform_type",
+       unreal.MaterialVectorCoordTransform.TRANSFORM_INSTANCE)
+    link(vn, "", ln_raw, IN1)
+    if ln_raw.get_editor_property("transform_type") != \
+            unreal.MaterialVectorCoordTransform.TRANSFORM_INSTANCE:
+        raise RuntimeError("M_ShipMaster: the normal transform did not take "
+                           "instance space; its default is TANGENT")
+    # Normalised before anything reads it: a world-to-instance transform on a
+    # component with non-uniform scale does not preserve length, and the blend
+    # weights below are a function of that length.
+    ln = normalizen(ln_raw, -2250, 320)
 
-    def biplanar(param, asset, x, y, normal=False, grey=False):
-        """Same texture sampled twice, blended by how much the surface faces
-        up. Returns the blended sample."""
-        a = tex(param, asset, x, y, normal, grey)
-        link(side_uv, "", a, ["UVs", "Coordinates"])
-        b = tex(param + "Top", asset, x, y + 260, normal, grey)
-        link(top_uv, "", b, ["UVs", "Coordinates"])
-        return lerp(a, b, blend, x + 320, y + 120)
+    sharp = scalar("ProjectionSharpness", 6.0, -2200, 430)
+    # Raising |n| to a power makes each changeover a narrow band instead of a
+    # long smear across the bilge.
+    pw = expr(unreal.MaterialExpressionPower, -1900, 400)
+    link(absn(ln, -2100, 320), "", pw, ["Base"])
+    link(sharp, "", pw, ["Exponent", "Exp"])
+
+    # Per-part gating, one scalar per plane. This replaces TopWeight and
+    # SideSwap: the old pair could only say "less top" or "swap the side", and
+    # could not say "this part has a third face nobody is projecting onto".
+    gate = app(app(scalar("PlaneWeightX", 1.0, -2200, 520),
+                   scalar("PlaneWeightY", 1.0, -2200, 600), -2000, 520),
+               scalar("PlaneWeightZ", 1.0, -2200, 680), -1850, 520)
+    w_raw = mul(pw, "", gate, "", -1700, 460)
+    # Renormalised, and by the SUM rather than by an assumption: a part that
+    # gates two of the three planes off still has to come out at full strength.
+    ones = vec3(unreal.LinearColor(1.0, 1.0, 1.0, 1.0), -1700, 600)
+    w_sum = expr(unreal.MaterialExpressionDotProduct, -1550, 520)
+    link(w_raw, "", w_sum, A_IN)
+    link(ones, "", w_sum, B_IN)
+    w = div(w_raw, add(w_sum, const(0.0001, -1450, 600), -1400, 560), -1300, 500)
+    wx = mask(w, -1150, 440, True, False, False)
+    wy = mask(w, -1150, 500, False, True, False)
+    wz = mask(w, -1150, 560, False, False, True)
+
+    def triplanar(param, asset, x, y, normal=False, grey=False):
+        """The same texture sampled once per plane and blended by how much the
+        surface faces each one. Returns the blend, or the three taps when the
+        caller needs them apart (the normal does)."""
+        tx = tex(param + "X", asset, x, y, normal, grey)
+        link(uv_x, "", tx, ["UVs", "Coordinates"])
+        ty = tex(param, asset, x, y + 260, normal, grey)
+        link(uv_y, "", ty, ["UVs", "Coordinates"])
+        tz = tex(param + "Top", asset, x, y + 520, normal, grey)
+        link(uv_z, "", tz, ["UVs", "Coordinates"])
+        return tx, ty, tz
+
+    def blend3(tx, ty, tz, x, y):
+        return add(add(mul(tx, "", wx, "", x, y),
+                       mul(ty, "", wy, "", x, y + 120), x + 150, y),
+                   mul(tz, "", wz, "", x, y + 240), x + 300, y)
 
     # ------------------------------------------------------------- albedo
-    alb = biplanar("BaseTex", "T_Timber_C", -1500, -300)
+    alb = blend3(*triplanar("BaseTex", "T_Timber_C", -1500, -900), x=-1000, y=-300)
     tint = vector("Tint", unreal.LinearColor(1, 1, 1, 1), -1500, 120)
     tinted = mul(alb, "", tint, "", -900, -200)
 
@@ -294,68 +345,87 @@ def build_master():
 
     # ------------------------------------------------------------- normal
     #
-    # THE FRAME. A tangent-space normal map is a promise that the mesh has a
-    # tangent frame, and a tangent frame is derived from UVs. NOT ONE MESH IN
-    # THIS PROJECT HAS UVs - that is the whole reason this material projects.
-    # So every bump on the hull, the deck, the sails, the cordage and the
-    # island's plants was being tilted in a basis nobody ever defined. It looked
-    # like lighting, which is why it went three sessions without being noticed.
+    # THE FRAME, third attempt, and the two failures are why this is written out
+    # at length.
     #
-    # The obvious repair is to rebuild the sample in the frame of the projection
-    # PLANE and hand the engine a world-space normal. It is also wrong, and it
-    # was tried first: a plane-frame normal always points along that plane's
-    # axis, so it is right only where the surface happens to face the way the
-    # plane assumes. The two planes here cover +-Y and +-Z. A MAST FACES +X.
-    # The masts came out black, which is what the old capture next to the new
-    # one showed, and what no amount of reading the graph had shown.
+    # A tangent-space normal map is a promise that the mesh has a tangent frame,
+    # and a tangent frame comes from UVs. No mesh in this project has UVs - that
+    # is the whole reason this material projects - so the bumps were being
+    # tilted in a basis nobody had defined.
     #
-    # So: keep the geometric normal and TILT it. A frame is built here, per
-    # pixel, from the normal itself - which is exactly what the tangent-space
-    # path was doing, minus the part where its frame did not exist. The bump
-    # detail still comes from the projected sample; only the basis changed.
+    # Attempt one rebuilt the sample in the frame of the projection PLANE and
+    # handed the engine a world-space normal. A plane-frame normal always points
+    # along that plane's axis, so it is right only where the surface faces the
+    # way the plane assumes. The masts came out black.
+    #
+    # Attempt two kept the geometric normal and tilted it in a frame made by
+    # crossing that normal with a fixed vector. It looked right in a capture and
+    # was wrong by a hundred and sixty degrees: cross(N, cross(N, h)) is the
+    # fixed vector h flattened into the surface and NEGATED - a function of h,
+    # not of the projection - so the map's G channel, which carries 99.5% of
+    # this texture's relief because the plank seams run along rows, was applied
+    # very nearly backwards over the whole hull. Every caulked seam was lit as a
+    # raised batten.
+    #
+    # This one does not invent a frame at all. A projected sample IS a height
+    # gradient in the plane's own two axes, so the gradient is rebuilt in those
+    # axes, the three planes' gradients are blended (a linear operation, so no
+    # seam and no discontinuity to gate against), the part of the gradient along
+    # the surface normal is removed, and what is left tilts the geometric
+    # normal. Degenerate nowhere. Exactly the geometric normal at strength zero.
+    # On a mast facing +X the X-plane's gradient simply loses the component that
+    # projection cannot see, instead of pointing somewhere arbitrary.
     sp(mat, "tangent_space_normal", False)
     if mat.get_editor_property("tangent_space_normal"):
         raise RuntimeError("M_ShipMaster: tangent_space_normal did not stick, so "
-                           "the engine would read a local-space normal as though "
-                           "it were tangent-space")
+                           "the engine would read an instance-space normal as "
+                           "though it were tangent-space")
 
-    nrm = biplanar("NormalTex", "T_Timber_N", -1500, 1100, normal=True)
-    nstr = scalar("NormalStrength", 1.0, -1500, 1460)
+    nx, ny, nz = triplanar("NormalTex", "T_Timber_N", -1500, 1000, normal=True)
+    nstr = scalar("NormalStrength", 1.0, -1500, 1760)
+    zero = const(0.0, -1150, 1000)
 
-    # A helper that is deliberately NOT an axis. Crossing the normal with it
-    # gives a tangent everywhere except where the surface faces exactly along
-    # it, and nothing on this ship - hull, deck, mast, sail, rope, frond - faces
-    # (0.31, 0.57, 0.76). Crossing with an axis instead would have gone
-    # degenerate on the hull sides or the decks, which is to say on the ship.
-    helper = vec3(unreal.LinearColor(0.31, 0.57, 0.76, 1.0), -1150, 1560)
-    tang = normalizen(crossn(ln, helper, -950, 1500), -820, 1500)
-    bitan = crossn(ln, tang, -680, 1500)
+    def grad(t, axis, x, y):
+        """(r, g) of a normal map are -dh/du and -dh/dv in the plane's own axes,
+        so the height gradient is r along u and g along v, and zero along the
+        axis the sample was taken down."""
+        r = mask(t, x, y, True, False, False)
+        g = mask(t, x, y + 60, False, True, False)
+        if axis == "x":            # uv = (y, z)
+            return app(app(zero, r, x + 150, y), g, x + 300, y)
+        if axis == "y":            # uv = (x, z)
+            return app(app(r, zero, x + 150, y), g, x + 300, y)
+        return app(app(r, g, x + 150, y), zero, x + 300, y)   # uv = (x, y)
 
-    # Only the map's X and Y tilt the normal; its Z is the part that says "and
-    # this much along the surface's own normal", which is already the thing
-    # being tilted.
-    n_u = mask(nrm, -950, 1180, True, False, False)
-    n_v = mask(nrm, -950, 1260, False, True, False)
-    tilt = add(mul(tang, "", n_u, "", -560, 1180),
-               mul(bitan, "", n_v, "", -560, 1280), -420, 1200)
-    # Strength zero is then EXACTLY the geometric normal, with no special case.
-    n_local = normalizen(add(ln, mul(tilt, "", nstr, "", -280, 1240),
-                             -160, 1200), -60, 1200)
+    grad3 = add(add(mul(grad(nx, "x", -1100, 1000), "", wx, "", -700, 1000),
+                    mul(grad(ny, "y", -1100, 1160), "", wy, "", -700, 1160),
+                    -520, 1000),
+                mul(grad(nz, "z", -1100, 1320), "", wz, "", -700, 1320),
+                -380, 1000)
+    # Only the part along the surface: a gradient has no business pushing the
+    # normal along itself.
+    along = expr(unreal.MaterialExpressionDotProduct, -300, 1140)
+    link(ln, "", along, A_IN)
+    link(grad3, "", along, B_IN)
+    flat = sub(grad3, mul(ln, "", along, "", -200, 1200), -120, 1140)
+    n_local = normalizen(add(ln, mul(flat, "", nstr, "", -40, 1180), 40, 1140),
+                         120, 1140)
 
-    nworld = expr(unreal.MaterialExpressionTransform, 60, 1200)
+    nworld = expr(unreal.MaterialExpressionTransform, 220, 1140)
     sp(nworld, "transform_source_type",
-       unreal.MaterialVectorCoordTransformSource.TRANSFORMSOURCE_LOCAL)
+       unreal.MaterialVectorCoordTransformSource.TRANSFORMSOURCE_INSTANCE)
     sp(nworld, "transform_type",
        unreal.MaterialVectorCoordTransform.TRANSFORM_WORLD)
     link(n_local, "", nworld, IN1)
     if nworld.get_editor_property("transform_type") != \
             unreal.MaterialVectorCoordTransform.TRANSFORM_WORLD:
-        raise RuntimeError("M_ShipMaster: the normal's local-to-world transform "
-                           "did not take, and its default is local-to-TANGENT")
+        raise RuntimeError("M_ShipMaster: the normal's instance-to-world "
+                           "transform did not take, and its default is TANGENT")
     MEL.connect_material_property(nworld, "", unreal.MaterialProperty.MP_NORMAL)
 
     # ---------------------------------------------------------- roughness
-    rtex = biplanar("RoughTex", "T_Timber_R", -1500, 1800, grey=True)
+    rtex = blend3(*triplanar("RoughTex", "T_Timber_R", -1500, 2000, grey=True),
+                  x=-1000, y=1900)
     rmin = scalar("RoughMin", 0.45, -1500, 2160)
     rmax = scalar("RoughMax", 0.90, -1500, 2240)
     rough_dry = lerp(rmin, rmax, rtex, -700, 1900)
@@ -398,7 +468,7 @@ def build_master():
 def build_instances(master):
     out = {}
     for slot, (alb, nrm, rgh, tint, scale, rmin, rmax, metal, nstr,
-               topw, swap, collapse) in PARTS.items():
+               wx, wy, wz, collapse) in PARTS.items():
         name = "MI_" + slot.replace("M_", "")
         path = MAT_DIR + "/" + name
         if EAL.does_asset_exist(path):
@@ -414,6 +484,7 @@ def build_instances(master):
                 return
             MEL.set_material_instance_texture_parameter_value(mi, pname, t)
             MEL.set_material_instance_texture_parameter_value(mi, pname + "Top", t)
+            MEL.set_material_instance_texture_parameter_value(mi, pname + "X", t)
 
         T("BaseTex", alb)
         T("NormalTex", nrm)
@@ -423,8 +494,9 @@ def build_instances(master):
             mi, "Tint", unreal.LinearColor(tint[0], tint[1], tint[2], 1.0))
         for k, v in (("TexScaleCm", scale), ("RoughMin", rmin),
                      ("RoughMax", rmax), ("Metallic", metal),
-                     ("NormalStrength", nstr), ("TopWeight", topw),
-                     ("SideSwap", swap), ("RopeCollapse", collapse)):
+                     ("NormalStrength", nstr), ("PlaneWeightX", wx),
+                     ("PlaneWeightY", wy), ("PlaneWeightZ", wz),
+                     ("RopeCollapse", collapse)):
             MEL.set_material_instance_scalar_parameter_value(mi, k, v)
         # Only the hull and the lower works get soaked; a sail does not have a
         # waterline and neither does a topmast.
@@ -482,7 +554,9 @@ def build_foliage(master):
                          unreal.MaterialInstanceConstantFactoryNew())
     MEL.set_material_instance_parent(mi, master)
     for pname, asset in (("BaseTex", "T_Turf_C"), ("BaseTexTop", "T_Turf_C"),
-                         ("NormalTex", "T_Turf_N"), ("NormalTexTop", "T_Turf_N")):
+                         ("BaseTexX", "T_Turf_C"),
+                         ("NormalTex", "T_Turf_N"), ("NormalTexTop", "T_Turf_N"),
+                         ("NormalTexX", "T_Turf_N")):
         t = EAL.load_asset(TEX_DIR + "/" + asset)
         if t is None:
             L("MISSING %s" % asset)
@@ -492,9 +566,16 @@ def build_foliage(master):
         mi, "Tint", unreal.LinearColor(0.85, 1.0, 0.70, 1.0))
     for k, v in (("TexScaleCm", 260.0), ("RoughMin", 0.72), ("RoughMax", 0.95),
                  ("Metallic", 0.0), ("NormalStrength", 1.0),
-                 # A palm frond is curved in every direction; a biplanar seam on
-                 # it would draw the same ring the sails grew. One plane only.
-                 ("TopWeight", 0.0), ("SideSwap", 0.0), ("RopeCollapse", 0.0)):
+                 # All three planes. This was one plane, because a blend
+                 # between two FRAMES leaves a seam and on a curved frond that
+                 # seam is a closed curve - the same ring the sails grew. The
+                 # blend is between GRADIENTS now, which is linear and has no
+                 # seam to hide, and one plane on a frond meant the whole upper
+                 # surface of every leaf and the entire crown of every bush -
+                 # about a quarter of the plant, measured - was drawn from a
+                 # single stretched column of texels.
+                 ("PlaneWeightX", 1.0), ("PlaneWeightY", 1.0),
+                 ("PlaneWeightZ", 1.0), ("RopeCollapse", 0.0)):
         MEL.set_material_instance_scalar_parameter_value(mi, k, v)
     EAL.save_asset(path)
 

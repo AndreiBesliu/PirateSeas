@@ -78,6 +78,17 @@ def build():
         sp(n, "group", "Island")
         return n
 
+    def const(v, x, y):
+        n = expr(unreal.MaterialExpressionConstant, x, y)
+        n.set_editor_property("r", v)
+        return n
+
+    def add(a, b, x, y, ao="", bo=""):
+        n = expr(unreal.MaterialExpressionAdd, x, y)
+        link(a, ao, n, A_IN)
+        link(b, bo, n, B_IN)
+        return n
+
     def mul(a, ao, b, bo, x, y):
         n = expr(unreal.MaterialExpressionMultiply, x, y)
         link(a, ao, n, A_IN)
@@ -202,12 +213,62 @@ def build():
                                   unreal.MaterialProperty.MP_BASE_COLOR)
 
     # --------------------------------------------------------- the normal
+    #
+    # THE PROJECTION AND THE FRAME HAVE TO BE THE SAME PAIR OF AXES. The island
+    # does have UVs - island.py writes a top-down (x, y) layout - so the tangent
+    # frame the engine builds has its U along world X and its V along world Y.
+    # Sand and turf are sampled with uv_top, the same (x, y), so they agreed.
+    # The ROCK is sampled with uv_side, (x, z): its green channel means "slope
+    # along +Z" and was being applied along +-Y, a median 75 degrees out on the
+    # rock faces, on a map whose relief is deliberately banded strata.
+    #
+    # Rebuilt the same way as the ship's master: each sample is a height
+    # gradient in its own projection's axes, the gradients are blended by the
+    # masks that already exist, the part along the surface normal is removed,
+    # and what is left tilts the geometric normal. Nothing here is forced by a
+    # missing UV set - the island has one - but a projection and a frame that
+    # disagree is the same defect wherever it happens.
+    sp(mat, "tangent_space_normal", False)
+    if mat.get_editor_property("tangent_space_normal"):
+        raise RuntimeError("M_Island: tangent_space_normal did not stick")
+
     sand_n = tex("SandN", "T_Sand_N", uv_top, -1700, 1400, normal=True)
     turf_n = tex("TurfN", "T_Turf_N", uv_top, -1700, 1700, normal=True)
     rock_n = tex("RockN", "T_Rock_N", uv_side, -1700, 2000, normal=True)
-    ground_n = lerp(sand_n, turf_n, turf_m, -1350, 1550)
-    all_n = lerp(ground_n, rock_n, rock_m, -1100, 1650)
-    MEL.connect_material_property(all_n, "", unreal.MaterialProperty.MP_NORMAL)
+
+    zero_n = const(0.0, -1500, 1340)
+
+    def app_n(a, b, x, y):
+        n = expr(unreal.MaterialExpressionAppendVector, x, y)
+        link(a, "", n, A_IN)
+        link(b, "", n, B_IN)
+        return n
+
+    def grad_xy(t, x, y):
+        """Sampled on (x, y): the gradient lies in X and Y."""
+        return app_n(app_n(mask(t, x, y, True, False, False),
+                           mask(t, x, y + 60, False, True, False), x + 150, y),
+                     zero_n, x + 300, y)
+
+    def grad_xz(t, x, y):
+        """Sampled on (x, z): the gradient lies in X and Z."""
+        return app_n(app_n(mask(t, x, y, True, False, False),
+                           zero_n, x + 150, y),
+                     mask(t, x, y + 60, False, True, False), x + 300, y)
+
+    ground_g = lerp(grad_xy(sand_n, -1450, 1400), grad_xy(turf_n, -1450, 1700),
+                    turf_m, -1000, 1550)
+    all_g = lerp(ground_g, grad_xz(rock_n, -1450, 2000), rock_m, -820, 1650)
+
+    nstr = scalar("IslandNormalStrength", 1.0, -1000, 1800)
+    along = expr(unreal.MaterialExpressionDotProduct, -640, 1700)
+    link(normal_ws, "", along, A_IN)
+    link(all_g, "", along, B_IN)
+    flat_g = sub(all_g, mul(normal_ws, "", along, "", -520, 1760), -420, 1700)
+    n_world = expr(unreal.MaterialExpressionNormalize, -220, 1700)
+    link(add(normal_ws, mul(flat_g, "", nstr, "", -320, 1740), -270, 1700),
+         "", n_world, IN1)
+    MEL.connect_material_property(n_world, "", unreal.MaterialProperty.MP_NORMAL)
 
     # ------------------------------------------------------ the roughness
     r_sand = scalar("SandRoughness", 0.90, -1350, 2300)
