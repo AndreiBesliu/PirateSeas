@@ -412,6 +412,21 @@ void AShipPawn::BeginPlay()
 			// cannot claw off a lee shore, which is the one situation where
 			// land kills rather than inconveniences - and it cannot be
 			// measured at all if only the player can be handed a crippled rig.
+			// -EnemyHands=N, GUARDED ON ALLEGIANCE. This whole block is the
+			// else of IsPlayerControlled(), which a merchant falls into as
+			// well - so without the guard the flag would quietly short-hand
+			// the convoy too, and every number would still look plausible.
+			int32 EnemyHands = 0;
+			if (Allegiance == EShipAllegiance::Crown
+				&& FParse::Value(FCommandLine::Get(), TEXT("EnemyHands="), EnemyHands)
+				&& EnemyHands > 0)
+			{
+				HandsMax = EnemyHands;
+				Hands = EnemyHands;
+				UE_LOG(LogTemp, Display, TEXT("CREWLOG %s sails short-handed: %d hands"),
+					*GetName(), Hands);
+			}
+
 			float EnemyRig = -1.f, EnemyRudder = -1.f;
 			if (FParse::Value(FCommandLine::Get(), TEXT("EnemyRigDamage="), EnemyRig)
 				&& EnemyRig >= 0.f)
@@ -1104,6 +1119,38 @@ void AShipPawn::OnRepairPressed()
 {
 	// R cycles a quarter, a half, and back to every man at the guns.
 	SetRepairShare(RepairShare < 0.2f ? 0.25f : (RepairShare < 0.45f ? 0.5f : 0.f));
+}
+
+bool AShipPawn::DetachPrizeCrew(int32 Count)
+{
+	if (Count <= 0 || Hands - Count < MinHandsAboard)
+	{
+		return false;
+	}
+	Hands -= Count;
+	HandsInPrizes += Count;
+	UE_LOG(LogTemp, Display,
+		TEXT("CREWLOG %s sent %d hands away to a prize, %d/%d left aboard (%d away in all)"),
+		*GetName(), Count, Hands, HandsMax, HandsInPrizes);
+	return true;
+}
+
+void AShipPawn::ManAsPrize(AShipPawn* Taker, int32 CrewAboard)
+{
+	if (bIsPrize)
+	{
+		return;
+	}
+	bIsPrize = true;
+	PrizeCrewAboard = CrewAboard;
+	// Her own people are prisoners; the men who work her now are the ones who
+	// came across. She keeps lying to, as she has since she struck.
+	Hands = CrewAboard;
+	SailTrimInput = -1.f;
+	SteerInput = 0.f;
+	UE_LOG(LogTemp, Display, TEXT("SHIPLOG %s MANNED by=%s crew=%d t=%.1f"),
+		*GetName(), Taker ? *Taker->GetName() : TEXT("none"), CrewAboard,
+		GetWorld()->GetTimeSeconds());
 }
 
 void AShipPawn::MakePort()

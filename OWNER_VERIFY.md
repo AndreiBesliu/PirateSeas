@@ -675,3 +675,30 @@ stăpânire: nu trimiţi oameni la bord şi nu o duci nicăieri, doar se contabi
 în clipa în care coboară pavilionul. Iar în rulările măsurate cel care ocheşte e
 un căpitan AI cu `-AIAimHigh=`, nu tu: că un om poate trage constant sus e o
 presupunere rezonabilă, nu o măsurătoare.
+
+## 28. Stăpânirea prăzii: se simte că doisprezece oameni lipsesc?
+
+**Ce te uiți:** `-Convoy=2 -EnemyCount=0`. Opreşti un negustor (tir înalt), apoi
+te apropii de el sub 150 m şi stai lângă el. Uită-te la rândul PURSE şi la
+bara HANDS, apoi la cât durează reîncărcarea următoarei salve.
+
+**Cum arată bine:** După vreo douăzeci de secunde lângă el, rândul PURSE trece
+la „1 manned, 12 hands away", bara HANDS scade de la 60 la 48, iar prada rămâne
+cu pânza strânsă. Reîncărcarea rămâne la fel (48 e exact câţi trebuie la tunuri).
+Iei şi al doilea negustor: 36 de oameni, şi **acum** reîncărcarea se lungeşte
+vizibil.
+
+**Cum arată prost:** Nu se întâmplă nimic oricât stai lângă ea. Sau oamenii pleacă
+instantaneu, fără cele douăzeci de secunde. Sau bara HANDS scade dar reîncărcarea
+nu se schimbă niciodată. Sau rândul PURSE se suprapune cu ce e sub el.
+
+**De ce nu pot eu:** Pot măsura tot — câţi au plecat, când, de la ce distanţă,
+cât a scăzut factorul de reîncărcare — şi am măsurat. Dacă „a doua pradă costă"
+se SIMTE ca o decizie când eşti în mijlocul convoiului, nu pot şti.
+
+**Ce știu deja și n-am ascuns:** prada rămâne acolo unde a rămas — nu o duci
+nicăieri, fiindcă nu există port. Oamenii plecaţi nu se mai întorc niciodată,
+nici la sfârşitul misiunii. Cele douăzeci de secunde se CUMULEAZĂ (poţi pleca şi
+reveni). Şi în rulările măsurate cel care ia prada e un căpitan AI cu
+`-AIPrize=1`; cu doctrina stinsă, cel mai aproape ajunge natural de o navă
+oprită e 272 m, deci un jucător trebuie să vrea să se apropie.

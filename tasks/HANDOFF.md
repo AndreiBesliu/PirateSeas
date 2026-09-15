@@ -69,7 +69,14 @@ vânt în plante şi greement, `-Hour=` pentru ora din zi.
    `MinGunCrewFactor` — raider-ul, care e la 1,00, nu poate fi raportat
    niciodată de cheia aia. Citeşte DUPĂ NUME de pe linia coçii care te
    interesează (`enemy_rig_quit`, `enemy_gun_crew_quit`).
-10. **Un număr derivat se scrie cu ingredientele pe aceeaşi linie**
+10. **Un contor care creşte cât timp nava nu realizează nimic măsoară lungimea
+   rulării.** Un raider refuzată stătea lângă pradă până la final: 13.224 de
+   ticuri de nimic. Orice stare „stau şi aştept" are nevoie de o ieşire.
+11. **Întinderea rulării nu repară o geometrie greşită.** `prizes_refused` a
+   citit 0 la 400 s şi la 500 s; cauza nu era timpul, ci că ţinta rămăsese la
+   350 m SUB VÂNT, ceea ce polara proiectului preţuieşte la sute de secunde.
+   Refuzul s-a făcut determinist, nu răbdător.
+12. **Un număr derivat se scrie cu ingredientele pe aceeaşi linie**
    (`value=1200 cargo=1200 hull=1.00`), şi suma lui se re-derivă într-o
    fixtură (`purse_balances`): altfel o greşeală de transcriere în bani e o
    cifră pe care trebuie s-o vadă cineva cu ochiul.
@@ -112,9 +119,18 @@ Livrat:
    Patru designuri, doi judecători; ambii au ales „prada" şi ambii au tăiat
    felia la VALOARE, fără stăpânire, fără echipaj de pradă, fără stare de AI.
 
-Următorul: stăpânirea prăzii (echipaj de pradă din oamenii tăi — `HandsMax 60`
-şi `FullGunCrew 48` lasă exact doisprezece de dat), apoi magazia (muniţie
-finită) şi abia apoi un port. **Abordajul rămâne AMÂNAT.**
+5. **Stăpânirea prăzii**: `DetachPrizeCrew`/`ManAsPrize` pe `AShipPawn`
+   (`HandsInPrizes` zăvorât, SEPARAT de `Casualties`), `SamplePrizes()` pe
+   timer propriu NEŞTERS la sfârşitul misiunii, timp alături CUMULAT (nu
+   neîntrerupt), podea de 20 de oameni pe punte, doctrina căpitanului
+   `-AIPrize=1` **implicit STINSĂ**, renunţare după 40 s degeaba,
+   `-PrizeCrew= -PrizeRangeM= -PrizeBoatSeconds= -EnemyHands=` (ultimul PĂZIT
+   pe apartenenţă). Perechea e `prize_rig` (stinsă) contra `prize_manned`
+   (aprinsă): 0 contra 2 prăzi stăpânite, 0 contra 24 de oameni plecaţi,
+   reîncărcare 1,00 contra 0,75. Plus `prize_shorthanded` pentru podea.
+
+Următorul: magazia (muniţie finită), apoi un port unde punga să cumpere ceva.
+**Abordajul rămâne AMÂNAT.**
 
 ## Ce aşteaptă ochiul owner-ului
 

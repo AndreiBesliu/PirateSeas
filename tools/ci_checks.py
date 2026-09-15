@@ -435,7 +435,13 @@ def check_comparison():
     if got != want:
         fail("the crew lines read %s, wanted %s" % (got, want))
 
-    # The money, off two real runs. The rig half and the hull half of the
+    # The money, off two real runs. These three fixtures were written against a
+    # PURSE line with four fields; possession gave it four more, and they went
+    # RED until they were brought to the line the game really prints now. That
+    # is the fixtures earning their keep: a reader that quietly stops matching
+    # a line it used to read is the failure this file exists to catch.
+    #
+    # The rig half and the hull half of the
     # prize pair, copied from their logs: the same merchant and the same cargo
     # pay 1200 and 696 because the hull fraction differs, and prize_rig_at_take
     # moves the OTHER way - which is what tells a correct formula from one
@@ -446,7 +452,7 @@ def check_comparison():
         "LogTemp: Display: PRIZELOG MerchantShipPawn_0 taken value=1200 cargo=1200 "
         "hull=1.00 rig=0.55 zone=rig t=70.9 purse=1200 prizes=1" + chr(10) +
         "LogTemp: Display: PRIZELOG PURSE purse=1200 prizes=1 valueMax=1200 "
-        "cargo=1200" + chr(10))
+        "cargo=1200 manned=0 refused=0 handsOut=0 closest=272" + chr(10))
     want = {"purse_end": 1200, "prizes_taken": 1, "prize_value_max": 1200,
             "prize_hull_at_take": 1.0, "prize_rig_at_take": 0.55,
             "prize_strike_zone": 1, "purse_balances": 1}
@@ -458,7 +464,7 @@ def check_comparison():
         "LogTemp: Display: PRIZELOG MerchantShipPawn_0 taken value=696 cargo=1200 "
         "hull=0.58 rig=1.00 zone=hull t=83.1 purse=696 prizes=1" + chr(10) +
         "LogTemp: Display: PRIZELOG PURSE purse=696 prizes=1 valueMax=696 "
-        "cargo=1200" + chr(10))
+        "cargo=1200 manned=0 refused=0 handsOut=0 closest=272" + chr(10))
     want = {"purse_end": 696, "prize_hull_at_take": 0.58,
             "prize_rig_at_take": 1.0, "prize_strike_zone": 0, "purse_balances": 1}
     got = {k: ph.get(k) for k in want}
@@ -474,10 +480,44 @@ def check_comparison():
         "LogTemp: Display: PRIZELOG MerchantShipPawn_1 taken value=600 cargo=1200 "
         "hull=0.50 rig=1.00 zone=hull t=90.0 purse=1200 prizes=2" + chr(10) +
         "LogTemp: Display: PRIZELOG PURSE purse=1000 prizes=2 valueMax=600 "
-        "cargo=1200" + chr(10))
+        "cargo=1200 manned=0 refused=0 handsOut=0 closest=50" + chr(10))
     if bad.get("purse_balances") != 0:
         fail("a purse that does not add up read purse_balances=%s"
              % bad.get("purse_balances"))
+
+    # Possession, off the two real runs. The PURSE line grew four fields and
+    # the old fixtures above must still read the same numbers from it - which
+    # is the point of keeping both: a line that gains fields is the commonest
+    # way a reader silently stops matching.
+    pm = ci_measure.measure("fixture",
+        "LogTemp: Display: PRIZELOG MerchantShipPawn_0 taken value=1200 cargo=1200 "
+        "hull=1.00 rig=0.55 zone=rig t=70.9 purse=1200 prizes=1" + chr(10) +
+        "LogTemp: Display: PRIZELOG MerchantShipPawn_0 manned by=EnemyShipPawn_0 "
+        "crew=12 closest=65m spent=20.0 t=133.8 manned=1 handsOut=12" + chr(10) +
+        "LogTemp: Display: PRIZELOG PURSE purse=2400 prizes=2 valueMax=1200 "
+        "cargo=1200 manned=2 refused=0 handsOut=24 closest=65" + chr(10) +
+        "LogTemp: Display: SEALOG EnemyShipPawn_0 landTicks=0 clawOffs=0 "
+        "rejoinTicks=0 avoidTicks=0 pursuitTicks=2619 prizeTicks=8501" + chr(10))
+    want = {"purse_end": 2400, "prizes_taken": 2, "prizes_manned": 2,
+            "prizes_refused": 0, "prize_hands_out": 24, "prize_closest_m": 65.0,
+            "prize_ticks_max": 8501, "pursuit_ticks_max": 2619}
+    got = {k: pm.get(k) for k in want}
+    if got != want:
+        fail("the possession lines read %s, wanted %s" % (got, want))
+
+    # And the floor. A refusal must be counted and must NOT be read as a take:
+    # manned and refused are different fields on the same line, one letter
+    # apart in the regex and a whole mechanic apart in meaning.
+    pf = ci_measure.measure("fixture",
+        "LogTemp: Display: PRIZELOG MerchantShipPawn_0 REFUSED by=EnemyShipPawn_0: "
+        "28 hands aboard, 16 would be left, floor is 20 t=146.3 refused=1" + chr(10) +
+        "LogTemp: Display: PRIZELOG PURSE purse=1200 prizes=1 valueMax=1200 "
+        "cargo=1200 manned=0 refused=1 handsOut=0 closest=41" + chr(10))
+    want = {"prizes_manned": 0, "prizes_refused": 1, "prize_hands_out": 0,
+            "prizes_taken": 1, "prize_closest_m": 41.0}
+    got = {k: pf.get(k) for k in want}
+    if got != want:
+        fail("the refusal lines read %s, wanted %s" % (got, want))
 
     # The enemy's gun crew, read BY NAME off her own line. The convoy runs
     # prove why: gun_crew_min is 0.25 in both halves because a merchant
@@ -512,7 +552,7 @@ LogTemp: Display: SHIPLOG ShipPawn_0 sink=foundering draught=120
         fail("ships_sunk read %d from a log holding exactly one SUNK line" % sunk)
     if len(FAILS) == before:
         ok("the measurement gate reports matches, moves, new and missing numbers, "
-           "and reads the convoy, crew, prize and pursuit lines")
+           "and reads the convoy, crew, prize, possession and pursuit lines")
 
 
 def main():

@@ -46,6 +46,9 @@ public:
 	/** Ticks spent running down a chase instead of laying the guns. Zero
 	 *  against anything that does not make off. */
 	int32 GetPursuitTicks() const { return PursuitTicks; }
+	/** Ticks spent standing by a prize instead of fighting. Zero in every
+	 *  scenario that does not turn the doctrine on. */
+	int32 GetPrizeTicks() const { return PrizeTicks; }
 
 protected:
 	/** Beyond this the enemy just closes the distance. */
@@ -325,6 +328,38 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Tactics")
 	bool bRepairsAtSea = true;
 
+	/** Whether she goes alongside a ship that has struck, to put men aboard.
+	 *
+	 *  DEFAULT OFF, and that is not timidity. Today, when a merchant strikes,
+	 *  the captain loses her target and bears down on the next one; the whole
+	 *  convoy family is measured with her doing exactly that. A doctrine that
+	 *  was on by default would send her to stand by the prize instead and
+	 *  would move broadsides, struck, splashes, the wake family and
+	 *  pursuit_ticks in convoy_weather - the pair that took three tries to
+	 *  come out right - in the same commit that introduces it. -AIPrize=1
+	 *  turns it on, and only the two new scenarios do. */
+	UPROPERTY(EditAnywhere, Category = "Prize")
+	bool bTakesPrizes = false;
+
+	/** How near she tries to lie to a prize. Well inside StandoffM, which is
+	 *  a fighting distance and not a boarding one. */
+	UPROPERTY(EditAnywhere, Category = "Prize")
+	float PrizeLieToM = 90.f;
+
+	/** How long she lies by a prize before giving her up, counted only while
+	 *  she is actually alongside. Twice the boats' twenty seconds, so an
+	 *  ordinary take is never interrupted and a take that cannot happen is
+	 *  not waited on for ever.
+	 *
+	 *  Measured before it existed: a raider who sailed with twenty-eight
+	 *  hands could not spare twelve, was refused, and then lay by that ship
+	 *  for the remaining hundred and fifty seconds of the run - 13,224 ticks
+	 *  of doing nothing, next to 8,501 for a captain who took two prizes and
+	 *  went on with her cruise. A counter that grows while a ship achieves
+	 *  nothing is measuring the length of the run. */
+	UPROPERTY(EditAnywhere, Category = "Prize")
+	float PrizeGiveUpSeconds = 40.f;
+
 private:
 	/** Nearest heading we can actually sail that is closest to what we want. */
 	float ResolveSailableHeading(float DesiredYawDeg, float WindFromBearingDeg,
@@ -412,4 +447,12 @@ private:
 
 	FVector Destination = FVector::ZeroVector;
 	bool bHasDestination = false;
+
+	/** The struck ship she is going alongside, if any. */
+	UPROPERTY(Transient)
+	TObjectPtr<AShipPawn> PrizeToMan;
+	int32 PrizeTicks = 0;
+	bool bPrizeLogged = false;
+	/** Seconds spent actually alongside this prize. */
+	float PrizeAlongsideSeconds = 0.f;
 };

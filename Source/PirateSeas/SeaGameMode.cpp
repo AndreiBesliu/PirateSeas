@@ -935,6 +935,9 @@ void ASeaGameMode::ReadConvoyFlags()
 	FParse::Value(FCommandLine::Get(), TEXT("RaiderOffingM="), RaiderOffingM);
 	FParse::Value(FCommandLine::Get(), TEXT("ConvoyCargo="), ConvoyCargo);
 	ConvoyCargo = FMath::Max(0, ConvoyCargo);
+	FParse::Value(FCommandLine::Get(), TEXT("PrizeCrew="), PrizeCrewHands);
+	FParse::Value(FCommandLine::Get(), TEXT("PrizeRangeM="), PrizeRangeM);
+	FParse::Value(FCommandLine::Get(), TEXT("PrizeBoatSeconds="), PrizeBoatSeconds);
 
 	// The wind as it stands at BeginPlay: pinned by -WindBearing= a moment
 	// ago, or the subsystem's base bearing. The course is laid ONCE, off this
@@ -1054,6 +1057,92 @@ void ASeaGameMode::SpawnConvoy()
 		Born, Landfall.X, Landfall.Y);
 	GetWorldTimerManager().SetTimer(GaugeTimer, this,
 		&ASeaGameMode::SampleWeatherGauge, 1.f, true);
+	GetWorldTimerManager().SetTimer(PrizeTimer, this,
+		&ASeaGameMode::SamplePrizes, 0.5f, true);
+}
+
+void ASeaGameMode::SamplePrizes()
+{
+	for (const TWeakObjectPtr<AShipPawn>& Ptr : Convoy)
+	{
+		AShipPawn* Prize = Ptr.Get();
+		// A ship that has struck and is still afloat is takeable. One that
+		// sank, made port, or is already manned is not.
+		if (!IsValid(Prize) || !Prize->HasStruck() || Prize->IsSunk()
+			|| Prize->IsPrize())
+		{
+			continue;
+		}
+
+		// The nearest hunter: any hull that is not a merchant and is still in
+		// the fight. The player's own hull counts, and needs no flag: she
+		// takes a prize by sailing up to it, which is what a person would do.
+		AShipPawn* Taker = nullptr;
+		float BestM = TNumericLimits<float>::Max();
+		for (TActorIterator<AShipPawn> It(GetWorld()); It; ++It)
+		{
+			AShipPawn* Hull = *It;
+			if (!IsValid(Hull) || Hull == Prize
+				|| Hull->GetAllegiance() == EShipAllegiance::Merchant
+				|| Hull->IsOutOfTheFight())
+			{
+				continue;
+			}
+			const float M = FVector::Dist2D(Hull->GetActorLocation(),
+				Prize->GetActorLocation()) * 0.01f;
+			if (M < BestM)
+			{
+				BestM = M;
+				Taker = Hull;
+			}
+		}
+		if (!Taker)
+		{
+			continue;
+		}
+		if (PrizeClosestM < 0.f || BestM < PrizeClosestM)
+		{
+			PrizeClosestM = BestM;
+		}
+		if (BestM > PrizeRangeM)
+		{
+			continue;
+		}
+
+		// Time spent within hail, ACCUMULATED. See PrizeBoatSeconds for why
+		// this does not reset: a continuous dwell would be a rule satisfied
+		// only by station-keeping nobody has ever asked this captain for.
+		float& Spent = PrizeBoatTime.FindOrAdd(Prize);
+		Spent += 0.5f;
+		if (Spent < PrizeBoatSeconds)
+		{
+			continue;
+		}
+
+		const float Now = GetWorld()->GetTimeSeconds();
+		if (Taker->DetachPrizeCrew(PrizeCrewHands))
+		{
+			Prize->ManAsPrize(Taker, PrizeCrewHands);
+			++PrizesManned;
+			HandsOutInPrizes = Taker->GetHandsInPrizes();
+			UE_LOG(LogTemp, Display,
+				TEXT("PRIZELOG %s manned by=%s crew=%d closest=%.0fm spent=%.1f t=%.1f manned=%d handsOut=%d"),
+				*Prize->GetName(), *Taker->GetName(), PrizeCrewHands, BestM,
+				Spent, Now, PrizesManned, HandsOutInPrizes);
+		}
+		else if (!RefusedPrizes.Contains(Prize))
+		{
+			// Latched per prize, or a half-second timer would print this four
+			// hundred times and the counter would measure the timer.
+			RefusedPrizes.Add(Prize);
+			++PrizesRefused;
+			UE_LOG(LogTemp, Warning,
+				TEXT("PRIZELOG %s REFUSED by=%s: %d hands aboard, %d would be left, floor is %d t=%.1f refused=%d"),
+				*Prize->GetName(), *Taker->GetName(), Taker->GetHands(),
+				Taker->GetHands() - PrizeCrewHands, Taker->GetMinHandsAboard(),
+				Now, PrizesRefused);
+		}
+	}
 }
 
 AShipPawn* ASeaGameMode::GetRaider() const
@@ -1273,9 +1362,10 @@ void ASeaGameMode::QuitNow()
 		if (const AShipAIController* AI = Cast<AShipAIController>(It->GetController()))
 		{
 			UE_LOG(LogTemp, Display,
-				TEXT("SEALOG %s landTicks=%d clawOffs=%d rejoinTicks=%d avoidTicks=%d pursuitTicks=%d"),
+				TEXT("SEALOG %s landTicks=%d clawOffs=%d rejoinTicks=%d avoidTicks=%d pursuitTicks=%d prizeTicks=%d"),
 				*It->GetName(), AI->GetLandTicks(), AI->GetClawOffs(),
-				AI->GetRejoinTicks(), AI->GetAvoidTicks(), AI->GetPursuitTicks());
+				AI->GetRejoinTicks(), AI->GetAvoidTicks(), AI->GetPursuitTicks(),
+				AI->GetPrizeTicks());
 		}
 	}
 	for (TActorIterator<AShipPawn> It(GetWorld()); It; ++It)
@@ -1293,8 +1383,9 @@ void ASeaGameMode::QuitNow()
 	// counter that is simply absent from thirteen scenarios cannot be told
 	// from one that stopped being written.
 	UE_LOG(LogTemp, Display,
-		TEXT("PRIZELOG PURSE purse=%d prizes=%d valueMax=%d cargo=%d"),
-		Purse, PrizesTaken, PrizeValueMax, ConvoyCargo);
+		TEXT("PRIZELOG PURSE purse=%d prizes=%d valueMax=%d cargo=%d manned=%d refused=%d handsOut=%d closest=%.0f"),
+		Purse, PrizesTaken, PrizeValueMax, ConvoyCargo, PrizesManned,
+		PrizesRefused, HandsOutInPrizes, PrizeClosestM);
 	UE_LOG(LogTemp, Display, TEXT("SEALOG quitting at t=%.1fs"),
 		GetWorld()->GetTimeSeconds());
 	if (GEngine)

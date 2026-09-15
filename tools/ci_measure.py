@@ -182,6 +182,45 @@ SCENARIOS = {
                    "-ConvoyRangeM=1200", "-EnemyCount=1", "-RaiderSide=weather",
                    "-RaiderOffingM=600", "-ConvoyCargo=1200", "-AIAimHigh=0",
                    "-ShipQuitAfter=400"],
+    # POSSESSION. The pair for this one is prize_rig ABOVE, which is this
+    # command line without -AIPrize=1 - so no redundant scenario is added and
+    # the two really are one flag apart. With the doctrine off she leaves a
+    # ship that has struck where she lies and goes hunting the next one; with
+    # it on she goes alongside, lies to, and sends twelve men across. Keys that
+    # must differ: prizes_manned, prize_hands_out, enemy_gun_crew_quit and
+    # prize_ticks_max.
+    #
+    # The COST is not manufactured by a flag. HandsMax is 60 and FullGunCrew
+    # 48, so the first prize is free at the guns and the second is not: she
+    # takes both here, twenty-four men go away, and her reload drops to 36/48.
+    # That is the mechanic biting at its own default, which is the difference
+    # between measuring a mechanic and measuring a clamp.
+    "prize_manned": ["-WindBearing=0", "-WindSpeed=12", "-Convoy=2",
+                     "-ConvoyX=120000", "-ConvoyY=150000", "-ConvoyWindAngle=90",
+                     "-ConvoyRangeM=1200", "-EnemyCount=1", "-RaiderSide=weather",
+                     "-RaiderOffingM=600", "-ConvoyCargo=1200", "-AIAimHigh=1",
+                     "-AIPrize=1", "-ShipQuitAfter=400"],
+    # And the floor, because prizes_refused is otherwise a counter that reads
+    # zero in every scenario, which is indistinguishable from a broken one -
+    # the ships_sunk defect, which this project has already paid for once.
+    #
+    # A raider who sails with twenty-eight hands cannot afford even her FIRST
+    # prize: twelve away would leave sixteen, under the floor of twenty. So
+    # the refusal is deterministic and lands at the same moment the take would
+    # have. Note what this does NOT do: it does not stretch the run until the
+    # counter happens to fire. That was tried - PrizeCrew=25 at 400 s and then
+    # at 500 s - and it failed for a reason worth keeping: sending
+    # twenty-five men away slows her guns (35/48), so the SECOND merchant
+    # struck at 352 s instead of 177, and by then she lay 350 m to leeward of
+    # her, which this project's own polar prices at hundreds of seconds. The
+    # counter was not slow; the geometry was wrong.
+    "prize_shorthanded": ["-WindBearing=0", "-WindSpeed=12", "-Convoy=2",
+                          "-ConvoyX=120000", "-ConvoyY=150000",
+                          "-ConvoyWindAngle=90", "-ConvoyRangeM=1200",
+                          "-EnemyCount=1", "-RaiderSide=weather",
+                          "-RaiderOffingM=600", "-ConvoyCargo=1200",
+                          "-AIAimHigh=1", "-AIPrize=1", "-EnemyHands=28",
+                          "-ShipQuitAfter=300"],
 }
 
 
@@ -434,11 +473,20 @@ def measure(name, text):
     # transcription bug in money then reads as a boolean that MOVED rather than
     # as a number somebody has to eyeball.
     purse = re.search(r"PRIZELOG PURSE purse=(\d+) prizes=(\d+) valueMax=(\d+) "
-                      r"cargo=(\d+)", text)
+                      r"cargo=(\d+) manned=(\d+) refused=(\d+) handsOut=(\d+) "
+                      r"closest=(-?[0-9.]+)", text)
     if purse:
         m["purse_end"] = int(purse.group(1))
         m["prizes_taken"] = int(purse.group(2))
         m["prize_value_max"] = int(purse.group(3))
+        # Possession. prize_closest_m is written whether the doctrine is on or
+        # off, on purpose: it is how the hailing distance was chosen, and it is
+        # how a take that never happens explains itself instead of just
+        # reading zero.
+        m["prizes_manned"] = int(purse.group(5))
+        m["prizes_refused"] = int(purse.group(6))
+        m["prize_hands_out"] = int(purse.group(7))
+        m["prize_closest_m"] = round(float(purse.group(8)), 0)
     taken = re.findall(r"PRIZELOG \S+ taken value=(\d+) cargo=(\d+) hull=([0-9.]+) "
                        r"rig=([0-9.]+) zone=(\w+) t=[0-9.]+ purse=(\d+) prizes=(\d+)", text)
     if taken:
@@ -460,6 +508,12 @@ def measure(name, text):
     pursuit = [int(v) for v in re.findall(r"SEALOG \S+ landTicks=.*?pursuitTicks=(\d+)", text)]
     if pursuit:
         m["pursuit_ticks_max"] = max(pursuit)
+    # Ticks a captain spent standing by a prize instead of fighting. Zero in
+    # every scenario that does not turn the doctrine on, which is all but two.
+    prize_ticks = [int(v) for v in
+                   re.findall(r"SEALOG \S+ landTicks=.*?prizeTicks=(\d+)", text)]
+    if prize_ticks:
+        m["prize_ticks_max"] = max(prize_ticks)
 
     band = re.findall(r"turf from ([0-9.]+) cm \(paint says ([0-9.]+), scale ([0-9.]+)\)", text)
     if band:

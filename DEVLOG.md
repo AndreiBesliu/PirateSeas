@@ -3405,3 +3405,101 @@ apartenenţei, şi e cea mai puternică dovadă pe care o poate purta o felie
 tăiată: nimic din ce mergea nu s-a clintit.
 
 **Task Completed.**
+
+---
+
+## Task Started — 15.09.2026 (mecanica, commit 5: stăpânirea prăzii)
+
+**Prompt:** „Continua"
+**Model:** Claude Opus 5
+
+O navă care a coborât pavilionul e **oprită**, nu **a ta**. Felia asta e ce costă
+să fie a ta: te apropii la 150 m, stai lângă ea douăzeci de secunde **cumulate**,
+şi pleacă doisprezece oameni la bordul ei pentru totdeauna.
+
+Acolo muşcă felia de echipaj, fără niciun flag de reglaj: 60 de oameni la bord,
+48 la tunuri pentru reîncărcare plină, deci **prima pradă e gratis şi a doua nu**.
+Măsurat cu valorile implicite: raider-ul ia ambii negustori, pleacă 24 de oameni,
+reîncărcarea scade la 36/48 = 0,75.
+
+### Ce am luat din avertismentele judecătorilor, cuvânt cu cuvânt
+
+Recenzia de design de la commit-ul trecut a numit trei capcane în felia asta
+înainte să fie scrisă, şi toate trei erau reale:
+
+1. **Doctrina implicit APRINSĂ ar fi detonat convoiul.** Azi, când un negustor
+   coboară pavilionul, căpitanul îşi pierde ţinta şi se duce la următorul — aşa e
+   măsurată toată familia de convoi. `bTakesPrizes` e **implicit stinsă**; doar
+   cele două scenarii noi o aprind. Rezultat: **zero numere mutate** în cele 16
+   scenarii existente.
+2. **Oamenii de pradă NU trec prin `LoseHands()`.** Nu sunt morţi. Ar fi dat unei
+   variabile două meserii şi ar fi mutat `casualties_max`, o cheie pinată în
+   familia de convoi, dintr-un motiv care n-are legătură cu tirul. Consecinţa e
+   scrisă în cod, nu descoperită mai târziu: **după ce pleacă o echipă de pradă,
+   `Hands + Casualties` nu mai e `HandsMax`** — oamenii lipsă sunt în
+   `HandsInPrizes`, şi linia PURSE îi arată ca să se închidă socoteala.
+3. **Timpul alături se ACUMULEAZĂ, nu se resetează.** Un „dwell" neîntrerupt ar
+   fi cerut o ţinere de poziţie la o distanţă pe care căpitanul ăsta n-a fost
+   niciodată pus s-o ţină (`StandoffM` e 320 m), şi ar fi eşuat tăcut — cu
+   `prizes_manned` zero în ambele jumătăţi şi o pereche care nu măsoară nimic.
+
+### Numărul care a ales distanţa de acostare
+
+`prize_closest_m`, scris în FIECARE rulare, cu doctrina aprinsă sau stinsă. Cu
+ea stinsă, cât de aproape ajunge raider-ul natural de o navă care a coborât
+pavilionul e **272 m** — de trei ori distanţa de acostare. Fără doctrină nu s-ar
+lua niciodată o pradă, şi asta nu se putea şti presupunând.
+
+### Perechea, şi podeaua
+
+Perechea e `prize_rig` (doctrina stinsă) contra `prize_manned` (aprinsă) —
+aceeaşi linie de comandă, un singur flag. Nu am adăugat un scenariu redundant.
+
+| | stăpânite | oameni plecaţi | reîncărcare | ticuri lângă pradă | pungă |
+|---|---|---|---|---|---|
+| doctrina stinsă | 0 | 0 | 1,00 | 0 | 1200 |
+| doctrina aprinsă | 2 | 24 | 0,75 | 8501 | 2400 |
+
+Şi o **podea**: sub douăzeci de oameni pe punte bărcile nu mai pleacă.
+`prize_shorthanded` o măsoară determinist cu `-EnemyHands=28` (flag PĂZIT pe
+apartenenţă — blocul în care stă e ramura `else` a lui `IsPlayerControlled()`,
+în care cad şi negustorii).
+
+**Cum am ajuns acolo e partea care merită scrisă.** Întâi am încercat podeaua cu
+`-PrizeCrew=25` la 400 s: `prizes_refused` a citit 0. Am întins la 500 s: tot 0.
+Cauza nu era timpul — trimiterea a 25 de oameni îi încetineşte tunurile (35/48),
+deci al doilea negustor a coborât pavilionul la 352 s în loc de 177, iar până
+atunci raider-ul rămăsese la 350 m **sub vânt** de ea, ceea ce polara proiectului
+preţuieşte la sute de secunde. **Întinderea rulării nu repară o geometrie
+greşită.** Refuzul s-a făcut determinist, nu răbdător.
+
+### Un contor care creştea degeaba
+
+Refuzată, raider-ul rămânea lângă pradă până la finalul rulării: 13.224 de ticuri
+de nimic. Un contor care creşte cât timp nava nu realizează nimic măsoară
+lungimea rulării. Acum renunţă după patruzeci de secunde alături degeaba şi face
+vela — 5.792 de ticuri, iar o luare normală rămâne neatinsă (8.501: pragul nu se
+declanşează niciodată într-o luare care merge).
+
+### Poarta a ieşit roşie, şi avea dreptate
+
+Linia PURSE a crescut cu patru câmpuri, iar cele trei fixturi scrise la
+commit-ul trecut au ieşit **roşii** până le-am adus la linia pe care jocul o
+scrie acum. Exact defectul pentru care există fişierul: un cititor care încetează
+tăcut să potrivească o linie pe care o citea.
+
+### Mutaţii şi suită
+
+Mutaţii, restaurate din copie pristină şi comparate bit cu bit: (A) oamenii sunt
+gratis — `prize_hands_out` 24 → 0 şi reîncărcarea 0,75 → 1,00, dar
+`prizes_manned` RĂMÂNE 2. Adică „prada a fost luată" şi „prada a costat" sunt
+separate, ceea ce o singură cheie nu poate face. (B) fără podea —
+`prizes_refused` 1 → 0, prada e luată în schimb, şi raider-ul coboară la 16
+oameni cu tunurile la 0,33: exact ce există podeaua să oprească. (C) pristin —
+totul la loc.
+
+**Suita: ZERO numere mutate** în cele 16 scenarii existente. Chei noi:
+`prizes_manned`, `prizes_refused`, `prize_hands_out`, `prize_closest_m`,
+`prize_ticks_max`.
+
+**Task Completed.**

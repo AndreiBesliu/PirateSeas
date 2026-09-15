@@ -57,6 +57,8 @@ public:
 	 *  not what you do with her. */
 	int32 GetPurse() const { return Purse; }
 	int32 GetPrizesTaken() const { return PrizesTaken; }
+	int32 GetPrizesManned() const { return PrizesManned; }
+	int32 GetHandsOutInPrizes() const { return HandsOutInPrizes; }
 
 protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Sea")
@@ -168,6 +170,29 @@ protected:
 	 *  the run "works" with different numbers. */
 	UPROPERTY(EditDefaultsOnly, Category = "Convoy")
 	int32 ConvoyCargo = 1200;
+
+	/** Men it takes to work a prize. Twelve, which is exactly what the crew
+	 *  slice left spare: HandsMax 60 against FullGunCrew 48. So the FIRST
+	 *  prize is free at the guns and the second is not - which is the whole
+	 *  shape of the decision. -PrizeCrew=N. */
+	UPROPERTY(EditDefaultsOnly, Category = "Prize")
+	int32 PrizeCrewHands = 12;
+
+	/** Hailing distance: how near a hunter must come for her boats to reach a
+	 *  prize. Sized by MEASUREMENT, not by taste - see the log line
+	 *  PRIZELOG closest, which is printed in every run whether the doctrine
+	 *  is on or off, precisely so this number can be chosen from data.
+	 *  -PrizeRangeM=N. */
+	UPROPERTY(EditDefaultsOnly, Category = "Prize")
+	float PrizeRangeM = 150.f;
+
+	/** How long the boats take, in seconds SPENT within hailing distance.
+	 *  ACCUMULATED, not continuous: a rule that reset the moment the taker
+	 *  drew off would be satisfied only by a ship that can hold station at a
+	 *  distance she has never been asked to hold, and would fail silently by
+	 *  never firing at all. -PrizeBoatSeconds=N. */
+	UPROPERTY(EditDefaultsOnly, Category = "Prize")
+	float PrizeBoatSeconds = 20.f;
 
 	/** How far off the convoy -RaiderSide= puts the raider, in metres, along
 	 *  the wind. -RaiderOffingM=. */
@@ -296,6 +321,13 @@ private:
 	UFUNCTION()
 	void SampleWeatherGauge();
 
+	/** Twice a second, on its OWN timer, which is never cleared - unlike the
+	 *  weather gauge, which stops at the end of the mission. A prize can be
+	 *  manned after the convoy is decided, and a mission that is over is not
+	 *  a sea that is empty. */
+	UFUNCTION()
+	void SamplePrizes();
+
 	/** -ConvoyStrikeTest=N: the first merchant still running strikes at N
 	 *  seconds, through Strike() and nothing else, so the whole path from a
 	 *  strike to a finished mission can be proved without a single shot. */
@@ -363,6 +395,22 @@ private:
 	int32 Purse = 0;
 	int32 PrizesTaken = 0;
 	int32 PrizeValueMax = 0;
+	/** Possession, all latched. Mirrored HERE rather than read off the raider
+	 *  at quit, because a wrecked raider is destroyed and would take her
+	 *  counters down with her. */
+	int32 PrizesManned = 0;
+	int32 PrizesRefused = 0;
+	int32 HandsOutInPrizes = 0;
+	/** Closest any hunter came to a struck prize, in metres, over the run.
+	 *  Written whether the doctrine is on or off: it is how the hailing
+	 *  distance was chosen, and how a take that never happens explains
+	 *  itself. */
+	float PrizeClosestM = -1.f;
+	FTimerHandle PrizeTimer;
+	/** Seconds each prize has had a hunter within hail. */
+	TMap<TWeakObjectPtr<AShipPawn>, float> PrizeBoatTime;
+	/** Prizes whose refusal has already been said once. */
+	TSet<TWeakObjectPtr<AShipPawn>> RefusedPrizes;
 	/** Latched, never sampled. */
 	int32 ConvoyStopped = 0;
 	int32 ConvoyThrough = 0;

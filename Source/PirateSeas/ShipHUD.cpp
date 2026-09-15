@@ -390,9 +390,15 @@ void AShipHUD::DrawGuns(AShipPawn* Ship)
 			// What the prizes are worth. It buys nothing yet and the README
 			// says so; a number on the panel that implied a shop would be
 			// the panel telling a lie the game cannot keep.
-			DrawText(FString::Printf(TEXT("PURSE  %d  from %d prize%s"),
-				Sea->GetPurse(), Sea->GetPrizesTaken(),
-				Sea->GetPrizesTaken() == 1 ? TEXT("") : TEXT("s")),
+			const int32 Away = Sea->GetHandsOutInPrizes();
+			DrawText(Away > 0
+				? FString::Printf(TEXT("PURSE  %d  from %d prize%s, %d manned, %d hands away"),
+					Sea->GetPurse(), Sea->GetPrizesTaken(),
+					Sea->GetPrizesTaken() == 1 ? TEXT("") : TEXT("s"),
+					Sea->GetPrizesManned(), Away)
+				: FString::Printf(TEXT("PURSE  %d  from %d prize%s"),
+					Sea->GetPurse(), Sea->GetPrizesTaken(),
+					Sea->GetPrizesTaken() == 1 ? TEXT("") : TEXT("s")),
 				Sea->GetPurse() > 0 ? Good : Faint, X, Y, Small, Scale);
 		}
 	}

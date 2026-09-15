@@ -176,6 +176,31 @@ public:
 	/** In under the guns of the fort, where nobody can follow her. */
 	bool HasMadePort() const { return bMadePort; }
 
+	/** --- prizes ------------------------------------------------------
+	 *
+	 *  A ship that has struck is stopped. She is not YOURS until your men are
+	 *  aboard her, and those men are gone for the rest of the cruise: they
+	 *  are sailing her, not serving your guns. That is the whole cost, and it
+	 *  is paid out of the same pool the crew slice made scarce. */
+	bool IsPrize() const { return bIsPrize; }
+	int32 GetPrizeCrewAboard() const { return PrizeCrewAboard; }
+	/** Latched, cumulative: men sent away to prizes over the whole run. */
+	int32 GetHandsInPrizes() const { return HandsInPrizes; }
+	int32 GetMinHandsAboard() const { return MinHandsAboard; }
+
+	/** Sends men away to a prize. Refuses, and says so, if it would leave
+	 *  fewer than MinHandsAboard to work this ship.
+	 *
+	 *  It deliberately does NOT go through LoseHands(): men in a prize crew
+	 *  are not casualties. Routing them through it to save four lines would
+	 *  give one variable two jobs and would move casualties_max - a pinned
+	 *  measurement in the convoy family - for a reason that has nothing to do
+	 *  with shot. */
+	bool DetachPrizeCrew(int32 Count);
+
+	/** Marks her as taken, and puts the prize crew aboard HER. */
+	void ManAsPrize(AShipPawn* Taker, int32 CrewAboard);
+
 	/** The rig threshold that brings a merchant to strike. Read by the game
 	 *  mode so the prize log can say WHICH of the two thresholds did it,
 	 *  rather than the log guessing at a number the pawn owns. */
@@ -671,6 +696,11 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Crew")
 	float JuryCap = 0.85f;
 
+	/** Fewest men that can still work this ship. A captain who put every
+	 *  hand into prizes would be a passenger on his own deck. */
+	UPROPERTY(EditDefaultsOnly, Category = "Prize")
+	int32 MinHandsAboard = 20;
+
 	// ---- damage by zone ------------------------------------------------
 	/** Fraction of a mast's rig carried away by one ball. Three hits and a
 	 *  mast is a bare pole: round shot cuts shrouds and halyards, and a sail
@@ -999,6 +1029,13 @@ private:
 	int32 Hands = 0;
 	/** Latched. Never goes down. */
 	int32 Casualties = 0;
+	/** Also latched, and SEPARATE from Casualties on purpose - see
+	 *  DetachPrizeCrew. Note the consequence, written down rather than
+	 *  discovered later: once a prize crew has left, Hands + Casualties no
+	 *  longer equals HandsMax. The missing men are here. */
+	int32 HandsInPrizes = 0;
+	bool bIsPrize = false;
+	int32 PrizeCrewAboard = 0;
 	float RepairShare = 0.f;
 	/** Latched: integrity restored over the whole run, all targets. */
 	float RepairedTotal = 0.f;

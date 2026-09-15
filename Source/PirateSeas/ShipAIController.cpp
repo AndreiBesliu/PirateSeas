@@ -65,6 +65,14 @@ void AShipAIController::OnPossess(APawn* InPawn)
 			(AimHigh != 0) ? TEXT("HIGH") : TEXT("LOW"));
 	}
 
+	int32 Prize = -1;
+	if (FParse::Value(FCommandLine::Get(), TEXT("AIPrize="), Prize) && Prize >= 0)
+	{
+		bTakesPrizes = Prize != 0;
+		UE_LOG(LogTemp, Display, TEXT("AILOG takes prizes: %s"),
+			bTakesPrizes ? TEXT("yes") : TEXT("no"));
+	}
+
 	int32 Repair = -1;
 	if (FParse::Value(FCommandLine::Get(), TEXT("AIRepair="), Repair) && Repair >= 0)
 	{
@@ -529,7 +537,80 @@ void AShipAIController::Tick(float DeltaSeconds)
 	if (Target && (!IsValid(Target) || Target->IsOutOfTheFight()))
 	{
 		UE_LOG(LogTemp, Display, TEXT("AILOG target lost %s"), *Target->GetName());
+		// A ship that struck rather than sank is money lying on the water, if
+		// this captain has the doctrine and the men. Guns stay silent: she is
+		// going alongside, not finishing her.
+		if (bTakesPrizes && IsValid(Target) && Target->HasStruck()
+			&& !Target->IsSunk() && !Target->IsPrize() && !PrizeToMan)
+		{
+			PrizeToMan = Target;
+			UE_LOG(LogTemp, Display, TEXT("AILOG %s stands by %s to put men aboard"),
+				*Me->GetName(), *Target->GetName());
+		}
 		Target = nullptr;
+	}
+
+	// Standing by a prize OWNS the tick: no target, no guns, no tactics. She
+	// is done with her when the boats have gone across (IsPrize), or when she
+	// is gone.
+	if (PrizeToMan)
+	{
+		if (!IsValid(PrizeToMan) || PrizeToMan->IsPrize() || PrizeToMan->IsSunk())
+		{
+			UE_LOG(LogTemp, Display, TEXT("AILOG %s has done with %s"),
+				*Me->GetName(),
+				IsValid(PrizeToMan) ? *PrizeToMan->GetName() : TEXT("her prize"));
+			PrizeToMan = nullptr;
+			bPrizeLogged = false;
+			PrizeAlongsideSeconds = 0.f;
+		}
+		else
+		{
+			++PrizeTicks;
+			const FVector ToHer = PrizeToMan->GetActorLocation() - Me->GetActorLocation();
+			const float PrizeRangeM = ToHer.Size2D() * 0.01f;
+			const UWindSubsystem* PrizeWind = GetWorld()->GetSubsystem<UWindSubsystem>();
+			const float PrizeWindFrom = PrizeWind
+				? FMath::UnwindDegrees(PrizeWind->GetWindBearingDeg() + 180.f) : 0.f;
+			float Course = ToHer.GetSafeNormal2D().Rotation().Yaw;
+			Course = CourseClearOfLand(Me, Course, PrizeWindFrom, DeltaSeconds,
+				ToHer.Size2D());
+			Course = ResolveSailableHeading(Course, PrizeWindFrom,
+				Me->GetNoGoAngleDeg(), DeltaSeconds);
+			const float PrizeErr = FMath::FindDeltaAngleDegrees(
+				Me->GetActorRotation().Yaw, Course);
+			Me->SetSteerInput(FMath::Clamp(PrizeErr / FullRudderErrorDeg, -1.f, 1.f));
+			// Take in sail as she comes up, so she lies to instead of sailing
+			// past; set it again if she has fallen away.
+			Me->SetSailTrimInput(PrizeRangeM <= PrizeLieToM ? -1.f : 1.f);
+			if (PrizeRangeM <= PrizeLieToM)
+			{
+				PrizeAlongsideSeconds += DeltaSeconds;
+				if (!bPrizeLogged)
+				{
+					bPrizeLogged = true;
+					UE_LOG(LogTemp, Display, TEXT("AILOG %s lies to by %s at %.0f m"),
+						*Me->GetName(), *PrizeToMan->GetName(), PrizeRangeM);
+				}
+			}
+			// The boats should have gone across long ago. They have not, which
+			// means she cannot spare the men: make sail and get on with the
+			// cruise. The prize stays struck and stays counted; she is simply
+			// nobody's.
+			if (PrizeAlongsideSeconds >= PrizeGiveUpSeconds)
+			{
+				UE_LOG(LogTemp, Display,
+					TEXT("AILOG %s gives up %s after %.0f s alongside: no men to spare"),
+					*Me->GetName(), *PrizeToMan->GetName(), PrizeAlongsideSeconds);
+				PrizeToMan = nullptr;
+				bPrizeLogged = false;
+				PrizeAlongsideSeconds = 0.f;
+			}
+			else
+			{
+				return;
+			}
+		}
 	}
 	// A target is kept until she is out of the fight, and the search runs
 	// only while there is none. This used to re-pick every two seconds, which

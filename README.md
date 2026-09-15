@@ -430,10 +430,32 @@ flag (`-AIAimHigh=`) şi dă fix cifrele astea, la 70,9 s şi 83,1 s.
 Punga se vede în panou sub rândul CONVOY şi se scrie la sfârşitul fiecărei
 rulări (`PRIZELOG PURSE`), inclusiv într-o rulare fără convoi — un zero numărat.
 
+### Stăpânirea: o pradă nu e a ta până nu ai oameni pe ea
+
+O navă care a coborât pavilionul e **oprită**, nu **a ta**. Ca s-o iei, te apropii
+la 150 m şi stai lângă ea douăzeci de secunde (cumulate, nu neîntrerupte) — apoi
+pleacă **doisprezece oameni** la bordul ei, şi **nu se mai întorc**: o
+navighează, nu-ţi mai servesc tunurile.
+
+Acolo muşcă felia de echipaj. Şaizeci de oameni la bord, patruzeci şi opt la
+tunuri pentru reîncărcare plină: **prima pradă e gratis, a doua nu**. Măsurat, cu
+valorile implicite şi fără niciun flag de reglaj: raider-ul ia ambii negustori,
+pleacă 24 de oameni, şi reîncărcarea ei scade la 36/48 = 0,75.
+
+Există şi o **podea**: nu poţi coborî sub douăzeci de oameni pe puntea ta. Sub ea
+boţii nu pleacă, prada rămâne doar oprită, şi căpitanul AI renunţă şi face vela
+după patruzeci de secunde degeaba — nu stă lângă o navă pe care n-o poate lua.
+
+Numărul care a decis distanţa de acostare e în log şi în linia de bază:
+`prize_closest_m`. Cu doctrina stinsă, cât de aproape ajunge raider-ul de o navă
+care a coborât pavilionul, natural, e **272 m** — de trei ori distanţa de
+acostare. Adică fără doctrină nu s-ar lua NICIODATĂ o pradă, şi asta nu se putea
+şti presupunând.
+
 **Ce NU face încă:** punga nu cumpără nimic şi nu supravieţuieşte rulării, prada
-nu e luată în stăpânire (nu trimiţi oameni la bord, nu o duci nicăieri), iar o
-navă scufundată după ce a coborât pavilionul rămâne numărată ca oprită. Felia
-asta e cât VALOREAZĂ o pradă, nu ce faci cu ea.
+nu se duce nicăieri (rămâne pe loc, cu oamenii tăi la bord), oamenii nu se mai
+întorc niciodată, iar o navă scufundată după ce a coborât pavilionul rămâne
+numărată ca oprită.
 
 ## Echipajul
 
@@ -594,6 +616,11 @@ pereche de rulări citea împrăștiere și credea că citește semnal.
 | `-ShipRepairShare=x` | nava jucătorului pornește cu fracția x din oameni la reparații (0 la 0,75) |
 | `-ConvoyCargo=N` | cât valorează marfa fiecărui negustor, întreagă (implicit 1200) |
 | `-AIAimHigh=1\|0` | căpitanul inamic ochește MEREU în greement / MEREU în cocă (fără flag, decide singur) |
+| `-AIPrize=1` | căpitanul inamic merge lângă o navă care a coborât pavilionul și trimite oameni (implicit NU) |
+| `-PrizeCrew=N` | câți oameni pleacă la o pradă (implicit 12 — exact cei de prisos peste tunuri) |
+| `-PrizeRangeM=N` | de la ce distanță pot ajunge bărcile (implicit 150 m) |
+| `-PrizeBoatSeconds=N` | câte secunde lângă pradă le ia bărcilor (implicit 20, CUMULATE) |
+| `-EnemyHands=N` | inamicul pornește cu N oameni (doar navele Coroanei, nu negustorii) |
 | `-Islands=N` | pune N insule pe mare, 1 la 8 (0 sau lipsă = niciuna) |
 | `-IsleX= -IsleY= -IsleRadius=` | unde e și cât de mare (raza plajei, implicit 11000 cm) |
 | `-ShipRunAground=N` | din secunda N, mână nava în insulă cu toate pânzele sus, apoi strânge pânza la 10 s după atingere |
@@ -856,8 +883,8 @@ toată nava, fiindcă `ObjectBounds` întorcea zero pentru mesh-ul ăla.
 - echipajul e o singură rezervă împărțită între tunuri și reparații: manevra
   velelor nu e încă o stație, coca nu se repară pe mare, nimeni nu se
   recrutează și nimeni nu se plătește
-- punga nu cumpără nimic și nu trece dintr-o rulare în alta; prada nu se ia în
-  stăpânire și nu se duce în port
+- punga nu cumpără nimic și nu trece dintr-o rulare în alta; o pradă luată în
+  stăpânire rămâne pe loc — nu o duci în port, fiindcă nu există port
 - abordajul e AMÂNAT explicit de owner; echipajul + reparaţiile şi economia +
   progresia sunt următoarele ateliere, în ordinea asta
 
