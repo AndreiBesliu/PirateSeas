@@ -98,7 +98,11 @@ void ASeaGameMode::BeginPlay()
 	// spawn and would have waved through an island sitting exactly on the
 	// flagged one - in a run whose whole purpose was to put land near it.
 	FParse::Value(FCommandLine::Get(), TEXT("EnemyCount="), SquadronSize);
-	SquadronSize = FMath::Clamp(SquadronSize, 1, 8);
+	// ZERO IS NOW ALLOWED. A mission where nobody is hunting you is a thing the
+	// objective layer needs, and the clamp made it unsayable. Nothing fires a
+	// victory at t=0 for an empty squadron: HandleShipSunk only ever runs from a
+	// hull actually sinking, so with none spawned it never runs at all.
+	SquadronSize = FMath::Clamp(SquadronSize, 0, 8);
 	{
 		float OverrideX = 0.f, OverrideY = 0.f;
 		if (FParse::Value(FCommandLine::Get(), TEXT("EnemyX="), OverrideX) &&

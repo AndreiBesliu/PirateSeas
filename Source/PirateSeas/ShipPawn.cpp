@@ -591,6 +591,12 @@ AShipPawn* AShipPawn::FindTargetOnSide(bool bStarboard) const
 	{
 		return nullptr;
 	}
+	// ANY hull on that beam, not just a hostile one, and deliberately so: this
+	// is where the PLAYER's guns are laid, and the player's choice of target is
+	// made by pointing a broadside at it. A filter here would decide for her
+	// which hull she is allowed to fire into - which is the whole question a
+	// raider is asking when a merchant is under her lee. Read again when
+	// allegiance landed and left alone on purpose.
 	const FVector Beam = GetActorRightVector() * (bStarboard ? 1.f : -1.f);
 	AShipPawn* Best = nullptr;
 	float BestDist = TNumericLimits<float>::Max();

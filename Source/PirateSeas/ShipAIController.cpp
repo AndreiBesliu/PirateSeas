@@ -83,16 +83,19 @@ AShipPawn* AShipAIController::FindTarget()
 		return nullptr;
 	}
 
-	// Anything that is a ship, is not us, is still afloat, and is driven by a
-	// player. Later this can widen to any hostile hull.
+	// Anything that is a ship, is not us, is still afloat, and is on ANOTHER
+	// SIDE. This asked for IsPlayerControlled() until now, and its own comment
+	// asked for this. In a two-sided world the two are the same answer - which
+	// is exactly why the change ships alone, with the whole measurement suite
+	// required to come back unmoved.
 	for (TActorIterator<AShipPawn> It(GetWorld()); It; ++It)
 	{
 		AShipPawn* Other = *It;
-		if (Other == Me || Other->IsSunk())
+		if (Other->IsSunk())
 		{
 			continue;
 		}
-		if (Other->IsPlayerControlled())
+		if (Me->IsHostileTo(Other))
 		{
 			return Other;
 		}
@@ -131,6 +134,10 @@ bool AShipAIController::ShotIsBlocked(const AShipPawn* Me, const FVector& FireDi
 			FVector::CrossProduct(FVector::UpVector,
 				Me->GetActorForwardVector().GetSafeNormal2D())));
 
+	// ANY hull, on any side, blocks a lane. Round shot does not check colours,
+	// and a captain who fires through a neutral to reach his enemy is doing
+	// something the rule is meant to stop. Read again when allegiance landed and
+	// deliberately left alone.
 	for (TActorIterator<AShipPawn> It(GetWorld()); It; ++It)
 	{
 		const AShipPawn* Other = *It;

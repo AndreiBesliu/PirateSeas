@@ -13,6 +13,28 @@ class UWaterBodyComponent;
 class UWindSubsystem;
 class ACannonBall;
 
+/** Who a hull belongs to.
+ *
+ *  Until now "enemy" meant IsPlayerControlled(), which is true of exactly one
+ *  hull and says nothing about sides. That was enough for a two-sided world and
+ *  is not enough for a third party who is nobody's enemy until somebody fires:
+ *  a merchant is not the player's friend, and she is not the Crown's quarry.
+ *
+ *  In today's two-sided world "allegiance differs" is arithmetically identical
+ *  to "is player controlled", which is the point of landing it on its own: the
+ *  whole measurement suite has to come back unmoved, and if it does not, the
+ *  model is wrong and nothing has been built on top of it yet. */
+UENUM()
+enum class EShipAllegiance : uint8
+{
+	/** The hull the person is steering. */
+	Player,
+	/** The squadron sent to sink her. */
+	Crown,
+	/** Cargo. Fires at nobody; anybody may fire at her. */
+	Merchant
+};
+
 /** Where a hull is on its way down. Afloat is the only state a ship fights in. */
 UENUM()
 enum class ESinkPhase : uint8
@@ -130,6 +152,18 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Ship")
 	bool IsSunk() const { return HullIntegrity <= 0.f; }
+
+	EShipAllegiance GetAllegiance() const { return Allegiance; }
+
+	/** The one question the AI asks about another hull. Different sides are
+	 *  hostile; the same side is not. A merchant is hostile to both, which is
+	 *  what makes her cargo and not a consort - she has no guns to fire back
+	 *  with, so "hostile" here costs her nothing and buys the rule its
+	 *  simplicity. */
+	bool IsHostileTo(const AShipPawn* Other) const
+	{
+		return Other && Other != this && Other->Allegiance != Allegiance;
+	}
 
 	/** True from the moment integrity hit zero until the wreck is destroyed. */
 	UFUNCTION(BlueprintPure, Category = "Ship")
@@ -521,6 +555,12 @@ protected:
 	/** Hull integrity when undamaged. */
 	UPROPERTY(EditAnywhere, Category = "Ship")
 	float MaxHullIntegrity = 1000.f;
+
+	/** Player on this class, Crown on AEnemyShipPawn, and later Merchant on the
+	 *  convoy. Set by the CLASS rather than at runtime, so there is no window in
+	 *  which a hull has no side and nothing to go wrong on possession. */
+	UPROPERTY(EditDefaultsOnly, Category = "Ship")
+	EShipAllegiance Allegiance = EShipAllegiance::Player;
 
 	// ---- damage by zone ------------------------------------------------
 	/** Fraction of a mast's rig carried away by one ball. Three hits and a
