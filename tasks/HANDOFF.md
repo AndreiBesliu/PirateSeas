@@ -37,6 +37,10 @@ vânt în plante şi greement, `-Hour=` pentru ora din zi.
 - **Capturi:** scoate `-NullRHI` şi adaugă `-ShipShots=20,21 -ShipShotCam=beam`.
   Prima rulare după ce reconstruieşti un material arată starea VECHE — rulează
   de două ori.
+- **PowerShell:** un flag cu zecimale se pune între ghilimele
+  (`"-EnemyRigDamage=0.4"`), altfel ajunge `0` şi rularea „merge" cu alt
+  rezultat. Şi NICIODATĂ `python - @'...'@` — deschide un REPL şi atârnă
+  pentru totdeauna; scripturile de analiză se scriu în fişiere.
 
 ## Reguli care au costat ceva ca să fie învăţate
 
@@ -80,9 +84,17 @@ Livrat:
    era de neluat de pe nicio parte: urmărirea unui fugar (histereză pe distanţă)
    şi ţinta păstrată până iese din luptă.
 
-Următorul: echipaj + reparaţii (un cronometru de ţinut poziţia lângă o navă
-care a coborât pavilionul e o operaţiune de echipaj în tot afară de nume), apoi
-economie + progresie (valoarea mărfii, prăzi).
+3. **Echipajul, felia 1**: `Hands`/`Casualties` pe `AShipPawn` (pierderi pe
+   zonă la fiecare lovitură, niciodată la eşuare), `RepairShare` împarte oamenii
+   între tunuri (reîncărcarea scade sub 48 de oameni) şi reparaţii (cârma, apoi
+   catargul mai rău, plafon 0,85, coca nu), tasta R / `-ShipRepairShare=`,
+   doctrina căpitanului (`-AIRepair=0` o opreşte), bara HANDS, o linie
+   `CREWLOG` per cocă la quit. Perechea `crew_repair` / `crew_fight` trebuie să
+   difere (prima salvă 224,6 vs 255,9). Şi a treia reparaţie la căpitan:
+   unghiul de apropiere în AFARA distanţei de menţinere (înăuntru neschimbat).
+
+Următorul: economie + progresie (valoarea mărfii, prăzi, un port), sau felia 2
+de echipaj (velele ca staţie, recrutare) — de ales cu owner-ul.
 
 ## Ce aşteaptă ochiul owner-ului
 

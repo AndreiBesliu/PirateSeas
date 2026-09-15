@@ -411,6 +411,30 @@ def check_comparison():
         if v.get("mission_result") != code or v.get("first_strike_t") != -1.0:
             fail("MISSION %s read as result=%s firstStrike=%s"
                  % (word, v.get("mission_result"), v.get("first_strike_t")))
+    # The hands, off the two quit-time lines of a real run: the player's, who
+    # lost eleven men to a broadside aimed high, and the enemy's, who lost none
+    # and knotted 0.748 of a rig back. The enemy's rig must be read from the
+    # ENEMY's line - 0.77 - and not as the minimum over hulls, which is 0.32
+    # and is the damage she dealt. And two broadside lines, so the first one
+    # is the earlier of the two and "target=ShipPawn_0" is not mistaken for
+    # the t= at the end.
+    cw = ci_measure.measure("fixture",
+        "LogTemp: Display: SHOTLOG broadside EnemyShipPawn_0 side=starboard guns=4 "
+        "target=ShipPawn_0 range=335m heel=1.2 muzzleZ=29 velBeam=-0.63 velFwd=6.32 "
+        "elev=4.30 aim=high lead=14.0m inherit=1 bias=1.040 t=224.6" + chr(10) +
+        "LogTemp: Display: SHOTLOG broadside EnemyShipPawn_0 side=starboard guns=4 "
+        "target=ShipPawn_0 range=340m heel=1.0 muzzleZ=25 velBeam=-0.60 velFwd=6.30 "
+        "elev=4.30 aim=high lead=14.0m inherit=1 bias=1.040 t=236.6" + chr(10) +
+        "LogTemp: Display: CREWLOG ShipPawn_0 hands=49/60 casualties=11 repairShare=0.00 "
+        "repaired=0.000 gunCrew=1.00 rig=0.32 rudder=1.00" + chr(10) +
+        "LogTemp: Display: CREWLOG EnemyShipPawn_0 hands=60/60 casualties=0 "
+        "repairShare=0.00 repaired=0.748 gunCrew=1.00 rig=0.77 rudder=1.00" + chr(10))
+    want = {"casualties_max": 11, "gun_crew_min": 1.0, "repaired_max": 0.748,
+            "enemy_rig_quit": 0.77, "first_broadside_t": 224.6, "broadsides": 2}
+    got = {k: cw.get(k) for k in want}
+    if got != want:
+        fail("the crew lines read %s, wanted %s" % (got, want))
+
     # And the captain's pursuit counter, off the quit-time line it rides on.
     pt = ci_measure.measure("fixture",
         "LogTemp: Display: SEALOG EnemyShipPawn_0 landTicks=0 clawOffs=0 "
@@ -429,7 +453,7 @@ LogTemp: Display: SHIPLOG ShipPawn_0 sink=foundering draught=120
         fail("ships_sunk read %d from a log holding exactly one SUNK line" % sunk)
     if len(FAILS) == before:
         ok("the measurement gate reports matches, moves, new and missing numbers, "
-           "and reads the convoy and pursuit lines")
+           "and reads the convoy, crew and pursuit lines")
 
 
 def main():

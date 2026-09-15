@@ -147,6 +147,20 @@ SCENARIOS = {
                    "-ConvoyWindAngle=90", "-ConvoyRangeM=1200",
                    "-EnemyCount=1", "-RaiderSide=lee",
                    "-RaiderOffingM=600", "-ShipQuitAfter=400"],
+    # The hands. A second pair that must come out different, this time in
+    # one flag on the CAPTAIN: an enemy starts 1.5 km off with her rig shot
+    # down to 0.40 and has to close on the idle player. With repairs at sea
+    # she sends half her men aloft on the way and arrives under a jury rig;
+    # without, she arrives as she left. first_broadside_t and repaired_max
+    # must differ. Casualties are exercised by the gunnery family, where the
+    # player's test broadside kills men on the enemy and gun_crew_min reads
+    # below 1.
+    "crew_repair": ["-WindBearing=120", "-WindSpeed=12", "-EnemyCount=1",
+                    "-EnemyX=150000", "-EnemyY=0", "-EnemyRigDamage=0.4",
+                    "-AIRepair=1", "-ShipQuitAfter=360"],
+    "crew_fight": ["-WindBearing=120", "-WindSpeed=12", "-EnemyCount=1",
+                   "-EnemyX=150000", "-EnemyY=0", "-EnemyRigDamage=0.4",
+                   "-AIRepair=0", "-ShipQuitAfter=360"],
 }
 
 
@@ -365,6 +379,31 @@ def measure(name, text):
         m["beat_seconds"] = int(ms.group(10))
         m["first_strike_t"] = float(ms.group(11))
         m["merchants_struck"] = len(re.findall(r"SHIPLOG \S+ STRUCK ", text))
+
+    # The hands, off the one line per hull printed at quit. casualties_max is
+    # the counter that must be non-zero wherever shot lands on a hull;
+    # gun_crew_min is what those casualties cost at the guns (1.00 until the
+    # spare dozen are gone); repaired_max is what the carpenter gave back.
+    crew = re.findall(r"CREWLOG \S+ hands=(\d+)/(\d+) casualties=(\d+) "
+                      r"repairShare=([0-9.]+) repaired=([0-9.]+) gunCrew=([0-9.]+) "
+                      r"rig=([0-9.]+) rudder=([0-9.]+)", text)
+    if crew:
+        m["casualties_max"] = max(int(c[2]) for c in crew)
+        m["gun_crew_min"] = min(float(c[5]) for c in crew)
+        m["repaired_max"] = round(max(float(c[4]) for c in crew), 3)
+    # The ENEMY's rig at quit, not the minimum over hulls: the player's rig is
+    # what the enemy has been firing at, so a minimum would read the damage she
+    # dealt and call it the state she arrived in.
+    enemy_rig = re.search(r"CREWLOG EnemyShipPawn_\d+ hands=\d+/\d+ casualties=\d+ "
+                          r"repairShare=[0-9.]+ repaired=[0-9.]+ gunCrew=[0-9.]+ "
+                          r"rig=([0-9.]+)", text)
+    if enemy_rig:
+        m["enemy_rig_quit"] = float(enemy_rig.group(1))
+    # When the first broadside of the run was fired, whoever fired it. The
+    # broadside line carries t= at its end since the crew slice.
+    times = [float(v) for v in re.findall(r"SHOTLOG broadside .*? t=([0-9.]+)", text)]
+    if times:
+        m["first_broadside_t"] = min(times)
 
     # Ticks a captain spent running down a chase instead of laying her guns.
     # Zero in every fight against a target that does not make off, which is

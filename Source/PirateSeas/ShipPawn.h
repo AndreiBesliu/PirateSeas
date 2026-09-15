@@ -186,6 +186,30 @@ public:
 	/** Reached the roadstead. Idempotent. */
 	void MakePort();
 
+	/** --- hands ------------------------------------------------------
+	 *
+	 *  The crew is one pool of men. Shot kills some of them; the rest are
+	 *  divided between the guns and the repair parties by RepairShare, and
+	 *  the guns reload only as fast as the men left to serve them. This is
+	 *  the first slice of crew: sail handling is not yet a station, and
+	 *  nothing here can be bought or recruited. */
+	int32 GetHands() const { return Hands; }
+	int32 GetHandsMax() const { return HandsMax; }
+	int32 GetCasualties() const { return Casualties; }
+	float GetRepairShare() const { return RepairShare; }
+	int32 GetHandsOnRepair() const { return FMath::RoundToInt(Hands * RepairShare); }
+	int32 GetHandsOnGuns() const { return Hands - GetHandsOnRepair(); }
+	/** How fast the guns reload compared with a full crew: 1 with the guns
+	 *  fully manned, down to MinGunCrewFactor with nobody left. */
+	float GetGunCrewFactor() const
+	{
+		return FMath::Clamp(GetHandsOnGuns() / FMath::Max(1.f, FullGunCrew), MinGunCrewFactor, 1.f);
+	}
+	float GetRepairedTotal() const { return RepairedTotal; }
+	/** 0 = every hand at the guns; up to 0.75 = three men in four aloft with
+	 *  the carpenter. Logged when it changes. */
+	void SetRepairShare(float Share);
+
 	/** True from the moment integrity hit zero until the wreck is destroyed. */
 	UFUNCTION(BlueprintPure, Category = "Ship")
 	bool IsSinking() const { return SinkPhase != ESinkPhase::Afloat; }
@@ -599,6 +623,49 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Ship")
 	float StrikeBelowRig = 0.6f;
 
+	/** Men aboard when she sails. Sixty is a small privateer's company; a
+	 *  merchant carries a dozen and says so in her own constructor. */
+	UPROPERTY(EditDefaultsOnly, Category = "Crew")
+	int32 HandsMax = 60;
+
+	/** Men lost to one ball in each zone. A hull hit sends splinters through
+	 *  a crowded deck; a gun hit kills the crew of that gun; aloft there is
+	 *  nobody much to kill. Grounding blows kill nobody. */
+	UPROPERTY(EditDefaultsOnly, Category = "Crew")
+	int32 HullHitCasualties = 2;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Crew")
+	int32 GunHitCasualties = 3;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Crew")
+	int32 RigHitCasualties = 1;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Crew")
+	int32 RudderHitCasualties = 1;
+
+	/** Men it takes to serve every gun at full speed: six to a gun, eight
+	 *  guns. With sixty aboard there are twelve to spare, so the first dozen
+	 *  casualties cost nothing at the guns and every one after that slows
+	 *  the reload. */
+	UPROPERTY(EditDefaultsOnly, Category = "Crew")
+	float FullGunCrew = 48.f;
+
+	/** The guns never stop entirely: one man can load a gun, slowly. */
+	UPROPERTY(EditDefaultsOnly, Category = "Crew")
+	float MinGunCrewFactor = 0.25f;
+
+	/** Integrity restored per man per second. 0.00015 puts thirty hands at
+	 *  0.0045 a second: one rig hit (0.12) knotted and spliced in about
+	 *  twenty-five seconds, a mast from 0.40 back to the jury cap in a
+	 *  hundred. */
+	UPROPERTY(EditDefaultsOnly, Category = "Crew")
+	float RepairPerHandPerSecond = 0.00015f;
+
+	/** A splice never makes a mast whole. Repairs at sea stop here; what
+	 *  was above it stays where it is. */
+	UPROPERTY(EditDefaultsOnly, Category = "Crew")
+	float JuryCap = 0.85f;
+
 	// ---- damage by zone ------------------------------------------------
 	/** Fraction of a mast's rig carried away by one ball. Three hits and a
 	 *  mast is a bare pole: round shot cuts shrouds and halyards, and a sail
@@ -923,6 +990,18 @@ private:
 	 *  struck stays struck for the rest of the run. */
 	bool bStruck = false;
 	bool bMadePort = false;
+
+	int32 Hands = 0;
+	/** Latched. Never goes down. */
+	int32 Casualties = 0;
+	float RepairShare = 0.f;
+	/** Latched: integrity restored over the whole run, all targets. */
+	float RepairedTotal = 0.f;
+	bool bRepairsLogged = false;
+
+	void LoseHands(int32 Count, const TCHAR* Why);
+	void TickRepairs(float DeltaSeconds);
+	void OnRepairPressed();
 	/** True only while a grounding wound is being delivered, so its log lines
 	 *  are tagged GROUNDLOG and never counted as gunnery. */
 	bool bGroundingBlow = false;

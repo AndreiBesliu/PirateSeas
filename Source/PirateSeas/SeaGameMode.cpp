@@ -1241,6 +1241,17 @@ void ASeaGameMode::QuitNow()
 				AI->GetRejoinTicks(), AI->GetAvoidTicks(), AI->GetPursuitTicks());
 		}
 	}
+	for (TActorIterator<AShipPawn> It(GetWorld()); It; ++It)
+	{
+		// The hands, at the end: who was lost, who was sent to repair, and
+		// what they gave back. One line per hull so the gate can read the
+		// enemy's and the player's apart.
+		UE_LOG(LogTemp, Display,
+			TEXT("CREWLOG %s hands=%d/%d casualties=%d repairShare=%.2f repaired=%.3f gunCrew=%.2f rig=%.2f rudder=%.2f"),
+			*It->GetName(), It->GetHands(), It->GetHandsMax(), It->GetCasualties(),
+			It->GetRepairShare(), It->GetRepairedTotal(), It->GetGunCrewFactor(),
+			It->GetRigEfficiency(), It->GetRudderIntegrity());
+	}
 	UE_LOG(LogTemp, Display, TEXT("SEALOG quitting at t=%.1fs"),
 		GetWorld()->GetTimeSeconds());
 	if (GEngine)

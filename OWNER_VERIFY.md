@@ -623,3 +623,30 @@ trebuie pe drumul pe care îl aşez eu, dar vântul liber al jocului nu e pinat)
 Panoul poate depăşi cu un rând dreptunghiul de fundal când apar şi escadronul,
 şi convoiul. Şi în rulările măsurate raider-ul e o navă AI, nu tu: că un om
 poate face ce face căpitanul AI e o presupunere rezonabilă, nu o măsurătoare.
+
+## 26. Echipajul: se vede când trimiți oamenii la reparații?
+
+**Ce te uiți:** `-ShipRigDamage=0.5 -EnemyCount=0`. Bara `HANDS` din CONDITION
+și barele `FORE` / `MAIN`. Apasă R o dată, apoi încă o dată, apoi a treia oară.
+
+**Cum arată bine:** La prima apăsare textul de lângă `HANDS` trece de la „60/60
+all at the guns (R)" la „60/60 15 repairing (R)", la a doua la 30, la a treia
+înapoi la toți la tunuri. Cât timp ai oameni sus, barele `FORE` și `MAIN` urcă
+vizibil (cu 30 de oameni, de la jumătate la 0,85 în vreo două minute) și se
+opresc la 0,85, nu la plin. Într-o luptă în care ai pierdut peste doisprezece
+oameni, reîncărcarea din panoul tunurilor durează vizibil mai mult de 12 s.
+
+**Cum arată prost:** Barele nu urcă, sau urcă până la 1,00. Textul `HANDS` nu se
+schimbă la R. Reîncărcarea rămâne 12 s cu jumătate din oameni morți. Panoul
+CONDITION se suprapune cu cel de dedesubt (l-am lungit cu un rând).
+
+**De ce nu pot eu:** Pot măsura tot ce e în `CREWLOG` — câți au murit, câți
+repară, cât s-a refăcut, factorul de reîncărcare — și le-am măsurat. Dacă R se
+simte ca o decizie în mijlocul luptei, dacă un sfert / jumătate sunt trepte
+bune, dacă barele care urcă se citesc, sunt judecăți de joc.
+
+**Ce știu deja și n-am ascuns:** manevra velelor nu e stație (oamenii de la
+reparații nu încetinesc întinsul pânzei). Cifrele de pierderi sunt alese, nu
+măsurate din nimic real: două pe cocă, trei pe tun, unul sus. Negustorul nu
+repară deloc. Și rata de reparație e aleasă ca un catarg să-și revină într-o
+sută de secunde — un număr de joc, nu de istorie.

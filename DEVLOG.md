@@ -3234,3 +3234,78 @@ copiate din log, şi verifică că STRUCK nu se numără ca SUNK. README are sec
 regulile 7 şi 8.
 
 **Task Completed.**
+
+---
+
+## Task Started — 15.09.2026 (mecanica, commit 3: echipajul, felia 1)
+
+**Prompt:** „continua"
+**Model:** Claude Fable 5.1
+
+Oameni, nu doar lemn. `Hands` (60; negustorul 14) şi `Casualties` zăvorât pe
+`AShipPawn`; o ghiulea omoară doi în cocă, trei la un tun scos, unul sus sau la
+cârmă, niciunul la eşuare. `RepairShare` (R ciclează 0 → ¼ → ½; sau
+`-ShipRepairShare=`) împarte oamenii rămaşi între tunuri şi reparaţii: tunurile
+se reîncarcă cu `HandsOnGuns / 48` (opt tunuri a câte şase), deci cu şaizeci la
+bord primii doisprezece morţi nu costă nimic şi fiecare de după încetineşte
+reîncărcarea, până la un sfert; echipa de reparaţii înnoadă cârma întâi, apoi
+catargul mai rău, cu 0,00015 pe om pe secundă, până la plafonul de 0,85. Coca nu
+se repară pe mare. Căpitanul inamic trimite jumătate din oameni sus când e
+rănit şi n-are în ce trage (`-AIRepair=0` opreşte doctrina). Bara HANDS în
+panou, `CREWLOG` per lovitură şi o linie per cocă la quit, `t=` la capătul
+liniei de salvă.
+
+### Perechea: `crew_repair` / `crew_fight`
+
+Un inamic cu greementul la 0,40 la 1,5 km de jucătorul care stă; un singur flag
+diferă. Cu reparaţii ajunge cu 0,77 din greement şi trage prima salvă la
+**209,5 s**; fără, ajunge cum a plecat şi trage la **239,6 s**. `repaired_max`
+0,748 vs 0.
+
+### Ce a ieşit la iveală: căpitanul nu ştia să tragă de la 380 m
+
+Prima versiune a perechii a ieşit pe dos: cu reparaţii ajungea mai repede şi
+**nu trăgea deloc**, fără reparaţii trăgea de şase ori. Nu era echipajul: în
+afara distanţei de menţinere unghiul de „uşurare" era un sfert de grad pe metru,
+deci la 380 m — 15°, un drum la 75° de relevment. Contra unei nave staţionare
+asta e un cerc lent la 380 m cu ţinta la 15° de travers, iar arcul de tragere e
+9°. Nouăzeci de secunde fără o salvă, apoi cercul a dus-o cu prova în vânt şi a
+stat în irons până la sfârşit. Nava mai lentă (0,40) trăgea fiindcă nu ţinea
+drumul aşa de bine şi ţinta îi nimerea în arc — noroc geometric, nu tactică.
+
+Prima reparaţie — câştig de trei ori mai mare în afara distanţei de menţinere —
+a reparat perechea şi **a stricat convoiul**: raider-ul care urmărise negustorul
+până la 350 m îşi termina virajul cu ţinta la 22° de travers în loc de 7, nu mai
+trăgea niciodată, şi convoiul luat la 71 s trecea. A doua: o **bandă de tragere**
+între distanţa de menţinere şi +60 m în care drumul e travers-pe-ţintă, câştigul
+mare doar dincolo de ea, iar înăuntrul distanţei de menţinere nimic schimbat —
+deci familia `gunnery`, care porneşte înăuntru, e neatinsă. Convoiul: TAKEN la
+70,9.
+
+### Capcane de unelte, plătite azi
+
+`-EnemyRigDamage=0.4` neghilimetat în PowerShell ajunge `0` — prima pereche a
+pornit dezarborată complet, nu la 0,40, şi „mergea". Şi `python - @'...'@` în
+PowerShell deschide un REPL şi atârnă până la timeout — regula era deja în
+memorie; scriptul de analiză e acum fişier.
+
+### Mutaţii şi suită
+
+Mutaţii, restaurate din copie pristină şi comparate pe conţinut: (A) nimeni nu
+moare — `casualties_max` cade de la 8 la 0 în `gunnery`, iar în `crew_fight`
+factorul de reîncărcare urcă la 1,00; (B) dulgherul nu face nimic — perechea
+se prăbuşeşte la IDENTIC (prima salvă 239,6 = 239,6, reparat 0); (C) pristin —
+0,748 / 209,5 din nou.
+
+Suita: familia `gunnery` (gunnery, gale, sinking, carried/loose_shot),
+`lee_shore` şi `dusk` **nemişcate**. Au mutat, toate din drumul de apropiere al
+căpitanului: `convoy_weather` (tot TAKEN, 70,9 în loc de 71,4, cinci salve în
+loc de trei), `grounding` (inamicii care vin peste jucătorul eşuat trag două
+salve în loc de una) şi `pursuit_ticks_max` din `sailing`/`crowded`, de la
+248/291 la **0** — cu banda de tragere, apropierea se face suficient de repede
+ca regula de urmărire să nu mai aibă de ce să tragă contra unui jucător care
+face cercuri. Chei noi peste tot: `casualties_max`, `gun_crew_min`,
+`repaired_max`, `enemy_rig_quit`, `first_broadside_t`. Linia de bază
+reînregistrată în acelaşi commit; ce a mutat e scris aici, nu doar în diff.
+
+**Task Completed.**

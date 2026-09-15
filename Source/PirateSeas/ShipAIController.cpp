@@ -54,6 +54,13 @@ void AShipAIController::OnPossess(APawn* InPawn)
 		UE_LOG(LogTemp, Display,
 			TEXT("AILOG tacks through the wind above %.1f m/s, wears below"), TackAbove);
 	}
+	int32 Repair = -1;
+	if (FParse::Value(FCommandLine::Get(), TEXT("AIRepair="), Repair) && Repair >= 0)
+	{
+		bRepairsAtSea = Repair != 0;
+		UE_LOG(LogTemp, Display, TEXT("AILOG repairs at sea %s"),
+			bRepairsAtSea ? TEXT("on") : TEXT("OFF"));
+	}
 	UE_LOG(LogTemp, Display, TEXT("AILOG possessed %s"),
 		InPawn ? *InPawn->GetName() : TEXT("none"));
 	if (AShipPawn* Ship = Cast<AShipPawn>(InPawn))
@@ -609,6 +616,16 @@ void AShipAIController::Tick(float DeltaSeconds)
 		Tactic = EShipTactic::Engage;
 	}
 
+	// --- the hands ---------------------------------------------------------
+	// Hurt and with nothing to shoot at, she repairs; in range, every man to
+	// the guns. SetRepairShare is idempotent and logs only a change.
+	{
+		const bool bHurt = Me->GetRigEfficiency() < RepairBelow
+			|| Me->GetRudderIntegrity() < RepairBelow;
+		const bool bGunsIdle = RangeM > EngageRangeM || Tactic == EShipTactic::Disengage;
+		Me->SetRepairShare((bRepairsAtSea && bHurt && bGunsIdle) ? RepairShareWhenHurt : 0.f);
+	}
+
 	// --- work out the course we want ------------------------------------
 	UWindSubsystem* Wind = GetWorld()->GetSubsystem<UWindSubsystem>();
 	const float WindFromBearing = Wind
@@ -629,7 +646,12 @@ void AShipAIController::Tick(float DeltaSeconds)
 		// further from the eye of the wind: circling on the windward side put
 		// the ship head to wind and stopped her dead every time.
 		const float RangeError = RangeM - StandoffM;
-		const float Lead = FMath::Clamp(RangeError * 0.25f, -55.f, 55.f);
+		// Three regimes, see FiringBandM: inside the standoff she eases out as
+		// she always did; in the band she is beam-on and the guns bear; beyond
+		// it she leads in steeply enough to actually close.
+		const float Lead = RangeError > 0.f
+			? FMath::Clamp((RangeError - FiringBandM) * OutsideLeadDegPerM, 0.f, 55.f)
+			: FMath::Clamp(RangeError * 0.25f, -55.f, 0.f);
 
 		const float TurnRight = FMath::UnwindDegrees(BearingToTarget + 90.f - Lead);
 		const float TurnLeft = FMath::UnwindDegrees(BearingToTarget - 90.f + Lead);

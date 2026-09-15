@@ -27,6 +27,7 @@ Apoi apeși **Play**.
 | Q | salvă la babord |
 | E | salvă la tribord |
 | Shift stânga (ținut) | ochești în greement, nu în cocă |
+| R | muți un sfert din oameni la reparații, apoi jumătate, apoi toți înapoi la tunuri |
 | Mouse | rotești doar camera, nu nava |
 
 **Nu ai accelerație.** W nu împinge nava, ci întinde pânza. Viteza iese din trei
@@ -412,6 +413,43 @@ Când e în rază, alege bordul cu virajul mai scurt, dacă acel curs e navigabi
 
 Când o scufunzi, la 8 secunde apare alta, la același loc de pornire.
 
+## Echipajul
+
+Nava are **oameni**, nu doar lemn: șaizeci la plecare (un negustor, paisprezece).
+O ghiulea îi omoară: două la o lovitură în cocă, trei la un tun scos din luptă,
+unul sus în greement sau la cârmă. Eșuarea nu omoară pe nimeni. Pierderile se
+adună pe toată partida și nu se întorc niciodată.
+
+Oamenii rămași sunt împărțiți între **tunuri** și **reparații** (R, sau
+`-ShipRepairShare=x`). Tunurile se reîncarcă atât de repede câți oameni au: opt
+tunuri a câte șase oameni înseamnă patruzeci și opt, deci cu șaizeci la bord
+primii doisprezece morți nu costă nimic la tunuri, și fiecare de după ei
+încetinește reîncărcarea, până la un sfert din viteză cu nimeni. Sub `HANDS` din
+panou vezi câți ai și unde sunt.
+
+Echipa de reparații **înnoadă și matisește**: cârma întâi, apoi catargul mai
+rău, cu 0,00015 din integritate pe om pe secundă — treizeci de oameni refac o
+lovitură în greement (0,12) în vreo douăzeci și cinci de secunde, un catarg de
+la 0,40 în vreo sută. Niciodată peste 0,85: o matiseală nu face un catarg
+întreg. Coca nu se repară pe mare, deocamdată.
+
+Căpitanul inamic face la fel: rănit și fără nimic de tras (în afara razei, sau
+fugind), trimite jumătate din oameni sus; în rază, toți la tunuri.
+`-AIRepair=0` îi oprește doctrina, ceea ce face mecanica măsurabilă: perechea
+`crew_repair` / `crew_fight` pornește un inamic cu greementul la 0,40 la 1,5 km
+de tine și diferă într-un singur flag. Cu reparații ajunge sub greement de
+avarie (0,77) și trage prima salvă la 224,6 s; fără, ajunge cum a plecat și
+trage la 255,9. Negustorul nu trimite pe nimeni sus în felia asta: ce-i strică
+o salvă rămâne stricat, și de asta coboară pavilionul.
+
+Ce a ieșit la iveală pe drum: în afara distanței de menținere căpitanul „ușura"
+spre țintă cu un sfert de grad pe metru, adică la 380 m ținea un drum la 75° de
+relevment — dădea roată unei nave staționare cu tunurile la 15° de travers, iar
+arcul de tragere e 9°. Măsurat: nouăzeci de secunde fără o salvă, apoi cercul a
+dus-o cu prova în vânt. Acum, în afara distanței de menținere, unghiul crește de
+trei ori mai repede; înăuntru e neschimbat, deci toată familia `gunnery`, care
+pornește înăuntru, a rămas exact unde era.
+
 ## Scufundarea
 
 La integritate zero nava nu dispare și nu rămâne o țintă: se scufundă, în
@@ -530,6 +568,8 @@ pereche de rulări citea împrăștiere și credea că citește semnal.
 | `-RaiderSide=weather\|lee` | aşază escadronul inamic în vântul convoiului sau sub el |
 | `-RaiderOffingM=` | la câţi metri de convoi, de-a lungul vântului (implicit 800) |
 | `-ConvoyStrikeTest=N` | primul negustor coboară pavilionul la N secunde, fără tunuri |
+| `-AIRepair=0` | căpitanul inamic NU mai trimite oameni la reparații (implicit 1) |
+| `-ShipRepairShare=x` | nava jucătorului pornește cu fracția x din oameni la reparații (0 la 0,75) |
 | `-Islands=N` | pune N insule pe mare, 1 la 8 (0 sau lipsă = niciuna) |
 | `-IsleX= -IsleY= -IsleRadius=` | unde e și cât de mare (raza plajei, implicit 11000 cm) |
 | `-ShipRunAground=N` | din secunda N, mână nava în insulă cu toate pânzele sus, apoi strânge pânza la 10 s după atingere |
@@ -789,6 +829,9 @@ toată nava, fiindcă `ObjectBounds` întorcea zero pentru mesh-ul ăla.
 - convoiul n-are prăzi, valoare a mărfii, escortă sau port adevărat (rada e un
   punct pe apă); negustorul nu ştie să vireze prin vânt, deci un drum aşezat în
   vânt l-ar putea prinde în irons
+- echipajul e o singură rezervă împărțită între tunuri și reparații: manevra
+  velelor nu e încă o stație, coca nu se repară pe mare, nimeni nu se
+  recrutează și nimeni nu se plătește
 - abordajul e AMÂNAT explicit de owner; echipajul + reparaţiile şi economia +
   progresia sunt următoarele ateliere, în ordinea asta
 

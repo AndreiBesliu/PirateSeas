@@ -261,6 +261,11 @@ void AShipPawn::ApplyShotCamera()
 
 void AShipPawn::BeginPlay()
 {
+	// Every man aboard, before anything below can take one away. Done here
+	// and not in the constructor because a subclass sets HandsMax in ITS
+	// constructor, which runs after this class's.
+	Hands = HandsMax;
+
 	Super::BeginPlay();
 
 	int32 Flag = -1;
@@ -354,6 +359,13 @@ void AShipPawn::BeginPlay()
 			// zone actually costs her can be measured instead of waited for:
 			// a rudder hit needs a rake through the transom, which happens
 			// perhaps once in a long engagement.
+			// -ShipRepairShare=x: the player's hands divided from the start,
+			// so a run with no one at the keyboard can still measure a repair.
+			float Share = -1.f;
+			if (FParse::Value(FCommandLine::Get(), TEXT("ShipRepairShare="), Share) && Share >= 0.f)
+			{
+				SetRepairShare(Share);
+			}
 			float RigDamage = -1.f, RudderDamage = -1.f;
 			int32 GunsDown = 0;
 			if (FParse::Value(FCommandLine::Get(), TEXT("ShipRigDamage="), RigDamage) && RigDamage >= 0.f)
@@ -793,7 +805,7 @@ bool AShipPawn::FireBroadside(bool bStarboard, AActor* AimAt, bool bHigh)
 		FVector(GGunPortsX[0], Side * GGunPortY, GGunPortZ));
 	const FVector Vel = VelBeforeRecoil;
 	UE_LOG(LogTemp, Display,
-		TEXT("SHOTLOG broadside %s side=%s guns=%d target=%s range=%.0fm heel=%.1f muzzleZ=%.0f velBeam=%.2f velFwd=%.2f elev=%.2f aim=%s lead=%.1fm inherit=%d bias=%.3f"),
+		TEXT("SHOTLOG broadside %s side=%s guns=%d target=%s range=%.0fm heel=%.1f muzzleZ=%.0f velBeam=%.2f velFwd=%.2f elev=%.2f aim=%s lead=%.1fm inherit=%d bias=%.3f t=%.1f"),
 		*GetName(), bStarboard ? TEXT("starboard") : TEXT("port"), Fired,
 		AimAt ? *AimAt->GetName() : TEXT("none"),
 		AimAt ? FVector::Dist2D(AimAt->GetActorLocation(), GetActorLocation()) * 0.01f : 0.f,
@@ -802,7 +814,7 @@ bool AShipPawn::FireBroadside(bool bStarboard, AActor* AimAt, bool bHigh)
 		FVector::DotProduct(Vel, GetActorForwardVector()) * 0.01f,
 		AimAt ? ElevationForRangeDeg(FVector::Dist2D(AimAt->GetActorLocation(), FirstMuzzle)) : GunElevationDeg,
 		bHigh ? TEXT("high") : TEXT("low"),
-		LastLeadCm * 0.01f, bInheritShipVelocity ? 1 : 0, RangeBias);
+		LastLeadCm * 0.01f, bInheritShipVelocity ? 1 : 0, RangeBias, GetWorld()->GetTimeSeconds());
 	return Fired > 0;
 }
 
@@ -920,16 +932,22 @@ float AShipPawn::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent,
 	const EShipZone Zone = ClassifyHit(Struck, LastHitLocal, Gun);
 	float HullLoss = 0.f;
 
+	// Men, as well as timber. A grounding blow kills nobody: the ground does
+	// not throw splinters, and bGroundingBlow already tags the log for it.
+	const bool bShot = !bGroundingBlow;
 	switch (Zone)
 	{
 	case EShipZone::ForeRig:
 		ForeRigIntegrity = FMath::Max(0.f, ForeRigIntegrity - RigHitDamage);
+		if (bShot) LoseHands(RigHitCasualties, TEXT("rig"));
 		break;
 	case EShipZone::MainRig:
 		MainRigIntegrity = FMath::Max(0.f, MainRigIntegrity - RigHitDamage);
+		if (bShot) LoseHands(RigHitCasualties, TEXT("rig"));
 		break;
 	case EShipZone::Rudder:
 		RudderIntegrity = FMath::Max(0.f, RudderIntegrity - RudderHitDamage);
+		if (bShot) LoseHands(RudderHitCasualties, TEXT("rudder"));
 		break;
 	case EShipZone::Guns:
 	{
@@ -937,16 +955,19 @@ float AShipPawn::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent,
 		if (Gun >= 0 && !bGunDown[SideIndex][Gun])
 		{
 			bGunDown[SideIndex][Gun] = true;
+			if (bShot) LoseHands(GunHitCasualties, TEXT("gun"));
 		}
 		else
 		{
 			// The port was already empty, so the ball went on into the hull.
 			HullLoss = DamageAmount;
+			if (bShot) LoseHands(HullHitCasualties, TEXT("hull"));
 		}
 		break;
 	}
 	default:
 		HullLoss = DamageAmount;
+		if (bShot) LoseHands(HullHitCasualties, TEXT("hull"));
 		break;
 	}
 
@@ -1002,6 +1023,87 @@ void AShipPawn::Strike(AActor* Causer)
 		HullIntegrity, MaxHullIntegrity, GetRigEfficiency(),
 		GetWorld()->GetTimeSeconds());
 	OnShipStruck.Broadcast(this, Causer);
+}
+
+void AShipPawn::LoseHands(int32 Count, const TCHAR* Why)
+{
+	if (Count <= 0 || Hands <= 0)
+	{
+		return;
+	}
+	const int32 Lost = FMath::Min(Count, Hands);
+	Hands -= Lost;
+	Casualties += Lost;
+	UE_LOG(LogTemp, Display, TEXT("CREWLOG %s lost %d hands (%s), %d/%d left"),
+		*GetName(), Lost, Why, Hands, HandsMax);
+}
+
+void AShipPawn::SetRepairShare(float Share)
+{
+	const float Clamped = FMath::Clamp(Share, 0.f, 0.75f);
+	if (FMath::IsNearlyEqual(Clamped, RepairShare, 0.001f))
+	{
+		return;
+	}
+	RepairShare = Clamped;
+	if (GetHandsOnRepair() > 0)
+	{
+		UE_LOG(LogTemp, Display, TEXT("CREWLOG %s %d hands to repair (share %.2f), %d at the guns"),
+			*GetName(), GetHandsOnRepair(), RepairShare, GetHandsOnGuns());
+	}
+	else
+	{
+		UE_LOG(LogTemp, Display, TEXT("CREWLOG %s all hands to the guns"), *GetName());
+	}
+}
+
+void AShipPawn::TickRepairs(float DeltaSeconds)
+{
+	const int32 OnRepair = GetHandsOnRepair();
+	if (OnRepair <= 0 || IsSinking())
+	{
+		return;
+	}
+	// The rudder first, because a ship that cannot steer cannot do anything
+	// else; then whichever mast is worse. Nothing above the jury cap is
+	// touched, and the hull is not repaired at sea in this slice.
+	float* Target = nullptr;
+	const TCHAR* Name = TEXT("");
+	if (RudderIntegrity < JuryCap)
+	{
+		Target = &RudderIntegrity;
+		Name = TEXT("rudder");
+	}
+	else if (ForeRigIntegrity < JuryCap && ForeRigIntegrity <= MainRigIntegrity)
+	{
+		Target = &ForeRigIntegrity;
+		Name = TEXT("fore rig");
+	}
+	else if (MainRigIntegrity < JuryCap)
+	{
+		Target = &MainRigIntegrity;
+		Name = TEXT("main rig");
+	}
+	if (!Target)
+	{
+		return;
+	}
+	const float Applied = FMath::Min(OnRepair * RepairPerHandPerSecond * DeltaSeconds,
+		JuryCap - *Target);
+	*Target += Applied;
+	RepairedTotal += Applied;
+	if (!bRepairsLogged)
+	{
+		bRepairsLogged = true;
+		UE_LOG(LogTemp, Display, TEXT("CREWLOG %s repairs begun on the %s with %d hands, t=%.1f"),
+			*GetName(), Name, OnRepair, GetWorld()->GetTimeSeconds());
+	}
+}
+
+void AShipPawn::OnRepairPressed()
+{
+	// R cycles a quarter, a half, and back to every man at the guns.
+	SetRepairShare(RepairShare < 0.2f ? 0.25f : (RepairShare < 0.45f ? 0.5f : 0.f));
 }
 
 void AShipPawn::MakePort()
@@ -1624,8 +1726,12 @@ void AShipPawn::Tick(float DeltaSeconds)
 		// Belt and braces for the sleep settings in the constructor.
 		HullCollision->WakeAllRigidBodies();
 	}
-	PortReload = FMath::Max(0.f, PortReload - DeltaSeconds);
-	StarboardReload = FMath::Max(0.f, StarboardReload - DeltaSeconds);
+	// The guns reload as fast as the men left to serve them. With a full
+	// crew and nobody sent to the carpenter this is exactly the old line.
+	const float GunCrew = GetGunCrewFactor();
+	PortReload = FMath::Max(0.f, PortReload - DeltaSeconds * GunCrew);
+	StarboardReload = FMath::Max(0.f, StarboardReload - DeltaSeconds * GunCrew);
+	TickRepairs(DeltaSeconds);
 	ComputeLift();
 
 	if (FireTestAt > 0.f && !bFireTestDone && PlayTime >= FireTestAt && !IsSinking())
@@ -2061,6 +2167,8 @@ void AShipPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 		this, &AShipPawn::OnAimHighPressed);
 	PlayerInputComponent->BindAction(TEXT("AimHigh"), IE_Released,
 		this, &AShipPawn::OnAimHighReleased);
+	PlayerInputComponent->BindAction(TEXT("Repair"), IE_Pressed,
+		this, &AShipPawn::OnRepairPressed);
 }
 
 void AShipPawn::OnSailTrimInput(float Value)

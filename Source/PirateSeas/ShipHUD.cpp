@@ -47,7 +47,7 @@ void AShipHUD::Tick(float DeltaSeconds)
 	UWindSubsystem* Wind = GetWorld() ? GetWorld()->GetSubsystem<UWindSubsystem>() : nullptr;
 
 	UE_LOG(LogTemp, Display,
-		TEXT("HUDLOG windRel=%.0f windAng=%.0f trackAng=%.0f trim=%.2f speed=%.2f vmg=%.2f leeway=%.1f hull=%.0f rig=%.2f/%.2f rud=%.2f guns=%d/%d reload=%.0f/%.0f aim=%s"),
+		TEXT("HUDLOG windRel=%.0f windAng=%.0f trackAng=%.0f trim=%.2f speed=%.2f vmg=%.2f leeway=%.1f hull=%.0f rig=%.2f/%.2f rud=%.2f guns=%d/%d reload=%.0f/%.0f aim=%s hands=%d/%d repair=%d"),
 		Wind ? FMath::FindDeltaAngleDegrees(Ship->GetActorRotation().Yaw,
 			FMath::UnwindDegrees(Wind->GetWindBearingDeg() + 180.f)) : 0.f,
 		Ship->GetWindAngleDeg(), Ship->GetTrackWindAngleDeg(),
@@ -56,7 +56,8 @@ void AShipHUD::Tick(float DeltaSeconds)
 		Ship->GetMainRigIntegrity(), Ship->GetRudderIntegrity(),
 		Ship->GetGunsRemaining(false), Ship->GetGunsRemaining(true),
 		Ship->GetReloadRemaining(false), Ship->GetReloadRemaining(true),
-		Ship->IsAimingHigh() ? TEXT("high") : TEXT("low"));
+		Ship->IsAimingHigh() ? TEXT("high") : TEXT("low"),
+		Ship->GetHands(), Ship->GetHandsMax(), Ship->GetHandsOnRepair());
 }
 
 AShipPawn* AShipHUD::GetShip() const
@@ -286,7 +287,7 @@ void AShipHUD::DrawCondition(AShipPawn* Ship)
 	float Y = Canvas->SizeY * 0.735f;
 
 	DrawRect(Panel, X - 12.f * Scale, Y - Line * 0.9f,
-		Width + Canvas->SizeX * 0.050f, Line * 5.4f);
+		Width + Canvas->SizeX * 0.050f, Line * 6.25f);
 	DrawText(TEXT("CONDITION"), Faint, X, Y - Line * 0.75f, Small, Scale);
 
 	Y = DrawBar(X, Y, Width, TEXT("HULL"),
@@ -297,6 +298,13 @@ void AShipHUD::DrawCondition(AShipPawn* Ship)
 	Y = DrawBar(X, Y, Width, TEXT("RUDDER"), Ship->GetRudderIntegrity(), FString());
 	Y = DrawBar(X, Y, Width, TEXT("SAIL SET"), Ship->GetSailTrim(),
 		FString::Printf(TEXT("%.0f%%"), Ship->GetSailTrim() * 100.f));
+	// The men, and where they are. R moves a quarter of them at a time.
+	const int32 OnRepair = Ship->GetHandsOnRepair();
+	Y = DrawBar(X, Y, Width, TEXT("HANDS"),
+		Ship->GetHands() / FMath::Max(1.f, (float)Ship->GetHandsMax()),
+		OnRepair > 0
+			? FString::Printf(TEXT("%d/%d  %d repairing (R)"), Ship->GetHands(), Ship->GetHandsMax(), OnRepair)
+			: FString::Printf(TEXT("%d/%d  all at the guns (R)"), Ship->GetHands(), Ship->GetHandsMax()));
 }
 
 void AShipHUD::DrawGuns(AShipPawn* Ship)

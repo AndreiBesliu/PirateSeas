@@ -280,6 +280,43 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Tactics")
 	float PursuitResumeM = 150.f;
 
+	/** While her rig or rudder is below this and the guns have nothing to
+	 *  fire at - out of range, or running - she sends RepairShareWhenHurt
+	 *  of her hands to knot and splice. Inside range every man goes back
+	 *  to the guns. -AIRepair=0 switches the doctrine off, which is what
+	 *  makes it measurable. */
+	/** From the standoff out to standoff + this, she sails BEAM-ON to her
+	 *  target: no lead at all, so the guns bear. Beyond it the lead grows at
+	 *  OutsideLeadDegPerM so that she closes. Inside the standoff the old
+	 *  quarter of a degree a metre of easing-out stays, untouched, so every
+	 *  fight that starts inside it - the whole gunnery family - is exactly
+	 *  as measured.
+	 *
+	 *  Why a band and not just a steeper gain. The quarter of a degree gave
+	 *  15 degrees of lead at standoff + 60: a course 75 degrees off the
+	 *  bearing, which against a ship lying still is a slow circle at 380 m
+	 *  with the target 15 degrees off the beam and the guns' arc 9. Measured
+	 *  on the crew pair: ninety seconds round a stationary player without a
+	 *  shot, then in irons. A steeper gain alone fixed that and broke the
+	 *  convoy: a raider who has run a merchant down to 350 m and turns to
+	 *  fire ends her turn 22 degrees off the beam instead of 7, never fires,
+	 *  and the convoy that was taken at 71 s got through. Sixty metres is a
+	 *  ship and a half of drift during a turn and a reload. */
+	UPROPERTY(EditAnywhere, Category = "Tactics")
+	float FiringBandM = 60.f;
+
+	UPROPERTY(EditAnywhere, Category = "Tactics")
+	float OutsideLeadDegPerM = 0.75f;
+
+	UPROPERTY(EditAnywhere, Category = "Tactics")
+	float RepairBelow = 0.9f;
+
+	UPROPERTY(EditAnywhere, Category = "Tactics")
+	float RepairShareWhenHurt = 0.5f;
+
+	UPROPERTY(EditAnywhere, Category = "Tactics")
+	bool bRepairsAtSea = true;
+
 private:
 	/** Nearest heading we can actually sail that is closest to what we want. */
 	float ResolveSailableHeading(float DesiredYawDeg, float WindFromBearingDeg,
