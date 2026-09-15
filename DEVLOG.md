@@ -2888,3 +2888,99 @@ două pe lovitură: linia de bază a scăzut de la 2 la 1, adică de la un numă
 unitate la unul cu.
 
 **Task Completed.**
+
+---
+
+## Task Started — 15.09.2026 (cele 22 neverificate)
+
+**Prompt:** „Continua"
+**Model:** Claude Opus 5
+
+Restul recenziei a doua: cele 22 de constatări raportate şi neverificate. Nouă
+mai erau în picioare după cele patru commit-uri de dimineaţă, şi au plecat la
+verificare câte un agent fiecare, împotriva arborelui de ACUM. **Opt încă
+ţineau, una nu ţinuse niciodată.** Restul de treisprezece erau despre documente
+şi despre lucruri deja reparate.
+
+### Controlul negativ putea trece din motivul greşit
+
+Ăsta e cel mai grav, fiindcă e lucrul care certifică toate celelalte. Pasul care
+strică dinadins o textură şi cere verificărilor s-o prindă nu verifica niciodată
+că STRICĂCIUNEA A APUCAT SĂ SE APLICE. `sed -i` iese cu 0 când nu potriveşte
+nimic şi rescrie fişierul octet cu octet. Redenumeşte `STRIPS` şi: stricăciunea
+nu mai prinde, verificările trec pe un arbore INTACT, iar pasul anunţă „garda e
+oarbă" despre o gardă perfect sănătoasă. Controlul ar fi fost lucrul stricat, şi
+ar fi dat vina pe gardă.
+
+Acum compară cu backupul înainte de orice verdict, cere ca refuzul să numească
+tiparul pe care l-am stricat NOI (şase locuri diferite tipăresc „does not
+divide"), şi verifică restaurarea. Probat local în ambele sensuri: stricăciunea
+reală e prinsă din motivul corect, iar redenumirea constantei face controlul să
+refuze cu un mesaj care numeşte constanta, în loc să mintă.
+
+### Plantele şi vopseaua se despărţeau pe orice insulă de altă mărime
+
+`Island.cpp` scala linia ţărmului cu mărimea insulei; `M_Island` citeşte Z
+absolut din lume. Măsurat înainte: la scara 1,27 plantele începeau la 573 cm iar
+vopseaua trecea la iarbă la 450 — 123 cm de iarbă pictată pe care nu creştea
+nimic; la 0,55 stăteau pe 205 cm de NISIP pictat, adică exact defectul pe care
+citirea numerelor din material trebuia să-l facă imposibil.
+
+Două caractere (`* Scale`) au plecat de pe singura margine care pretinde că e
+numărul materialului. Logul tipăreşte acum ambele numere, diferenţa lor e o
+cheie în linia de bază, şi a intrat un scenariu `lee_shore` cu insule la 1,27 —
+singurul din suită în care cele două numere POT să nu fie egale.
+
+### Anticipaţia scădea o viteză pe care ghiuleaua n-o primea
+
+Două locuri derivau „ce duce ghiuleaua cu ea" din acelaşi flag, separat, şi doar
+unul îl citea. Acum e un singur vector. Măsurat, aceeaşi navă, aceeaşi viteză, un
+singur flag diferenţă:
+
+    inherit=1  velFwd=6.58  lead=6.1 m
+    inherit=0  velFwd=6.58  lead=3.1 m
+
+Şi de-aia perechea care păzeşte asta are `-ShipRudderTest`: prima versiune trăgea
+din loc, unde viteza proprie e zero, ambele ramuri sunt de acord banal şi
+măsurătoarea e nulă. A citit 4,0 m de ambele părţi şi n-a dovedit nimic.
+
+### O lovitură fără ţintă era notată ca lovitură în plin
+
+`along=+0.0 lateral=+0.0` e ce tipăreşte o lovitură perfectă. Era şi ce tipărea o
+ghiulea trasă în gol, sau una a cărei ţintă se scufundase în zbor — un sfert din
+sfârşiturile din logul scenariului de furtună. Acum scrie `nomark`.
+
+### Şi patru mai mici, toate din aceeaşi familie
+
+`PushIslands` îşi punea zăvorul chiar şi când nu găsea nimic, deci o suprafaţă
+care a tictăcit o dată înainte să existe insule renunţa definitiv — în timp ce
+antetul descria exact cazul ăla ca motiv al reîncercării. WAKELOG tipărea `of 24`
+şi `splashes=8`, constante de compilare în formă de măsurători (o singură valoare
+distinctă în 198 de linii); le-au luat locul `slots` şi `shortest`, care se mişcă.
+Trei butoane din categoria Wake nu erau citite de nimeni, deşi fraţii lor de pe
+liniile de deasupra erau — jumătate din guler era al actorului şi jumătate al
+materialului. Iar `ScatterRangeCm`, rampa de culoare a apei, era tot 150 cm fixe
+pe acelaşi semnal de creastă de pe care mutasem pragul spumei dimineaţă: 4 sigma
+la vântul pentru care fusese scrisă hula, 8,9 într-un calm şi 2,4 într-o furtună
+din clipa în care hula a început să urmeze vântul.
+
+### Şi numerele din documente
+
+Şapte constatări erau despre cifre pe care documentele le publicau şi codul nu le
+mai avea. Măsurate, nu amintite: nava are **7074** de triunghiuri, nu 4654; sunt
+**opt** instanţe de material, nu şase; `textures.py` scrie **21** de PNG-uri, nu
+17; fumul are **30** de cărţi, nu 18. Plus trei puncte din OWNER_VERIFY pe care
+le-am găsit singur trecând prin listă: îţi cereau să confirmi un throttle care nu
+există, să te uiţi la şase materiale din opt, şi să iei o decizie despre Visual
+Studio luată acum o lună.
+
+### Măsurători
+
+Nouă scenarii. Chei noi: `scatter_range_cm` şi `scatter_span` (trebuie să se
+mişte în direcţii OPUSE — prima urmează vântul, a doua e ce ţine cuplarea pe
+loc), `turf_band_gap_cm`, `islands_pushed`, `lead_max_m` cu `fire_velfwd_max` ca
+gardă, `wake_slots_max`, `wake_shortest_max`. Linia de bază rescrisă deliberat,
+apoi toată suita rulată din nou peste ea: **toate măsurătorile se potrivesc**,
+inclusiv cheile şi scenariile noi.
+
+**Task Completed.**

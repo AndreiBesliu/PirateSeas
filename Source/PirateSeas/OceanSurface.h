@@ -106,6 +106,16 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Sea")
 	float FoamFullSigmas = 2.2f;
 
+	/** How far up a crest the water's colour reaches the shallow end of its
+	 *  ramp, in the same standard deviations. The material divides the crest
+	 *  height by this to decide how much of the deep-to-shallow colour the sea
+	 *  actually traverses, and it was a frozen 150 cm - which was 4 sigma at the
+	 *  one wind the swell used to be built for, and became 8.9 sigma in a calm
+	 *  and 2.4 in a gale the day the swell started following the wind. Four
+	 *  reproduces today's look at that authored wind and holds it at the others. */
+	UPROPERTY(EditAnywhere, Category = "Sea")
+	float ScatterCrestSigmas = 4.0f;
+
 private:
 	/** Copies the water body's wave set into the material. */
 	void PushWaves();

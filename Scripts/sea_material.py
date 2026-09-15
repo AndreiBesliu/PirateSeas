@@ -636,6 +636,11 @@ def build():
     foam_col = vector("FoamColor", unreal.LinearColor(0.400, 0.430, 0.445, 1.0), -900, 400)
 
     # Scatter: the crest is thin and lit through, the trough is deep and dark.
+    # OVERWRITTEN FROM C++ at BeginPlay, from the crest's standard deviation -
+    # the 150 here is only what an opened material editor shows. It was the
+    # runtime value once, and it was 4 sigma at the wind the swell was authored
+    # for and nothing in particular at any other, which stopped being harmless
+    # the day the swell began following the wind.
     scatter_scale = scalar("ScatterRangeCm", 150.0, -700, 500)
     scatter = sat(add(mul(div(crest, scatter_scale, -560, 420), "",
                           const(0.5, -560, 500), "", -420, 420),

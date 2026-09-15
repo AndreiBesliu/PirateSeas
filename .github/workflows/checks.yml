@@ -32,17 +32,52 @@ jobs:
       # Proof the gate can come out red. A guard nobody has ever seen fail is a
       # guard nobody has any reason to trust; this breaks one on purpose and
       # requires the checks to notice.
+      #
+      # Three things have to hold for that proof to mean anything, and two of
+      # them used to be assumed:
+      #   1. THE BREAK HAS TO LAND. `sed -i` exits 0 when it matches nothing and
+      #      rewrites the file byte for byte, so a rename or a reindent of that
+      #      constant would leave the tree pristine - and this step would then
+      #      announce "the guard is blind" about a guard that was working
+      #      perfectly. The control would have been the stale thing, and it
+      #      would have blamed the guard.
+      #   2. THE REFUSAL HAS TO NAME THE PATTERN WE BROKE. Six call sites print
+      #      "does not divide", so the old unanchored grep was satisfied by any
+      #      of them refusing for any reason.
+      #   3. THE TREE HAS TO GO BACK, or the break leaks into later steps.
       - name: prove the tiling guard can fail
         run: |
-          cp Scripts/textures.py /tmp/textures.py.bak
-          sed -i 's/    STRIPS = 8/    STRIPS = 7/' Scripts/textures.py
-          if python tools/ci_checks.py > /tmp/neg.log 2>&1; then
-            echo "The guard PASSED a deliberately non-tiling texture. It is blind."
-            cp /tmp/textures.py.bak Scripts/textures.py
+          TARGET=Scripts/textures.py
+          cp "$TARGET" /tmp/textures.py.bak
+          trap 'cp /tmp/textures.py.bak "$TARGET"' EXIT
+
+          sed -i 's/^\( *\)STRIPS = 8\r\?$/\1STRIPS = 7/' "$TARGET"
+
+          if cmp -s "$TARGET" /tmp/textures.py.bak; then
+            echo "::error::The negative control never broke anything."
+            echo "'STRIPS = 8' matched no line in $TARGET, so the checks below"
+            echo "would have judged a PRISTINE tree. The stale thing is this"
+            echo "CONTROL, not the guard. STRIPS is currently spelled:"
+            grep -n 'STRIP' "$TARGET" || echo "  (no STRIP in the file at all)"
             exit 1
           fi
-          grep -q "does not divide" /tmp/neg.log \
-            || { echo "It failed, but not for the right reason:"; cat /tmp/neg.log; \
-                 cp /tmp/textures.py.bak Scripts/textures.py; exit 1; }
-          echo "Caught it:"; grep "does not divide" /tmp/neg.log
-          cp /tmp/textures.py.bak Scripts/textures.py
+          echo "break applied:"; diff /tmp/textures.py.bak "$TARGET" || true
+
+          if python tools/ci_checks.py > /tmp/neg.log 2>&1; then
+            echo "::error::The guard PASSED a deliberately non-tiling texture."
+            cat /tmp/neg.log
+            exit 1
+          fi
+          WANT='canvas strips: period 7 does not divide'
+          if ! grep -qF "$WANT" /tmp/neg.log; then
+            echo "::error::It failed, but not for the break we introduced."
+            echo "expected to find: $WANT"
+            cat /tmp/neg.log
+            exit 1
+          fi
+          echo "Caught it:"; grep -F "$WANT" /tmp/neg.log
+
+          cp /tmp/textures.py.bak "$TARGET"
+          cmp -s "$TARGET" /tmp/textures.py.bak \
+            || { echo "::error::the restore did not restore"; exit 1; }
+          echo "tree restored."

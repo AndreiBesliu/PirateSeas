@@ -1,64 +1,61 @@
-# Ce a mai raportat recenzia a doua şi NU e reparat încă
+# Recenzia a doua: toate cele 34 de constatări, închise
 
-A doua pasă adversarială (12 lentile-agent + verificatori, 15.09.2026) a raportat
-34 de constatări. Douăsprezece au fost verificate adversarial — toate au
-supravieţuit — şi toate douăsprezece sunt reparate în commit-urile din ziua asta.
+A doua pasă adversarială (15.09.2026) a raportat 34 de constatări. Douăsprezece
+au fost verificate adversarial în ziua aia — toate au supravieţuit — şi toate au
+fost reparate. Restul de 22 fuseseră raportate dar NU verificate, şi fişierul
+ăsta le-a ţinut lista ca să nu dispară tăcut.
 
-Restul de douăzeci şi două au fost raportate dar **NU verificate** (bugetul de
-verificare a fost primele două pe lentilă, după gravitate). Lista de mai jos e
-ce a rămas, ca să nu dispară tăcut. Fiecare are fişierul şi linia din momentul
-raportării.
+Sunt închise acum, toate. Cum:
 
-Ordinea nu e o prioritizare a mea — e ordinea în care le-a dat recenzia.
+## 6 erau deja reparate când s-a scris lista
 
-## Deja reparate din lista neverificată
+Reparate în aceleaşi commit-uri care închideau cele douăsprezece verificate:
+MI_Foliage pe un singur plan, spaţiul de instanţă pe meshuri instanţiate,
+normala rocii insulei, prospeţimea logului de măsurare, `groundings` care număra
+linii, şi rândul din README despre `-Islands`.
 
-- `Scripts/ship_materials.py:497` — MI_Foliage pe un singur plan (un sfert din
-  fiecare plantă dintr-o singură coloană de texeli). **REPARAT**: trei plane.
-- `Scripts/ship_materials.py:326` — pe meshuri instanţiate „Local" e cadrul
-  COMPONENTEI, nu al instanţei. **REPARAT**: spaţiu de instanţă peste tot.
-- `Scripts/island_material.py:207` — roca insulei eşantionată pe (x, z) şi
-  aplicată în cadrul tangent al unui layout (x, y). **REPARAT**: gradienţi.
-- `tools/ci_measure.py:73` — un singur log partajat, fără dovadă că vine din
-  rularea tocmai lansată. **REPARAT**: logul se şterge înainte şi linia de
-  comandă din el se verifică flag cu flag.
-- `tools/ci_measure.py:89` — `groundings` număra LINII de log, două pe lovitură.
-  **REPARAT**: numără loviturile; linia de bază a scăzut de la 2 la 1.
-- `README.md:468` — tabelul zicea „exact o insulă, oricât ai cere"; codul face
-  până la opt. **REPARAT**.
+## 9 au fost trimise la verificare, câte un agent fiecare
 
-## Rămase
+Împotriva arborelui de ATUNCI, nu a celui despre care fuseseră scrise — patru
+commit-uri se mutaseră sub ele. **Opt încă ţineau. Una nu ţinuse niciodată.**
 
-- `Scripts/sea_material.py:639` — `ScatterRangeCm` e o constantă de 150 cm în
-  material, pe care C++ n-o împinge niciodată: exact defectul pe care l-a reparat
-  `FoamStartCm`, rămas într-un alt colţ al aceleiaşi foi.
-- `Source/PirateSeas/OceanSurface.h:179` — trei butoane `EditAnywhere` de siaj pe
-  care nu le citeşte nimeni şi nu le împinge nicăieri: le poţi roti fără să se
-  schimbe un pixel.
-- `Source/PirateSeas/OceanSurface.cpp:197` — `PushIslands()` îşi pune zăvorul
-  `bIslandsPushed` chiar şi când n-a găsit nicio insulă, deci e o singură
-  încercare, deşi antetul îl descrie ca amânat până apar insulele.
-- `Source/PirateSeas/Island.cpp:112` — linia ţărmului se scalează cu mărimea
-  insulei, dar `M_Island` citeşte Z absolut din lume: pe orice insulă în afară de
-  cea autorizată, plantele şi vopseaua se despart.
-- `Source/PirateSeas/OceanSurface.cpp:487` — linia WAKELOG tipărea două
-  măsurători diferite sub aceeaşi cheie `live=`. **Parţial reparat** azi (a doua
-  a devenit `alive=`), dar linia tot poartă o constantă de compilare (`of 24`)
-  deghizată în măsurătoare.
-- `Source/PirateSeas/ShipPawn.cpp:676` — rezolvarea de anticipaţie scade mereu
-  viteza proprie a navei, chiar şi când `-ShipInheritVel=0` înseamnă că ghiuleaua
-  n-a purtat-o niciodată.
-- `Source/PirateSeas/CannonBall.cpp:258` — o ghiulea fără ţintă, sau a cărei
-  ţintă s-a scufundat în zbor, se înregistrează ca lovitură în plin
-  (`along=+0.0 lateral=+0.0`), deci mediile de precizie o numără ca perfectă.
-- `.github/workflows/checks.yml:38` — controlul negativ dă vina pe gardă când de
-  fapt stricăciunea deliberată e cea care n-a fost aplicată.
-- `.github/workflows/measure.yml:36` — şterge 2,9 GB de build înainte de fiecare
-  build, deci prima rulare e o recompilare la rece într-un timeout de 45 min.
+Cele opt sunt reparate: controlul negativ din `checks.yml` care putea trece din
+motivul greşit, linia ţărmului scalată faţă de vopsea, anticipaţia care scădea o
+viteză pe care ghiuleaua n-o primea, lovitura fără ţintă notată ca lovitură în
+plin, zăvorul din `PushIslands`, constantele tipărite ca măsurători în WAKELOG,
+cele trei butoane moarte de siaj, şi `ScatterRangeCm`.
 
-## Cum se citeşte lista asta
+**RESPINSĂ, şi scrisă aici tocmai ca să nu fie „reparată" din greşeală mai
+târziu:** `measure.yml` „şterge 2,9 GB înainte de fiecare build". Aşa e, şi
+ASTA E IDEEA — un build la rece e ce face măsurătoarea onestă. Nu pune cache, nu
+pune `clean: false`, nu ridica timeout-ul.
 
-„Neverificat" nu înseamnă „fals". Înseamnă că nimeni n-a încercat încă s-o
-combată — iar în pasa asta, din douăsprezece constatări pe care CINEVA a încercat
-serios să le combată, au căzut zero. Rata aia e un motiv să le iei în serios, nu
-un motiv să le crezi pe cuvânt.
+## 7 erau despre documente, şi toate erau adevărate
+
+Numere pe care documentele le publicau şi codul nu le mai avea de mult. Măsurate
+una câte una, apoi corectate:
+
+| ce scria | ce e | unde |
+|---|---|---|
+| 4654 triunghiuri | **7074** | README, tabelul proiectului |
+| şase instanţe de material | **opt** | README, acelaşi tabel |
+| şaptesprezece PNG-uri | **douăzeci şi unu** | README, secţiunea de texturi |
+| optsprezece cărţi de fum | **treizeci** | README, secţiunea de fum |
+| „mai mult de o insulă" nefăcut | făcut (până la opt) | README, „ce rămâne" |
+| garda de apariţie nu ştie de uscat | ştie | README, „ce rămâne" |
+| cordajul n-are LOD | are, de la 240 m | OWNER_VERIFY 19 |
+
+Plus trei pe care le-am găsit singur trecând prin OWNER_VERIFY: punctul 3 îţi
+cerea să confirmi un throttle şi o cocă rotită din mouse (comenzile navei-jucărie
+din prima săptămână), punctul 5 zicea „şase materiale" şi punea vina pe importul
+FBX, iar punctul 6 îţi cerea o decizie despre Visual Studio luată acum o lună.
+
+## Ce rămâne
+
+Din recenzia a doua, nimic.
+
+Ce nu e acoperit de ea, şi nu se pretinde că e: lucrurile din OWNER_VERIFY care
+aşteaptă ochiul owner-ului (punctele 16-22), runner-ul self-hosted pentru
+`measure.yml` care încă nu există, şi lista onestă de goluri grafice din
+OWNER_VERIFY 18 — nimic nu se mişcă în vânt, cerul e cel implicit, niciun sunet,
+coca nu poartă urme de lovitură.

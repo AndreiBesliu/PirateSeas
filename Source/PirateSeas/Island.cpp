@@ -108,8 +108,21 @@ void AIsland::ScatterVegetation()
 
 	// Where turf wins over sand, and ground wins over rock: the half-way point
 	// of each of the material's own ramps.
+	//
+	// NOT SCALED. The material reads ABSOLUTE world Z - SandTopCm and SandFadeCm
+	// are centimetres above the waterline, full stop - so scaling the number
+	// here moved the plants off the paint on every island that is not exactly
+	// the authored size. Measured: at scale 1.27 the plants started 573 cm up
+	// while the paint turned to turf at 450, leaving 123 cm of painted grass
+	// with nothing growing on it; at 0.55 the plants started at 245 and stood on
+	// 205 cm of painted SAND - which is the exact failure that reading the
+	// numbers off the material was supposed to make impossible.
+	//
+	// The other two bounds below KEEP their scale on purpose: they are look
+	// choices ("palms on the lower slopes"), not the material's numbers, and a
+	// bigger hill should carry them proportionally higher.
 	const float Scale = GetScale();
-	const float TurfFromCm = (SandTop + 0.5f * SandFade) * Scale;
+	const float TurfFromCm = SandTop + 0.5f * SandFade;
 	const float MinFlatness = RockStart - 0.5f * RockFade;
 
 	const float R = ShoreRadiusCm;
@@ -192,9 +205,10 @@ void AIsland::ScatterVegetation()
 	UE_LOG(LogTemp, Display,
 		TEXT("ISLELOG %s planted palms=%d scrub=%d of %d tried "
 			 "(missed=%d, wrong height=%d, too steep=%d); "
-			 "turf from %.0f cm, flatness >= %.2f, %d of %d numbers read from the material"),
+			 "turf from %.0f cm (paint says %.0f, scale %.2f), flatness >= %.2f, "
+			 "%d of %d numbers read from the material"),
 		*GetName(), Planted[0], Planted[1], Tried, NoHit, TooLow, TooSteep,
-		TurfFromCm, MinFlatness, Got, Asked);
+		TurfFromCm, SandTop + 0.5f * SandFade, Scale, MinFlatness, Got, Asked);
 }
 
 void AIsland::BeginPlay()

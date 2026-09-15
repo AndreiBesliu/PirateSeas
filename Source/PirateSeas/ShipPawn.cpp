@@ -637,6 +637,13 @@ bool AShipPawn::FireBroadside(bool bStarboard, AActor* AimAt, bool bHigh)
 	const FVector VelBeforeRecoil = HullCollision
 		? HullCollision->GetPhysicsLinearVelocity() : FVector::ZeroVector;
 
+	// The way the BALL carries off the muzzle - zero when inheritance is off.
+	// ONE vector, read by both the sites that care: the lead solver has to
+	// allow for exactly the motion the shot does not carry, and deriving that
+	// twice from the same flag is how the two came to disagree.
+	const FVector CarriedVel = bInheritShipVelocity
+		? FVector(VelBeforeRecoil.X, VelBeforeRecoil.Y, 0.f) : FVector::ZeroVector;
+
 	int32 Fired = 0;
 	const int32 SideIndex = bStarboard ? 1 : 0;
 	for (int32 g = 0; g < UE_ARRAY_COUNT(GGunPortsX); ++g)
@@ -673,8 +680,14 @@ bool AShipPawn::FireBroadside(bool bStarboard, AActor* AimAt, bool bHigh)
 			if (bLeadTarget)
 			{
 				const FVector TargetVel = AimAt->GetVelocity();
-				const FVector RelVel = FVector(TargetVel.X - VelBeforeRecoil.X,
-					TargetVel.Y - VelBeforeRecoil.Y, 0.f);
+				// Against what the BALL actually carries, not against our own way.
+				// With inheritance on the two are the same thing and the relative
+				// form is right; with -ShipInheritVel=0 the ball leaves in the world
+				// frame, the lead owes the whole of the target's motion, and taking
+				// our own velocity off it aimed short by exactly that much times the
+				// time of flight.
+				const FVector RelVel = FVector(TargetVel.X - CarriedVel.X,
+					TargetVel.Y - CarriedVel.Y, 0.f);
 				const FVector Mark = AimPoint;
 				for (int32 Pass = 0; Pass < FMath::Max(1, LeadPasses); ++Pass)
 				{
@@ -737,8 +750,7 @@ bool AShipPawn::FireBroadside(bool bStarboard, AActor* AimAt, bool bHigh)
 		}
 		// The ball carries the ship's way with it. Sampled before the broadside
 		// so it is the ship's motion and not her own recoil.
-		const FVector Inherited = bInheritShipVelocity
-			? FVector(VelBeforeRecoil.X, VelBeforeRecoil.Y, 0.f) : FVector::ZeroVector;
+		const FVector Inherited = CarriedVel;
 		const int32 ThisShot = ShotCounter++;
 		Ball->Fire(Aim * MuzzleSpeed + Inherited, PrimaryWaterBody, this,
 			ThisShot, AimAt);

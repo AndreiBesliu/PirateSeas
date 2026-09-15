@@ -614,8 +614,8 @@ suprapuse cu perioade care nu se repetă scurt, deci nu simți un ciclu.
 
 | Ce | Unde |
 |---|---|
-| nava, 4654 triunghiuri, 37,5 m, originea pe linia de plutire | `Content/Meshes/SM_PirateShip` |
-| material părinte + șase instanțe (cocă, punte, lemn, lemn închis, velă, fier) | `Content/Materials/` |
+| nava, 7074 triunghiuri, 37,5 m, originea pe linia de plutire | `Content/Meshes/SM_PirateShip` |
+| material părinte + opt instanțe (cocă, punte, lemn, lemn închis, velă, fier, parâmă, vegetație) | `Content/Materials/` |
 | nivelul: ocean 5 km, zonă de apă, manager de plutire, cer, soare, ceață, nori | `Content/Maps/L_OpenSea` |
 | suprafața mării: grilă radială de 30 880 de triunghiuri, 6 km | `Content/Meshes/SM_SeaSurface` |
 | materialul mării: șase unde Gerstner în deplasare de vârfuri | `Content/Materials/M_Sea` |
@@ -661,10 +661,19 @@ raportează UBT, nu la numele folderului.
 
 ## Ce rămâne de construit
 
-- AI care știe de uscat: să nu se lase prins pe un mal sub vânt, să nu tragă
-  prin insulă
-- mai mult de o insulă odată (`IsSpawnClear` nu știe ce e uscatul)
+- AI care știe de uscat: să nu se lase prins pe un mal sub vânt e REZOLVAT;
+  rămâne că trage prin insulă, ceea ce README-ul de mai sus numește o decizie
+  deliberată, nu un gol
 - umbra de vânt în adăpostul insulei
+- nimic nu se mișcă în vânt: palmierii și tufele sunt geometrie rigidă
+- cerul e cel implicit al motorului, aceeași oră din zi în fiecare rulare
+- niciun sunet
+- coca nu poartă urme de lovitură: gaura se vede în cifre, nu pe lemn
+
+Reparate de când secțiunea asta a fost scrisă, și scoase din ea ca să nu fie
+refăcute: mai multe insule odată (până la opt, cu `-Islands=N`), și garda de
+apariție care acum ȘTIE de uscat — fiecare punct în care se poate naște o cocă e
+verificat înainte să se pună uscat peste el.
 
 ## Stare verificată
 
@@ -702,7 +711,7 @@ aceea numărată e tot ce a stat între o galerie de trei cadre şi una de unul.
 
 ### Texturile sunt generate, nu descărcate
 
-`Scripts/textures.py` scrie şaptesprezece PNG-uri — lemn, pânză, fier, nisip,
+`Scripts/textures.py` scrie douăzeci şi una de PNG-uri — lemn, pânză, fier, nisip,
 rocă, iarbă, două foi de riduri de apă şi o mască de spumă. Nimic nu e luat de
 undeva: totul e sintetizat, deci întreg aspectul rămâne reproductibil din sursă
 şi nimic din arbore n-are licenţă ataşată.
@@ -902,7 +911,7 @@ convenţia cealaltă — şi scena a ieşit neagră.
 
 Mecanismul e întreg şi funcţionează: un `AGunSmoke` per TUN (nu per salvă, ca
 patru pufuri să facă un banc de fum de unsprezece metri de-a lungul bordului),
-optsprezece cărţi instanţiate, jet cu frecare în primele trei zecimi, ridicare,
+treizeci de cărţi instanţiate, jet cu frecare în primele trei zecimi, ridicare,
 umflare, derivă sub vânt cu rampă şi forfecare, rotire per carte, plafon de
 patruzeci şi opt de pufuri vii cu tăierea **scrisă în log**. Nelegat de navă:
 fumul rămâne în urmă, cum face fumul.

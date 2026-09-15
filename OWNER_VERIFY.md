@@ -137,25 +137,29 @@ nava e un punct.
 **Cum arată bine:** Cocă maro foarte închis, punte mai deschisă și caldă, vele
 crem, tunuri negre metalice.
 
-**Cum arată prost:** Totul gri sau alb uniform. Ar însemna că importul FBX n-a
-adus culorile de bază din Blender.
+**Cum arată prost:** Totul gri, sau un caroiaj gri-alb pe vreo piesă. Caroiajul
+înseamnă că motorul a înlocuit materialul cu cel implicit şi a spus-o într-o
+linie de log care nu conţine cuvintele „failed to compile" — a costat o sesiune
+o dată deja.
 
-**De ce nu pot eu:** Am confirmat că cele șase materiale s-au creat ca assets,
-dar n-am confirmat vizual valorile lor de culoare după import.
+**De ce nu pot eu:** Am confirmat din log că toate cele opt instanţe se creează
+şi se leagă de sloturile corecte, dar nu pot spune dacă la ochi arată a lemn.
+
+**Corectat:** punctul ăsta zicea „şase materiale" şi punea vina pe importul FBX
+dacă totul iese gri. Sunt opt instanţe (şapte pe navă plus una de vegetaţie), şi
+culorile nu mai vin din Blender de mult: vin din texturile sintetizate cu numpy
+plus o nuanţă pe piesă. FBX-ul nu mai aduce nicio culoare.
 
 ---
 
-## 6. Decizia de care depinde Faza 2
+## 6. REZOLVAT 10.09 — lanţul de compilare
 
-**Ce te uiți:** Vrei sau nu să instalezi Visual Studio 2022 Build Tools cu
-workload-ul „Desktop development with C++".
+Punctul ăsta te întreba dacă vrei să instalezi Visual Studio Build Tools, fiindcă
+fără compilator C++ nu se puteau scrie tunuri, avarii, scufundare şi nave
+inamice. Ai instalat VS 2026; modulul C++ compilează din 10.09, iar tot ce
+depindea de decizia asta e livrat de săptămâni.
 
-**De ce contează:** Fără el nu pot scrie tunuri, avarii, scufundare sau nave
-inamice. API-ul Python al Unreal nu poate crea noduri Blueprint, iar pe mașina
-asta există doar Build Tools 2019 fără compilator C++ și fără Windows SDK.
-
-**De ce nu pot eu:** E o instalare de câțiva GB de la Microsoft, pe contul și
-mașina ta. Nu descarc și nu instalez software fără acordul tău explicit.
+Rămâne aici doar ca să nu se renumeroteze lista. Nu ai ce verifica.
 
 ---
 
@@ -403,9 +407,22 @@ podea laminată e altceva.
 
 **Ce te uiți:** Priveşte cadrul întreg şi spune ce te scoate primul din el.
 
-**De ce întreb:** Am o listă a ce lipseşte — cordaj, siaj, stropi, fum de tun,
-vegetaţie, spumă la ţărm. Ordinea în care le fac ar trebui să fie ordinea în
-care TE deranjează, nu ordinea în care mi se pare mie că sunt grele.
+**De ce întreb:** Ordinea în care le fac ar trebui să fie ordinea în care TE
+deranjează, nu ordinea în care mi se pare mie că sunt grele.
+
+**Lista veche e livrată.** Scria aici „cordaj, siaj, stropi, fum de tun,
+vegetaţie, spumă la ţărm" — toate şase există acum (fumul merge, dar l-ai parcat
+tu). Lista onestă de acum, cât o ştiu eu:
+
+- nimic nu se mişcă în vânt: palmierii şi tufele sunt geometrie rigidă;
+- frunzele sunt solide, nu cartonaşe cu decupaj — silueta e mai groasă decât
+  trebuie de aproape;
+- cerul e cel implicit al motorului, aceeaşi oră din zi în fiecare rulare;
+- nu există sunet, deloc;
+- coca nu poartă urme de lovitură: gaura se vede în cifre, nu pe lemn;
+- nu există echipaj, nici interior.
+
+Care dintre astea te scoate prima din cadru?
 
 
 ---
@@ -428,8 +445,12 @@ nu se mai vede nava.
 calculat de pe cocă şi ajunge într-un punct calculat de pe catarg. Dacă
 ansamblul arată a marinărie sau a desiş e o judecată de ochi.
 
-**Ce știu deja și n-am ascuns:** de departe cordajul scânteiază — funii de trei
-centimetri la câteva sute de metri sunt sub un pixel şi nu există LOD.
+**Ce știu deja și n-am ascuns:** cordajul SCÂNTEIA de departe — funii de trei
+centimetri la câteva sute de metri sunt sub un pixel. Are LOD acum: peste
+`RopeFadeStartCm` (240 m) vârfurile sunt trase spre origine până când funia e un
+punct. Ce merită ochiul tău s-a mutat: dacă dispariţia se vede ca o smucitură la
+240 m, şi dacă se subţiază DOAR parâmele — orice altceva care se micşorează la
+distanţă înseamnă că butonul a scăpat pe o piesă care nu e cordaj.
 
 
 ---

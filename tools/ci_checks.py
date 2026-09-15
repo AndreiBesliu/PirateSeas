@@ -325,16 +325,36 @@ def check_comparison():
     # And the counters the game really prints. This is a WAKELOG line copied from
     # a log, with the numbers changed: every one of these was being printed and
     # read by nothing at all until this commit.
-    w = ci_measure.measure("fixture", "LogTemp: Display: WAKELOG live=6 of 24 "
-                           "tracked=ShipPawn_0:3  ignored=3 stranded=2 doubled=1 "
-                           "stolen=5 discarded=7 splashes=8 alive=0 seen=0 lost=4\n")
+    w = ci_measure.measure("fixture", "LogTemp: Display: WAKELOG live=6 slots=2 "
+                           "shortest=3 tracked=ShipPawn_0:3  ignored=3 stranded=2 "
+                           "doubled=1 stolen=5 discarded=7 alive=0 seen=0 lost=4\n")
     got = (w.get("wake_stranded_max"), w.get("wake_doubled_max"),
            w.get("wake_stolen_max"), w.get("wake_discarded_max"),
            w.get("wake_ignored_max"), w.get("splash_lost_max"),
-           w.get("wake_live_max"))
-    if got != (2, 1, 5, 7, 3, 4, 6):
+           w.get("wake_live_max"), w.get("wake_slots_max"),
+           w.get("wake_shortest_max"))
+    if got != (2, 1, 5, 7, 3, 4, 6, 2, 3):
         fail("the wake counters read %s from a line holding "
-             "(2, 1, 5, 7, 3, 4, 6)" % (got,))
+             "(2, 1, 5, 7, 3, 4, 6, 2, 3)" % (got,))
+
+    # The sea line, likewise copied rather than paraphrased.
+    sea = ci_measure.measure("fixture", "LogTemp: Display: SEALOG surface waves "
+                             "drawn=6 of 6, amplitude 178 of 178 cm (100%) sigma=56 "
+                             "foam>=73 cm over 51, breaking on 11.6% of the sea, "
+                             "scatter>=224 cm span 0.54\n")
+    if (sea.get("scatter_range_cm"), sea.get("scatter_span")) != (224.0, 0.54):
+        fail("the scatter numbers read %s from a line holding (224.0, 0.54)"
+             % ((sea.get("scatter_range_cm"), sea.get("scatter_span")),))
+
+    # And the island band, where the whole point is that the two numbers agree.
+    isle = ci_measure.measure("fixture", "LogTemp: Display: ISLELOG Island_0 planted "
+                              "palms=18 scrub=118 of 258 tried (missed=0, wrong "
+                              "height=121, too steep=1); turf from 573 cm (paint "
+                              "says 450, scale 1.27), flatness >= 0.69, 4 of 4 "
+                              "numbers read from the material\n")
+    if isle.get("turf_band_gap_cm") != 123.0 or isle.get("island_scale_max") != 1.27:
+        fail("the island band read gap=%s scale=%s from a line holding 123.0 and "
+             "1.27" % (isle.get("turf_band_gap_cm"), isle.get("island_scale_max")))
 
     # And the counter the review caught: it must match the line the game really
     # prints. This is the text from ShipPawn.cpp, not a paraphrase of it.

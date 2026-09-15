@@ -90,6 +90,31 @@ SCENARIOS = {
     # differ too; if they ever match again, the coupling is gone.
     "gale": ["-WindBearing=120", "-WindSpeed=18", "-EnemyX=9000",
              "-EnemyY=1500", "-ShipFireTest=8", "-ShipQuitAfter=45"],
+    # An island at a size NOBODY ELSE BUILDS. Every other scenario runs at scale
+    # 1.00, where the height the plants start at and the height the paint turns
+    # to turf are the same number whether they agree by construction or by
+    # accident - so a disagreement between them was invisible in the whole
+    # suite. These are the flags OWNER_VERIFY item 14 already ships.
+    # A matched PAIR, differing in exactly one flag: does the ball carry the
+    # ship's way off the muzzle. The lead solver used to subtract our own
+    # velocity whatever the ball was given, so the two used to print the same
+    # lead; they must differ now.
+    #
+    # Both carry -ShipRudderTest so she has WAY ON when she fires. Without it
+    # the ship is in irons at the moment of the broadside, her own velocity is
+    # zero, the two branches agree trivially and the measurement is void - which
+    # is exactly what the first version of this pair measured: 4.0 m both times.
+    # The guard is velFwd on the same log line; if it ever reads ~0 the pair has
+    # stopped testing anything.
+    "carried_shot": ["-WindBearing=120", "-WindSpeed=11", "-EnemyX=9000",
+                     "-EnemyY=1500", "-ShipRudderTest=2", "-ShipFireTest=20",
+                     "-ShipQuitAfter=30", "-ShipLead=1", "-ShipInheritVel=1"],
+    "loose_shot": ["-WindBearing=120", "-WindSpeed=11", "-EnemyX=9000",
+                   "-EnemyY=1500", "-ShipRudderTest=2", "-ShipFireTest=20",
+                   "-ShipQuitAfter=30", "-ShipLead=1", "-ShipInheritVel=0"],
+    "lee_shore": ["-WindBearing=0", "-WindSpeed=12", "-Islands=3",
+                  "-IsleX=-35000", "-IsleY=0", "-IsleRadius=14000",
+                  "-EnemyX=-75000", "-EnemyY=0", "-ShipQuitAfter=40"],
 }
 
 
@@ -142,6 +167,21 @@ def measure(name, text):
     # NOT zero before the guard, and the four splashes it produced were counted
     # as shot falling in the sea.
     m["awash"] = len(re.findall(r"SHOTLOG awash", text))
+
+    # How far ahead of her mark each broadside aimed, and whether the ball was
+    # given the ship's way. The two are one question: the lead must allow for
+    # exactly the motion the shot does NOT carry.
+    leads = [float(v) for v in re.findall(r"SHOTLOG broadside .*?lead=(-?[0-9.]+)m", text)]
+    if leads:
+        m["lead_max_m"] = round(max(leads), 1)
+    # The pair above is only a measurement while the ship has way on.
+    vel = [abs(float(v)) for v in re.findall(r"velFwd=(-?[0-9.]+)", text)]
+    if vel:
+        m["fire_velfwd_max"] = round(max(vel), 2)
+    inh = re.search(r"SHOTLOG \S+ ballistics inherit=(\d+) lead=(\d+)", text)
+    if inh:
+        m["ballistics_inherit"] = int(inh.group(1))
+        m["ballistics_lead"] = int(inh.group(2))
     # The terminal event, not a phase word. This counted "sink=sinking" for
     # three commits. The only line that prints sink= prints one of afloat,
     # flooding, foundering, plunging or wreck - never "sinking" - so the number
@@ -171,6 +211,15 @@ def measure(name, text):
     if b:
         m["foam_breaking_pct"] = float(b.group(1))
 
+    # The colour ramp, and the two halves of it that must behave OPPOSITELY:
+    # the centimetres follow the wind (so gunnery and gale must differ), and the
+    # share of the ramp the sea travels is what that keying holds still (so they
+    # must agree). One key alone could not tell a fix from a freeze.
+    sc = re.search(r"scatter>=([0-9.]+) cm span ([0-9.]+)", text)
+    if sc:
+        m["scatter_range_cm"] = float(sc.group(1))
+        m["scatter_span"] = float(sc.group(2))
+
     # Did any shot die against a sea with a wave in it? surfZ is the flat-plane
     # detector: before the wave-aware query it was ~0 on all 25 splashes ever
     # logged, on a sea a metre high.
@@ -190,9 +239,19 @@ def measure(name, text):
     # (stranded), one ship holding two slots (doubled), a followed ship that
     # could not be given a slot at all (discarded), and a fading trail taken to
     # make room (stolen, which is legitimate but should not move silently).
+    # wake_live_max is recorded but is NOT the detector: it is bounded by
+    # WakePointCount and already sits on that ceiling in two scenarios. slots and
+    # shortest are the ones that move the right way - a frozen or mis-bound trail
+    # collapses the shortest occupied trail while `live` stays pinned at 24.
     live = [int(v) for v in re.findall(r"WAKELOG live=(\d+)", text)]
     if live:
         m["wake_live_max"] = max(live)
+    slots = [int(v) for v in re.findall(r"WAKELOG [^\n]*?\bslots=(\d+)", text)]
+    if slots:
+        m["wake_slots_max"] = max(slots)
+    short = [int(v) for v in re.findall(r"WAKELOG [^\n]*?\bshortest=(\d+)", text)]
+    if short:
+        m["wake_shortest_max"] = max(short)
     for tag in ("stranded", "doubled", "stolen", "discarded", "ignored"):
         vals = [int(v) for v in
                 re.findall(r"WAKELOG [^\n]*?\b%s=(\d+)" % tag, text)]
@@ -205,10 +264,26 @@ def measure(name, text):
     if lost:
         m["splash_lost_max"] = max(lost)
 
-    # Did the world build what it was asked for?
+    # Did the world build what it was asked for - and did the SEA hear about it?
+    # Two ends of one wire: the game mode spawns them, the surface has to push
+    # them into the material, and the second used to give up for good if it ran
+    # once before the first.
     isles = re.search(r"SEALOG islands built=(\d+) of (\d+)", text)
     if isles:
         m["islands_built"] = int(isles.group(1))
+    pushed = re.search(r"SEALOG surf against (\d+) islands \(dropped=(\d+)", text)
+    if pushed:
+        m["islands_pushed"] = int(pushed.group(1))
+        m["islands_dropped"] = int(pushed.group(2))
+
+    # The plants against the paint. Island.cpp prints the height it plants from
+    # and the height the MATERIAL says the sand ends at; they are the same
+    # number only while nothing scales one of them. Recorded as the gap, because
+    # a gap of zero is the whole claim and it reads at a glance.
+    band = re.findall(r"turf from ([0-9.]+) cm \(paint says ([0-9.]+), scale ([0-9.]+)\)", text)
+    if band:
+        m["turf_band_gap_cm"] = round(max(abs(float(a) - float(b)) for a, b, _ in band), 1)
+        m["island_scale_max"] = round(max(float(c) for _, _, c in band), 2)
     return m
 
 

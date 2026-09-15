@@ -294,6 +294,12 @@ void ACannonBall::ReportAndDie(const TCHAR* Reason, const FVector& Where)
 	// Where it died relative to what it was aimed at: along the line of fire
 	// (+ is long) and across it. A ball that is "long" by less than the hull's
 	// half thickness with near-zero lateral error went straight through.
+	// A ball with no target has no miss to report, and printing +0.0/+0.0 for it
+	// is printing a DEAD-CENTRE HIT: the same characters a perfect shot makes.
+	// A quarter of the endings in the gale scenario's log were that - shots
+	// fired at nothing on that side, and shots whose target was destroyed in
+	// flight. Anything that averaged this field averaged those in as bullseyes.
+	bool bHaveMark = false;
 	float AlongM = 0.f, LateralM = 0.f;
 	if (IsValid(Target))
 	{
@@ -301,16 +307,19 @@ void ACannonBall::ReportAndDie(const TCHAR* Reason, const FVector& Where)
 		const FVector Miss = Where - Target->GetActorLocation();
 		AlongM = FVector::DotProduct(Miss, Line) * 0.01f;
 		LateralM = FVector::CrossProduct(Line, Miss).Z * 0.01f;
+		bHaveMark = true;
 	}
+	const FString Mark = bHaveMark
+		? FString::Printf(TEXT("along=%+.1f lateral=%+.1f"), AlongM, LateralM)
+		: FString(TEXT("along=nomark lateral=nomark"));
 	// surfZ is the gate on the wave-aware query: it read ~0 on every shot ever
 	// logged while the sea had a metre of wave in it, and it has to move with the
 	// swell now. A run in which it is negative on all of them is the flat plane
 	// back again.
 	UE_LOG(LogTemp, Display,
-		TEXT("SHOTLOG %s by=%s shot=%d range=%.0fm flight=%.2fs impactZ=%.0f surfZ=%.0f "
-			 "along=%+.1f lateral=%+.1f"),
+		TEXT("SHOTLOG %s by=%s shot=%d range=%.0fm flight=%.2fs impactZ=%.0f surfZ=%.0f %s"),
 		Reason, IsValid(Shooter) ? *Shooter->GetName() : TEXT("?"), ShotIndex,
-		RangeM, FlightTime, Where.Z, SurfaceZAtDeath, AlongM, LateralM);
+		RangeM, FlightTime, Where.Z, SurfaceZAtDeath, *Mark);
 
 	if (Collision)
 	{

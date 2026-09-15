@@ -52,6 +52,41 @@ void AOceanSurface::BeginPlay()
 
 	SeaMaterial = Surface ? Surface->CreateAndSetMaterialInstanceDynamic(0) : nullptr;
 
+	// Three knobs in the Wake category were read by NOBODY: not by this file,
+	// not by any other, and not pushed into the material that has a parameter of
+	// the same name waiting for them. Turning CollarWidthCm in the details panel
+	// changed no pixel, while its two siblings on the lines above it did - so
+	// half the collar was owned by the actor and half by the material, and the
+	// panel said nothing about which half.
+	//
+	// They are constants, so they are pushed ONCE. And read BACK: setting a
+	// parameter the material does not have is silently a no-op, which is exactly
+	// how a wired knob becomes a dead knob again the day somebody renames it in
+	// sea_material.py.
+	if (SeaMaterial)
+	{
+		const TPair<const TCHAR*, float> Knobs[] = {
+			TPair<const TCHAR*, float>(TEXT("CollarWidthCm"), CollarWidthCm),
+			TPair<const TCHAR*, float>(TEXT("BowArmLengthCm"), BowArmLengthCm),
+			TPair<const TCHAR*, float>(TEXT("BowArmHalfWidthCm"), BowArmHalfWidthCm),
+		};
+		FString Unwired;
+		for (const TPair<const TCHAR*, float>& K : Knobs)
+		{
+			SeaMaterial->SetScalarParameterValue(FName(K.Key), K.Value);
+			float Back = 0.f;
+			if (!SeaMaterial->GetScalarParameterValue(FName(K.Key), Back)
+				|| !FMath::IsNearlyEqual(Back, K.Value))
+			{
+				Unwired += FString::Printf(TEXT("%s "), K.Key);
+			}
+		}
+		UE_LOG(LogTemp, Display,
+			TEXT("SEALOG wakeknobs collar_w=%.0f arm_len=%.0f arm_w=%.0f unwired=%s"),
+			CollarWidthCm, BowArmLengthCm, BowArmHalfWidthCm,
+			Unwired.IsEmpty() ? TEXT("none") : *Unwired);
+	}
+
 	for (TActorIterator<AWaterBody> It(GetWorld()); It; ++It)
 	{
 		if (UWaterBodyComponent* Component = It->GetWaterBodyComponent())
@@ -154,12 +189,22 @@ void AOceanSurface::PushWaves()
 	SeaMaterial->SetScalarParameterValue(TEXT("FoamStartCm"), FoamStart);
 	SeaMaterial->SetScalarParameterValue(TEXT("FoamRangeCm"), FoamRange);
 
+	// The colour ramp reads the SAME crest signal as the foam, and it was still
+	// a frozen 150 cm after the foam was keyed to the crest's spread. Two terms
+	// on one signal; one was converted and the other was not. The floor is there
+	// because a calm must not divide by something near zero and turn the sea
+	// into two flat bands of the authored colours.
+	const float ScatterRange = FMath::Max(25.f, ScatterCrestSigmas * Sigma);
+	SeaMaterial->SetScalarParameterValue(TEXT("ScatterRangeCm"), ScatterRange);
+
 	// HOW MUCH OF THE SEA ACTUALLY BREAKS. The same six waves the material was
 	// just handed, evaluated on a lattice across twenty kilometres of water at
 	// t=0, counted against the threshold. One number, and it is the number that
 	// would have said "0.3%" when the comment said "the top fifth" - which no
 	// amount of reading either of them was ever going to say.
 	int32 Over = 0, Sampled = 0;
+	TArray<float> Heights;
+	Heights.Reserve(64 * 64);
 	for (int32 iy = 0; iy < 64; ++iy)
 	{
 		for (int32 ix = 0; ix < 64; ++ix)
@@ -176,16 +221,36 @@ void AOceanSurface::PushWaves()
 			}
 			++Sampled;
 			Over += (H > FoamStart) ? 1 : 0;
+			Heights.Add(H);
 		}
 	}
 	const float BreakingPct = Sampled > 0 ? 100.f * Over / Sampled : 0.f;
 
+	// And how much of the colour ramp the sea actually travels: the same
+	// lattice, put through the material's own scatter expression. This is the
+	// number that was silently swinging from a quarter of the ramp in a calm to
+	// nine tenths in a gale while the parameter behind it never moved, and it is
+	// the one that must now stay PUT while the centimetres follow the wind.
+	Heights.Sort();
+	float ScatterSpan = 0.f;
+	if (Heights.Num() > 0)
+	{
+		auto Ramp = [ScatterRange](float Height)
+		{
+			return FMath::Clamp(0.5f + Height / (2.f * ScatterRange), 0.f, 1.f);
+		};
+		ScatterSpan = Ramp(Heights[Heights.Num() / 100])
+			- Ramp(Heights[(Heights.Num() * 99) / 100]);
+		ScatterSpan = FMath::Abs(ScatterSpan);
+	}
+
 	bWavesPushed = true;
 	UE_LOG(LogTemp, Display,
 		TEXT("SEALOG surface waves drawn=%d of %d, amplitude %.0f of %.0f cm (%.0f%%) "
-			 "sigma=%.0f foam>=%.0f cm over %.0f, breaking on %.1f%% of the sea"),
+			 "sigma=%.0f foam>=%.0f cm over %.0f, breaking on %.1f%% of the sea, "
+			 "scatter>=%.0f cm span %.2f"),
 		Count, Waves.Num(), Drawn, Total, Total > 0.f ? 100.f * Drawn / Total : 0.f,
-		Sigma, FoamStart, FoamRange, BreakingPct);
+		Sigma, FoamStart, FoamRange, BreakingPct, ScatterRange, ScatterSpan);
 }
 
 void AOceanSurface::PushIslands()
@@ -238,7 +303,11 @@ void AOceanSurface::PushIslands()
 	// Counted, not assumed: a world with no islands must report zero here, and
 	// a run that shows surf with this line reading 0 is a bug in the material,
 	// not in the sea.
-	bIslandsPushed = true;
+	// Latched on SUCCESS, not on the attempt. It used to latch either way, so a
+	// surface that ticked once before any island existed gave up for good and no
+	// island spawned afterwards could ever reach the material - while the header
+	// above described exactly that case as the reason for the retry.
+	bIslandsPushed = (Found > 0);
 	UE_LOG(LogTemp, Display,
 		TEXT("SEALOG surf against %d islands (dropped=%d, first shore r=%.0f cm)"),
 		Found, Dropped, Found > 0 ? Radii[0] : 0.f);
@@ -630,12 +699,28 @@ void AOceanSurface::UpdateWake(float DeltaSeconds)
 					*Trails[s].Ship->GetName(), Trails[s].Crumbs.Num());
 			}
 		}
+		// `of 24` and `splashes=8` were compile-time constants printed in the
+		// shape of measurements - 198 log lines across every scenario, one
+		// distinct value each. They are gone; what replaces them can move:
+		// `slots` is how many trails hold water, and `shortest` is the shortest
+		// of them, which is the number that collapses when a trail is frozen or
+		// mis-bound while `live` sits on its ceiling of 24.
+		int32 Slots = 0, Shortest = MAX_int32;
+		for (const FWakeTrail& T : Trails)
+		{
+			if (T.Crumbs.Num() > 0)
+			{
+				++Slots;
+				Shortest = FMath::Min(Shortest, T.Crumbs.Num());
+			}
+		}
 		UE_LOG(LogTemp, Display,
-			TEXT("WAKELOG live=%d of %d tracked=%s ignored=%d stranded=%d doubled=%d "
-				 "stolen=%d discarded=%d splashes=%d alive=%d seen=%d lost=%d"),
-			Live, WakePointCount, *Names, Ignored, WakeStranded, WakeDoubled,
-			WakeStolen, WakeDiscarded, MaxSplashes, LiveSplashes,
-			SplashesSeen, SplashesOverwritten);
+			TEXT("WAKELOG live=%d slots=%d shortest=%d tracked=%s ignored=%d "
+				 "stranded=%d doubled=%d stolen=%d discarded=%d "
+				 "alive=%d seen=%d lost=%d"),
+			Live, Slots, Slots > 0 ? Shortest : 0, *Names, Ignored,
+			WakeStranded, WakeDoubled, WakeStolen, WakeDiscarded,
+			LiveSplashes, SplashesSeen, SplashesOverwritten);
 	}
 }
 
