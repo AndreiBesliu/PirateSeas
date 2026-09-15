@@ -1,8 +1,29 @@
 # Unde e proiectul, pe scurt
 
 Scris ca o sesiune nouă (sau un model nou) să poată continua fără să recitească
-DEVLOG-ul de 3000 de rânduri. Starea de la 15.09.2026, după commit-ul „convoiul" (al doilea din arcul de
-mecanică).
+DEVLOG-ul de 4000 de rânduri. Starea de la 15.09.2026, după commit-ul „portul"
+(al şaselea din arcul de mecanică).
+
+## Unde stă, şi de ce NU stă lângă celelalte proiecte
+
+`C:\Users\besli\Documents\Unreal Projects\PirateSeas` — unde îl pune Unreal
+implicit. Există o scurtătură către el în `MyWork\Apps\games\PirateSeas.lnk`,
+lângă restul proiectelor.
+
+**Nu se mută în `MyWork`, şi asta e o decizie luată, nu o scăpare** (15.09.2026,
+owner-ul întrebat direct). `MyWork` e sincronizat cu Google Drive, iar din cele
+2,95 GB ale proiectului **2,83 GB sunt ieşiri de build** pe care motorul le
+rescrie la fiecare compilare: `Intermediate` 2,42 GB, `Saved` 0,41 GB,
+`Binaries` 0,06 GB. Proiectul propriu-zis e ~120 MB. Într-un folder sincronizat
+asta ar însemna 2,4 GB urcaţi după fiecare build (într-o singură zi de lucru au
+fost vreo douăzeci), plus riscul ca Drive să ţină un fişier blocat exact când
+scrie compilatorul în el. Şi ar dubla singur dimensiunea întregului `Apps`.
+
+Dacă totuşi se mută vreodată: mai întâi şterge folderele regenerabile (sunt
+toate în `.gitignore`), apoi mută ~120 MB, apoi pune-le înapoi ca JONCŢIUNI
+către un folder local nesincronizat — şi VERIFICĂ pe teren că Drive chiar
+ignoră joncţiunile, nu presupune. Şi ai de reparat calea absolută scrisă în
+cinci scripturi din `Scripts/` plus una îngropată în `Scripts/ship.blend`.
 
 ## Ce e construit
 
