@@ -75,6 +75,59 @@ AShipPawn* AShipAIController::GetShip() const
 	return Cast<AShipPawn>(GetPawn());
 }
 
+void AShipAIController::SetDestination(const FVector& Where)
+{
+	Destination = Where;
+	bHasDestination = true;
+}
+
+void AShipAIController::TickMerchant(AShipPawn* Me, float DeltaSeconds)
+{
+	// Struck or in port she lies to: sail off, helm amidships, EVERY tick.
+	// SailTrimInput is a rate the pawn integrates, so a single furl order
+	// holds only until something overwrites it, and a sinking clears it.
+	if (Me->IsOutOfTheFight() || !bHasDestination)
+	{
+		Me->SetSailTrimInput(-1.f);
+		Me->SetSteerInput(0.f);
+		return;
+	}
+
+	const FVector ToPort = Destination - Me->GetActorLocation();
+	const UWindSubsystem* Wind = GetWorld()->GetSubsystem<UWindSubsystem>();
+	const float WindFrom = Wind
+		? FMath::UnwindDegrees(Wind->GetWindBearingDeg() + 180.f) : 0.f;
+
+	// The laid course, bent off the land if there is any, then handed to the
+	// rig: if it lies inside the no-go cone she beats on the nearer board,
+	// held for TackHoldSeconds, exactly as a fighting ship would. What she
+	// does NOT have is the wear/come-about machinery: she turns the short
+	// way and takes her chances head to wind. A merchant caught in irons on
+	// a course laid across the wind is a thing the log would show, and the
+	// scenarios lay her course on a reach.
+	float DesiredYaw = ToPort.GetSafeNormal2D().Rotation().Yaw;
+	DesiredYaw = CourseClearOfLand(Me, DesiredYaw, WindFrom, DeltaSeconds, ToPort.Size2D());
+	DesiredYaw = ResolveSailableHeading(DesiredYaw, WindFrom,
+		Me->GetNoGoAngleDeg(), DeltaSeconds);
+
+	const float Err = FMath::FindDeltaAngleDegrees(Me->GetActorRotation().Yaw, DesiredYaw);
+	Me->SetSteerInput(FMath::Clamp(Err / FullRudderErrorDeg, -1.f, 1.f));
+	// Every stitch she has. She is running for her life, and what makes her
+	// slower than the ship chasing her is her hold, not her canvas.
+	Me->SetSailTrimInput(1.f);
+
+	LogTimer += DeltaSeconds;
+	if (LogTimer >= 2.f)
+	{
+		LogTimer = 0.f;
+		UE_LOG(LogTemp, Display,
+			TEXT("AILOG merchant %s port=%.0fm headingErr=%.0f hull=%.0f speed=%.1fm/s windAng=%.0f rig=%.2f trim=%.2f"),
+			*Me->GetName(), ToPort.Size2D() * 0.01f, Err, Me->GetHullIntegrity(),
+			Me->GetForwardSpeedMS(), Me->GetWindAngleDeg(), Me->GetRigEfficiency(),
+			Me->GetSailTrim());
+	}
+}
+
 AShipPawn* AShipAIController::FindTarget()
 {
 	AShipPawn* Me = GetShip();
@@ -83,24 +136,31 @@ AShipPawn* AShipAIController::FindTarget()
 		return nullptr;
 	}
 
-	// Anything that is a ship, is not us, is still afloat, and is on ANOTHER
-	// SIDE. This asked for IsPlayerControlled() until now, and its own comment
-	// asked for this. In a two-sided world the two are the same answer - which
-	// is exactly why the change ships alone, with the whole measurement suite
-	// required to come back unmoved.
+	// The NEAREST ship that is on another side and still in the fight. Until
+	// the convoy this returned the first hostile hull the iterator offered,
+	// which was the same thing while there was only ever one; with a convoy
+	// on the water and the player's idle hull a kilometre off, "first" would
+	// send a raider past three merchants to go and fight the wrong ship. Every
+	// existing scenario has exactly one hostile hull per side, so for them
+	// nearest and first are the same hull and every number stays put.
+	AShipPawn* Best = nullptr;
+	float BestDist = TNumericLimits<float>::Max();
+	const FVector Here = Me->GetActorLocation();
 	for (TActorIterator<AShipPawn> It(GetWorld()); It; ++It)
 	{
 		AShipPawn* Other = *It;
-		if (Other->IsSunk())
+		if (Other->IsOutOfTheFight() || !Me->IsHostileTo(Other))
 		{
 			continue;
 		}
-		if (Me->IsHostileTo(Other))
+		const float Dist = FVector::DistSquared2D(Here, Other->GetActorLocation());
+		if (Dist < BestDist)
 		{
-			return Other;
+			BestDist = Dist;
+			Best = Other;
 		}
 	}
-	return nullptr;
+	return Best;
 }
 
 bool AShipAIController::ArcCrossesWind(float FromYaw, float ToYaw,
@@ -207,7 +267,14 @@ float AShipAIController::ConsortAvoidance(const AShipPawn* Me) const
 	for (TActorIterator<AShipPawn> It(GetWorld()); It; ++It)
 	{
 		const AShipPawn* Other = *It;
-		if (Other == Me || !IsValid(Other) || Other->IsPlayerControlled())
+		// A consort is a hull on MY side. This read IsPlayerControlled() and
+		// so counted every hull that was not the player - which, with a
+		// convoy on the water, would have had a raider sheering politely away
+		// from the merchant she was trying to close with. In a two-sided world
+		// "not the player" and "on my side" are the same hulls, so the ten
+		// existing scenarios do not move.
+		if (Other == Me || !IsValid(Other)
+			|| Other->GetAllegiance() != Me->GetAllegiance())
 		{
 			continue;
 		}
@@ -429,13 +496,33 @@ void AShipAIController::Tick(float DeltaSeconds)
 		return;
 	}
 
+	// A merchant is sailed by this controller and fought by nobody. The
+	// early-out is the whole of the difference: everything below is a
+	// captain's, and she has no guns for it to lay.
+	if (Me->GetAllegiance() == EShipAllegiance::Merchant)
+	{
+		TickMerchant(Me, DeltaSeconds);
+		return;
+	}
+
 	RetargetTimer -= DeltaSeconds;
-	if (Target && (!IsValid(Target) || Target->IsSunk()))
+	// Struck or in port is as lost as sunk: a raider who went on pounding a
+	// ship that had hauled down her colours would be sinking his own prize.
+	if (Target && (!IsValid(Target) || Target->IsOutOfTheFight()))
 	{
 		UE_LOG(LogTemp, Display, TEXT("AILOG target lost %s"), *Target->GetName());
 		Target = nullptr;
 	}
-	if (!Target || RetargetTimer <= 0.f)
+	// A target is kept until she is out of the fight, and the search runs
+	// only while there is none. This used to re-pick every two seconds, which
+	// was harmless with one hostile hull in the world and ruinous with two
+	// merchants abeam of each other 150 m apart: the raider put four balls
+	// into one's rigging, "nearest" flipped to the other as they crossed, she
+	// put three into that one, and neither was hurt enough to strike. A
+	// captain who has cut up a ship's rig finishes her. With one hostile hull
+	// the search returns the same ship it always did, so nothing already
+	// measured moves.
+	if (!Target && RetargetTimer <= 0.f)
 	{
 		Target = FindTarget();
 		RetargetTimer = 2.f;
@@ -570,6 +657,39 @@ void AShipAIController::Tick(float DeltaSeconds)
 		const float Nearer = (TurnRightCost <= TurnLeftCost) ? TurnRight : TurnLeft;
 		const float Farther = (TurnRightCost <= TurnLeftCost) ? TurnLeft : TurnRight;
 		DesiredYaw = Sailable(Nearer) ? Nearer : (Sailable(Farther) ? Farther : Nearer);
+
+		// Being outrun. Outside her standoff and not closing, she runs straight
+		// down on her chase and lays the guns when she gets there; see
+		// PursuitBelowMS for what this looked like before. Against a target
+		// that is not making off the closing speed is her own approach speed
+		// and this never fires - which is what keeps every fight already
+		// measured exactly where it was.
+		const FVector RelVel = Target->GetVelocity() - Me->GetVelocity();
+		const float ClosingMS = -FVector::DotProduct(RelVel, DirToTarget) * 0.01f;
+		// Once running down she keeps at it until she is inside the slack;
+		// once she has laid the guns she keeps them laid until the range has
+		// opened past the resume distance AND the laid course is not closing.
+		const bool bRunningDown = bPursuing
+			? RangeM > StandoffM + PursuitSlackM
+			: (RangeM > StandoffM + PursuitResumeM && ClosingMS < PursuitBelowMS);
+		if (bRunningDown)
+		{
+			DesiredYaw = BearingToTarget;
+			++PursuitTicks;
+			if (!bPursuing)
+			{
+				bPursuing = true;
+				UE_LOG(LogTemp, Display,
+					TEXT("AILOG %s running down %s: range %.0f m, closing %.1f m/s"),
+					*Me->GetName(), *Target->GetName(), RangeM, ClosingMS);
+			}
+		}
+		if (!bRunningDown && bPursuing)
+		{
+			bPursuing = false;
+			UE_LOG(LogTemp, Display, TEXT("AILOG %s lays the guns again at %.0f m"),
+				*Me->GetName(), RangeM);
+		}
 		break;
 	}
 

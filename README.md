@@ -323,6 +323,62 @@ Panoul îți spune câte mai sunt pe apă. Victoria se numără pe escadron, nu 
 navă: nu ai învins până nu s-a dus și ultima, iar escadronul următor iese la
 mare la opt secunde după aceea.
 
+## Convoiul
+
+Primul motiv să lupţi. `-Convoy=N` pune N negustori pe mare (până la şase), care
+ies dintr-un punct (`-ConvoyX= -ConvoyY=`, implicit la 1,9 km spre nord-est) şi
+fug pe un drum aşezat la `-ConvoyWindAngle=` grade faţă de vânt spre o radă la
+`-ConvoyRangeM=` metri (implicit 1500). Implicit drumul e la 90 de grade, adică
+DE-A CURMEZIŞUL vântului, ca „în vântul convoiului" şi „sub vântul lui" să
+însemne acelaşi lucru toată partida, nu doar la început. O navă ajunsă la 150 m
+de radă e sub tunurile fortului şi a scăpat.
+
+Un negustor nu luptă până la ultima scândură: **coboară pavilionul** când i-a
+rămas sub 60% din cocă sau sub 60% din greement. Atunci strânge pânza, pune
+cârma la mijloc şi nimeni nu-l mai vânează — dar loviturile tot intră: cine
+continuă să tragă într-o navă care a coborât pavilionul o scufundă, şi pierde
+exact ce voia.
+
+Convoiul e **LUAT** când ai oprit `-ConvoyNeed=` nave (implicit jumătate,
+rotunjit în sus) şi **A TRECUT** când destui au ajuns în radă sau pe fund încât
+numărul ăla nu se mai poate atinge. Panoul arată socoteala. Fără prăzi, fără
+valoarea mărfii, fără escortă, fără abordaj: astea sunt feliile următoare. Asta
+e doar partea care face din **partea vântului pe care stai** decizia — polara
+măsurată a proiectului o preţuieşte la vreo 8:1 (500 m sub vânt costă 62 s,
+500 m înapoi în vânt costă 481).
+
+Negustorul e aceeaşi cocă, acelaşi greement, acelaşi căpitan AI (care ştie că e
+negustor şi navighează în loc să lupte), dar ÎNCĂRCAT: viteza lui maximă e 55%
+din a unei nave de luptă — măsurat, 3,6 m/s faţă de 6,5. Nu pânza e butonul: cu
+jumătate de pânză tot făcea 5,2 m/s, fiindcă forţa scade cu 1 − v/Vmax şi marea
+dă cea mai mare parte înapoi. Linia de plutire e butonul.
+
+`-RaiderSide=weather|lee` şi `-RaiderOffingM=` aşează ESCADRONUL inamic în
+vântul convoiului sau sub vântul lui, la atâţia metri de-a lungul vântului.
+Raider-ul dintr-o rulare măsurată e o navă inamică obişnuită cu căpitanul
+obişnuit, care vânează cea mai apropiată cocă duşmană — iar negustorii îi sunt
+duşmani. Nava jucătorului stă unde e. `-ConvoyStrikeTest=N` face primul
+negustor să coboare pavilionul la N secunde fără nicio ghiulea, ca drumul de la
+pavilion la misiune încheiată să se poată dovedi singur.
+
+### Ce a trebuit reparat la căpitan ca să poată prinde un negustor
+
+Până acum, în raza de angajare, vira să-şi pună tunurile pe ţintă ORICE ar fi
+făcut ţinta. Contra unei nave care stă şi luptă e corect; contra uneia care fuge
+înseamnă că stă la 490–540 m două sute de secunde fără să tragă un foc — măsurat
+cu raider-ul în vântul convoiului, cu 800 m avans. Acum, în afara distanţei de
+menţinere şi fără să câştige teren, se duce DREPT spre ea şi pune tunurile când
+ajunge. Cu histereză pe DISTANŢĂ, nu pe viteza de apropiere: fugarul deschide
+distanţa exact când raider-ul virează să tragă, deci o regulă care relua
+urmărirea la 350 m o relua la două cadre după fiecare viraj (293 de rânduri
+„running down" într-o rulare, şi o navă care zigzaga în loc să termine vreunul
+din drumuri).
+
+Şi îşi păstrează ţinta până iese din luptă. Recăuta la fiecare două secunde —
+inofensiv cu o singură cocă duşmană în lume, ruinător cu doi negustori la 150 m
+unul de altul: patru ghiulele în greementul unuia, „cel mai apropiat" sare la
+celălalt, trei în al lui, şi niciunul destul de rănit ca să coboare pavilionul.
+
 ## Nava inamică
 
 Un `AEnemyShipPawn` creat la pornire de `ASeaGameMode`, la 632 m de tine.
@@ -465,7 +521,15 @@ pereche de rulări citea împrăștiere și credea că citește semnal.
 | `-ShipGunsDown=N` | N tunuri scoase pe fiecare bord de la start |
 | `-ShipForeRigDamage=x`, `-ShipMainRigDamage=x` | fiecare catarg separat, ca panoul să poată fi verificat că le arată diferit |
 | `-EnemyX= -EnemyY= -EnemyYaw=` | unde și cum apare inamicul |
-| `-EnemyCount=N` | câte nave inamice, de la 1 la 8 (implicit 2) |
+| `-EnemyCount=N` | câte nave inamice, de la 0 la 8 (implicit 2; 0 = nimeni nu te vânează) |
+| `-Convoy=N` | N negustori (0 la 6, implicit 0 = fără convoi şi fără misiune) |
+| `-ConvoyNeed=N` | câţi trebuie opriţi ca să fie LUAT (implicit jumătate, rotunjit în sus) |
+| `-ConvoyX= -ConvoyY=` | de unde iese convoiul (cm; implicit 120000, 150000) |
+| `-ConvoyWindAngle=` | drumul lui, în grade faţă de direcţia DIN care bate vântul (implicit 90) |
+| `-ConvoyRangeM=` | cât are de fugit până în radă (implicit 1500 m; rada e tăiată în cutia oceanului) |
+| `-RaiderSide=weather\|lee` | aşază escadronul inamic în vântul convoiului sau sub el |
+| `-RaiderOffingM=` | la câţi metri de convoi, de-a lungul vântului (implicit 800) |
+| `-ConvoyStrikeTest=N` | primul negustor coboară pavilionul la N secunde, fără tunuri |
 | `-Islands=N` | pune N insule pe mare, 1 la 8 (0 sau lipsă = niciuna) |
 | `-IsleX= -IsleY= -IsleRadius=` | unde e și cât de mare (raza plajei, implicit 11000 cm) |
 | `-ShipRunAground=N` | din secunda N, mână nava în insulă cu toate pânzele sus, apoi strânge pânza la 10 s după atingere |
@@ -722,6 +786,11 @@ toată nava, fiindcă `ObjectBounds` întorcea zero pentru mesh-ul ăla.
   partide
 - niciun sunet
 - coca nu poartă urme de lovitură: gaura se vede în cifre, nu pe lemn
+- convoiul n-are prăzi, valoare a mărfii, escortă sau port adevărat (rada e un
+  punct pe apă); negustorul nu ştie să vireze prin vânt, deci un drum aşezat în
+  vânt l-ar putea prinde în irons
+- abordajul e AMÂNAT explicit de owner; echipajul + reparaţiile şi economia +
+  progresia sunt următoarele ateliere, în ordinea asta
 
 Reparate de când secțiunea asta a fost scrisă, și scoase din ea ca să nu fie
 refăcute: mai multe insule odată (până la opt, cu `-Islands=N`), și garda de

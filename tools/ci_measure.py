@@ -121,6 +121,32 @@ SCENARIOS = {
     "lee_shore": ["-WindBearing=0", "-WindSpeed=12", "-Islands=3",
                   "-IsleX=-35000", "-IsleY=0", "-IsleRadius=14000",
                   "-EnemyX=-75000", "-EnemyY=0", "-ShipQuitAfter=40"],
+    # The convoy, and the first pair whose two members must come out with
+    # DIFFERENT RESULTS: identical but for which side of the wind the raider
+    # starts on. Two laden merchants run 1200 m across the wind for a
+    # landfall, and stopping one of them takes the convoy; an ordinary enemy
+    # hull with the ordinary captain is placed 600 m to windward of them in
+    # one run and 600 m to leeward in the other, and the player's hull sits
+    # idle at the origin as it does in lee_shore. To windward she runs down
+    # on them and one strikes; to leeward she beats the whole run and never
+    # gets a shot off. If these two ever agree on mission_result, the wind
+    # has stopped mattering and the objective has lost the point of its
+    # existence.
+    #
+    # Sized by measurement, not by taste: at 800 m and three merchants the
+    # weather raider's first broadside came at about 170 s and the convoy
+    # was in port at 244, so "taken" was unreachable from EITHER side and
+    # the pair agreed.
+    "convoy_weather": ["-WindBearing=0", "-WindSpeed=12", "-Convoy=2",
+                       "-ConvoyX=120000", "-ConvoyY=150000",
+                       "-ConvoyWindAngle=90", "-ConvoyRangeM=1200",
+                       "-EnemyCount=1", "-RaiderSide=weather",
+                       "-RaiderOffingM=600", "-ShipQuitAfter=400"],
+    "convoy_lee": ["-WindBearing=0", "-WindSpeed=12", "-Convoy=2",
+                   "-ConvoyX=120000", "-ConvoyY=150000",
+                   "-ConvoyWindAngle=90", "-ConvoyRangeM=1200",
+                   "-EnemyCount=1", "-RaiderSide=lee",
+                   "-RaiderOffingM=600", "-ShipQuitAfter=400"],
 }
 
 
@@ -316,6 +342,37 @@ def measure(name, text):
     if rig:
         m["rig_sway_mats"] = int(rig.group(1))
         m["rig_sway_readback_ok"] = 1 if rig.group(3) == "ok" else 0
+
+    # The convoy. One MISSION line per run, printed from every exit including
+    # the quit timer, so a run that ended neither way still reports its
+    # counters. mission_result: 2 taken, 1 got through, 0 unresolved. The
+    # gauge/lee/beat trio is sampled once a second into latched counters;
+    # merchants_struck is the SHIP's count of the same event the game mode
+    # counts as stopped - two ends of one wire.
+    ms = re.search(r"CONVOYLOG MISSION (\w+) t=([0-9.]+) stopped=(\d+) "
+                   r"through=(\d+) sunk=(\d+) of (\d+) need=(\d+) gauge=(\d+) "
+                   r"lee=(\d+) beat=(\d+) firstStrike=(-?[0-9.]+)", text)
+    if ms:
+        m["mission_result"] = {"TAKEN": 2, "THROUGH": 1}.get(ms.group(1), 0)
+        m["mission_t"] = float(ms.group(2))
+        m["convoy_stopped"] = int(ms.group(3))
+        m["convoy_through"] = int(ms.group(4))
+        m["convoy_sunk"] = int(ms.group(5))
+        m["convoy_size"] = int(ms.group(6))
+        m["convoy_need"] = int(ms.group(7))
+        m["gauge_ticks"] = int(ms.group(8))
+        m["lee_ticks"] = int(ms.group(9))
+        m["beat_seconds"] = int(ms.group(10))
+        m["first_strike_t"] = float(ms.group(11))
+        m["merchants_struck"] = len(re.findall(r"SHIPLOG \S+ STRUCK ", text))
+
+    # Ticks a captain spent running down a chase instead of laying her guns.
+    # Zero in every fight against a target that does not make off, which is
+    # every scenario but the convoy pair - and a non-zero here in any of them
+    # says the pursuit rule has started firing where it was not meant to.
+    pursuit = [int(v) for v in re.findall(r"SEALOG \S+ landTicks=.*?pursuitTicks=(\d+)", text)]
+    if pursuit:
+        m["pursuit_ticks_max"] = max(pursuit)
 
     band = re.findall(r"turf from ([0-9.]+) cm \(paint says ([0-9.]+), scale ([0-9.]+)\)", text)
     if band:

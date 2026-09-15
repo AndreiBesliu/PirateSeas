@@ -43,6 +43,15 @@ public:
 	TArray<AShipPawn*> GetOrderOfBattle() const;
 	int32 GetDefeats() const { return Defeats; }
 
+	/** The convoy, for the panel. Zero merchants means no mission. */
+	int32 GetConvoySize() const { return ConvoySize; }
+	int32 GetConvoyNeed() const { return ConvoyNeed; }
+	int32 GetConvoyStopped() const { return ConvoyStopped; }
+	int32 GetConvoyThrough() const { return ConvoyThrough; }
+	int32 GetConvoySunk() const { return ConvoySunk; }
+	bool IsMissionOver() const { return bMissionOver; }
+	const FString& GetMissionResult() const { return MissionResult; }
+
 protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Sea")
 	TSubclassOf<APawn> EnemyShipClass;
@@ -99,6 +108,65 @@ protected:
 	 *  water under it. */
 	UPROPERTY(EditDefaultsOnly, Category = "Sea")
 	float OceanHalfExtentCm = 240000.f;
+
+	/** --- the convoy ----------------------------------------------------
+	 *
+	 *  The first objective. A convoy of merchants is sighted and runs for a
+	 *  landfall; it is TAKEN when enough of them have been stopped, and it
+	 *  has GOT THROUGH when enough of them are safe or on the bottom that
+	 *  that number can no longer be reached. A merchant is stopped when she
+	 *  strikes. No prizes, no cargo value, no escort, no boarding: those are
+	 *  the next slices, and this one is deliberately only the part that makes
+	 *  the SIDE OF THE WIND the decision. */
+
+	UPROPERTY(EditDefaultsOnly, Category = "Convoy")
+	TSubclassOf<APawn> MerchantShipClass;
+
+	/** How many merchants. -Convoy=N. Zero, the default, is no convoy and no
+	 *  mission, and every existing scenario runs exactly as it did. */
+	UPROPERTY(EditDefaultsOnly, Category = "Convoy")
+	int32 ConvoySize = 0;
+
+	/** How many must be stopped for the convoy to be taken. -ConvoyNeed=N;
+	 *  zero means half, rounded up. */
+	UPROPERTY(EditDefaultsOnly, Category = "Convoy")
+	int32 ConvoyNeed = 0;
+
+	/** Where the convoy is first sighted. -ConvoyX/-ConvoyY. Well off the
+	 *  origin, where the player's hull sits, so a raider's nearest hostile
+	 *  hull is a merchant. */
+	UPROPERTY(EditDefaultsOnly, Category = "Convoy")
+	FVector ConvoyStart = FVector(120000.f, 150000.f, 0.f);
+
+	/** Her course, in degrees off where the wind comes FROM. Ninety - a beam
+	 *  reach - lays the track ACROSS the wind, so "to windward of the convoy"
+	 *  and "to leeward of it" mean the same thing for the whole run and not
+	 *  just at the start. -ConvoyWindAngle=. */
+	UPROPERTY(EditDefaultsOnly, Category = "Convoy")
+	float ConvoyWindAngleDeg = 90.f;
+
+	/** How far she has to run to be safe, in metres. -ConvoyRangeM=. */
+	UPROPERTY(EditDefaultsOnly, Category = "Convoy")
+	float ConvoyRangeM = 1500.f;
+
+	/** Inside this of the landfall she is under the fort's guns. */
+	UPROPERTY(EditDefaultsOnly, Category = "Convoy")
+	float LandfallRadiusCm = 15000.f;
+
+	/** Formed abeam, this far apart. */
+	UPROPERTY(EditDefaultsOnly, Category = "Convoy")
+	float ConvoySpacingCm = 15000.f;
+
+	/** How far off the convoy -RaiderSide= puts the raider, in metres, along
+	 *  the wind. -RaiderOffingM=. */
+	UPROPERTY(EditDefaultsOnly, Category = "Convoy")
+	float RaiderOffingM = 800.f;
+
+	/** Mirrors the captain's CloseHauledMarginDeg: a bearing this close to
+	 *  the eye of the wind, past the no-go angle, is beaten rather than
+	 *  sailed. Used only to COUNT beat seconds; it steers nothing. */
+	UPROPERTY(EditDefaultsOnly, Category = "Convoy")
+	float BeatMarginDeg = 22.f;
 
 private:
 	/** Puts a whole squadron on the water, formed abeam. */
@@ -200,6 +268,41 @@ private:
 	 *  triangles on screen". The sea has never drawn; this says which gate. */
 	void DumpWaterRendering() const;
 
+	/** Reads -Convoy= and its flags and lays the course, BEFORE the islands
+	 *  are placed, so every station and the landfall itself are on the
+	 *  island's refusal list. -RaiderSide= is read here too, because it moves
+	 *  the squadron's spawn and that has to be known for the same reason. */
+	void ReadConvoyFlags();
+
+	UFUNCTION()
+	void SpawnConvoy();
+
+	/** Once a second: who has the weather gauge, is the raider beating, and
+	 *  has anyone made port. Latched into cumulative counters, because a
+	 *  count of a thing that must happen a certain way is worthless if it is
+	 *  sampled and printed. */
+	UFUNCTION()
+	void SampleWeatherGauge();
+
+	/** -ConvoyStrikeTest=N: the first merchant still running strikes at N
+	 *  seconds, through Strike() and nothing else, so the whole path from a
+	 *  strike to a finished mission can be proved without a single shot. */
+	UFUNCTION()
+	void StrikeMerchantForTest();
+
+	void HandleShipStruck(AShipPawn* Ship, AActor* Causer);
+
+	/** Idempotent. Called from every exit - taken, got through, and the
+	 *  quit timer for a run that ended neither way - so exactly one MISSION
+	 *  line is printed per run, whatever happened. */
+	void FinishMission(const TCHAR* Result);
+
+	/** Who the counters follow: the first ship of the squadron when
+	 *  -RaiderSide= placed one, otherwise the player. */
+	AShipPawn* GetRaider() const;
+
+	AShipPawn* NearestMerchantInTheFight(const FVector& From) const;
+
 	/** True when no hull, afloat or sinking, still stands above the water
 	 *  near that point. Checks EVERY ship, not just the one that sank: two
 	 *  60-tonne boxes born inside each other are thrown apart by the solver. */
@@ -235,4 +338,26 @@ private:
 	float ShipSinkTestAt = 0.f;
 	float EnemySinkTestAt = 0.f;
 	bool bSinkTestStarboard = true;
+
+	TArray<FVector> ConvoyStations;
+	FVector Landfall = FVector::ZeroVector;
+	float ConvoyCourseYaw = 0.f;
+	TArray<TWeakObjectPtr<AShipPawn>> Convoy;
+	/** "weather", "lee", or empty when nobody was placed. */
+	FString RaiderSide;
+	/** Latched, never sampled. */
+	int32 ConvoyStopped = 0;
+	int32 ConvoyThrough = 0;
+	int32 ConvoySunk = 0;
+	int32 GaugeTicks = 0;
+	int32 LeeTicks = 0;
+	int32 BeatSeconds = 0;
+	float FirstStrikeAt = -1.f;
+	bool bMissionOver = false;
+	bool bRaiderLogged = false;
+	FString MissionResult;
+	float ConvoyStrikeTestAt = 0.f;
+	FTimerHandle ConvoySpawnTimer;
+	FTimerHandle GaugeTimer;
+	FTimerHandle ConvoyStrikeTestTimer;
 };

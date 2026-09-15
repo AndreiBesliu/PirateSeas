@@ -33,6 +33,9 @@ public:
 	virtual void OnPossess(APawn* InPawn) override;
 	virtual void Tick(float DeltaSeconds) override;
 
+	/** Where a merchant is bound. The game mode lays the course; she sails it. */
+	void SetDestination(const FVector& Where);
+
 	/** Counted, not assumed: both must read 0 in a world with no island. */
 	int32 GetLandTicks() const { return LandTicks; }
 	int32 GetClawOffs() const { return ClawOffs; }
@@ -40,6 +43,9 @@ public:
 	int32 GetWears() const { return Wears; }
 	int32 GetAvoidTicks() const { return AvoidTicks; }
 	int32 GetTacksThrough() const { return TacksThrough; }
+	/** Ticks spent running down a chase instead of laying the guns. Zero
+	 *  against anything that does not make off. */
+	int32 GetPursuitTicks() const { return PursuitTicks; }
 
 protected:
 	/** Beyond this the enemy just closes the distance. */
@@ -244,6 +250,36 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Tactics")
 	float FireHighAboveRig = 0.5f;
 
+	/** Closing speed, in m/s, below which a ship outside her standoff stops
+	 *  trying to lay her guns and runs straight down on her chase.
+	 *
+	 *  The Engage course trades closing speed for a heading the guns bear
+	 *  on, which is right against a ship that stands and fights and wrong
+	 *  against one that is making off. Measured against a merchant at half
+	 *  canvas, with the raider to windward and 800 m up: she reached 486 m,
+	 *  turned to lay her broadside, and sat between 490 and 540 m for two
+	 *  hundred seconds without firing a shot, while the merchant walked
+	 *  across her bow and into port. A captain who cannot overhaul a laden
+	 *  merchant with the weather gauge is not a captain. */
+	UPROPERTY(EditAnywhere, Category = "Tactics")
+	float PursuitBelowMS = 1.f;
+
+	/** Inside standoff plus this she gives the chase up and lays the guns
+	 *  whatever the closing speed: at that range the turn IS the attack. */
+	UPROPERTY(EditAnywhere, Category = "Tactics")
+	float PursuitSlackM = 30.f;
+
+	/** And she does not take the chase up again until the range has opened
+	 *  to standoff plus THIS. The hysteresis is on range, not on closing
+	 *  speed, because the flapping was on range: a runner opens the range
+	 *  the moment the raider turns to bring her guns to bear, so a rule that
+	 *  resumed the chase at standoff + 30 resumed it two ticks into every
+	 *  turn - 293 "running down" lines in a run, and a raider who zigzagged
+	 *  at 350 m instead of finishing either course. 150 m is what a turn
+	 *  and a broadside cost against a target making four metres a second. */
+	UPROPERTY(EditAnywhere, Category = "Tactics")
+	float PursuitResumeM = 150.f;
+
 private:
 	/** Nearest heading we can actually sail that is closest to what we want. */
 	float ResolveSailableHeading(float DesiredYawDeg, float WindFromBearingDeg,
@@ -256,6 +292,12 @@ private:
 
 	AShipPawn* GetShip() const;
 	AShipPawn* FindTarget();
+
+	/** The whole of a merchant's seamanship: sail the laid course, beat if it
+	 *  lies in the wind, keep off the land, and lie to once struck or in
+	 *  port. No tactics, no guns, no station-keeping - she is not in a line
+	 *  of battle and has nothing to fire. */
+	void TickMerchant(AShipPawn* Me, float DeltaSeconds);
 
 	/** True when a consort lies between this ship and where she is aiming.
 	 *  A squadron that fires through its own line is not a squadron. */
@@ -308,6 +350,10 @@ private:
 	float HeldLandYaw = 0.f;
 	bool bAvoiding = false;
 	int32 TacksThrough = 0;
+	int32 PursuitTicks = 0;
+	/** Latched so "running down" and "guns laid again" are each said once
+	 *  per spell, not sixty times a second. */
+	bool bPursuing = false;
 	bool bClawLogged = false;
 	/** Counted, not assumed: both must read 0 in a world with no island. */
 	int32 LandTicks = 0;
@@ -318,4 +364,7 @@ private:
 	bool bReportedStation = false;
 	float RetargetTimer = 0.f;
 	float LogTimer = 0.f;
+
+	FVector Destination = FVector::ZeroVector;
+	bool bHasDestination = false;
 };

@@ -3127,3 +3127,110 @@ fiecare număr din suită ar rămâne identic. Chei noi: `sun_elev_deg`, `sun_lu
 încetează să urmeze lumina se vede aici ca una care se mişcă fără cealaltă.
 
 **Task Completed.**
+
+---
+
+## Task Started — 15.09.2026 (mecanica, commit 1: apartenenţa)
+
+**Prompt:** „deocamdată arată ok, dar, vom imbunatati foarte mult look-ul jocului
+si a assets pe viitor, deocamdata vreau sa dezvolti mecanica jocului" + (prin
+întrebare) obiective, echipaj + reparaţii, economie; „mai vedem cu abordajul";
+autonomie „ca până acum"
+**Model:** Claude Opus 5
+
+Grafica e parcată. Pentru stratul de obiective am scris patru designuri
+independente şi le-am judecat de două ori — o dată pe fezabilitate faţă de codul
+real, o dată pe cum s-ar juca. Ambii judecători au pus primul acelaşi design,
+„convoiul", şi ambii au spus că prima lui felie e prea mare. Motivul alegerii:
+e singurul ale cărui reguli fac din PARTEA VÂNTULUI pe care stai decizia —
+polara măsurată o preţuieşte la ~8:1 — şi singurul care lasă goluri exact pe
+forma următoarelor două ateliere (o navă care a coborât pavilionul, o valoare de
+marfă, un cronometru de ţinut poziţia).
+
+Commit-ul ăsta e doar piesa cea mai riscantă, singură: `EShipAllegiance
+{Player, Crown, Merchant}` pusă de CLASĂ, `IsHostileTo()` într-un singur loc
+(`FindTarget`). În lumea cu două tabere „apartenenţa diferă" e aritmetic identic
+cu `IsPlayerControlled()`, deci **toate cele 10 scenarii au ieşit nemişcate** şi
+n-am reînregistrat nimic. Celelalte patru locuri care iterează nave au fost
+recitite şi lăsate deliberat, cu motivul scris la buclă. `-EnemyCount=0` e legal
+(verificat: fără victorie la t=0, fără crash).
+
+**Task Completed** (`ed65e93`).
+
+---
+
+## Task Started — 15.09.2026 (mecanica, commit 2: convoiul)
+
+**Prompt:** „continua"
+**Model:** Claude Fable 5.1
+
+Convoiul propriu-zis: `AMerchantShipPawn` (a treia tabără), coborârea
+pavilionului pe ramura de avarii care deja decide scufundarea, rada,
+`-Convoy= -ConvoyNeed= -ConvoyX/Y= -ConvoyWindAngle= -ConvoyRangeM= -RaiderSide=
+-RaiderOffingM= -ConvoyStrikeTest=`, o singură linie `CONVOYLOG MISSION` pe
+rulare (din toate ieşirile, inclusiv cronometrul de quit), contoare ZĂVORÂTE
+gauge/lee/beat eşantionate o dată pe secundă, rândul CONVOY în panou. Fără prăzi,
+valoare a mărfii, escortă sau abordaj.
+
+### Perechea care trebuia să iasă diferit a ieşit identic de trei ori
+
+Scenariile `convoy_weather` / `convoy_lee` diferă într-un singur flag. Prima
+versiune a dat THROUGH pe ambele părţi, cu 0 salve în vânt. A doua şi a treia la
+fel. De fiecare dată jocul nu crăpa, contoarele se mişcau şi orice poartă
+„merge" ar fi trecut. Cauzele, în ordinea în care le-am măsurat:
+
+1. **Aceeaşi polară nu poate prinde aceeaşi polară.** Negustorul cu toată pânza
+   făcea 6,4 m/s pe un bord larg; raider-ul cobora pe el cu 6,5, iar polara e
+   plată între 90 şi 180 de grade. Cu 800 m avans n-a intrat sub 528 m în
+   150 s. Cu JUMĂTATE de pânză tot făcea 5,2 — forţa scade cu 1 − v/Vmax şi
+   marea dă înapoi cea mai mare parte — deci pânza nu e butonul. Butonul e
+   linia de plutire: `LadenSpeedFactor = 0,55` pe `MaxForwardSpeed` → 3,6 m/s,
+   şapte noduri contra doisprezece, cât spune epoca.
+2. **Căpitanul nu ştia să prindă un fugar.** În raza de angajare vira să pună
+   tunurile pe ţintă ORICE ar fi făcut ţinta — corect contra uneia care stă şi
+   luptă, dar contra uneia care fuge a stat la 490–540 m două sute de secunde
+   fără un foc. Regula nouă: în afara distanţei de menţinere şi fără să câştige
+   teren, se duce DREPT spre ea. Prima formă avea histereză pe viteza de
+   apropiere şi se răsturna la fiecare cadru (293 de rânduri „running down"):
+   fugarul deschide distanţa exact când raider-ul virează să tragă, deci
+   histereza trebuie pe DISTANŢĂ (reia la standoff + 150 m, renunţă la
+   standoff + 30).
+3. **Ţinta sărea.** Recăutarea „cel mai apropiat" la fiecare 2 s: patru
+   ghiulele în greementul unui negustor, saltul la celălalt aflat la 150 m,
+   trei în al lui, niciunul destul de rănit. Acum ţinta se păstrează până iese
+   din luptă; cu o singură cocă duşmană căutarea dă aceeaşi navă, deci nimic
+   deja măsurat nu se mişcă.
+4. **Dimensionarea.** Cu trei negustori, 800 m şi „opreşte doi", prima salvă
+   venea la ~170 s şi convoiul era în radă la 244: de neluat de pe NICIO parte.
+   Perechea finală: doi negustori, 1200 m, 600 m avans, opreşte unul.
+
+Rezultatul: în vânt **TAKEN la 71,4 s** (pavilion după două salve în greement,
+rig 0,55), gauge 71 / lee 0 / beat 0. Sub vânt **THROUGH la 316,3 s**, gauge 0 /
+lee 315 / beat 315, două salve rătăcite, nicio oprire. Testul
+`-ConvoyStrikeTest=30` dă TAKEN la 30,0 fără nicio ghiulea, iar raider-ul AI o
+lasă în pace (`AILOG target lost`).
+
+### Mutaţii
+
+Arborele e necomitat, deci restaurarea NU s-a putut face prin git: copie
+pristină → mutaţie (cu asert că textul s-a schimbat) → build → rulare →
+restaurare din copie → comparaţie bit cu bit. (A) pragurile de pavilion la 0: 7
+lovituri, 0 opriri, THROUGH la 321. (B) urmărirea dezactivată: 0 salve, THROUGH
+la 316. (C) pristin din nou: TAKEN la 71,4, aceleaşi numere — reproductibil.
+
+### Suita
+
+Cele 10 scenarii vechi: **niciun număr mişcat**. Chei noi: `pursuit_ticks_max`
+peste tot, plus cele două scenarii. De spus fără ocoliş: regula de urmărire a
+TRAS 248 de ticuri în `sailing` şi 291 în `crowded` (jucătorul face cercuri sub
+`-ShipRudderTest`), şi nimic măsurat acolo nu s-a mişcat — nu fiindcă regula ar
+fi echivalentă, ci fiindcă nimic măsurat acolo nu se uită la drumul căpitanului.
+Nemişcat şi neobservat nu sunt acelaşi lucru. Linia de bază reînregistrată în
+acelaşi commit, doar cu adăugiri.
+
+`ci_checks.py` citeşte acum liniile MISSION / STRUCK / pursuitTicks din fixturi
+copiate din log, şi verifică că STRUCK nu se numără ca SUNK. README are secţiunea
+„Convoiul", OWNER_VERIFY punctul 25 (un negustor oprit ARATĂ oprit?), HANDOFF
+regulile 7 şi 8.
+
+**Task Completed.**

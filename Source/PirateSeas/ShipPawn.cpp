@@ -967,11 +967,54 @@ float AShipPawn::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent,
 		Gun, ForeRigIntegrity, MainRigIntegrity, RudderIntegrity,
 		GetGunsRemaining(false), GetGunsRemaining(true));
 
+	// A merchant does not fight to the last plank. On the same branch that
+	// decides a sinking, and BELOW the zero test in the order of events: a
+	// blow that carries her straight through the strike line and under the
+	// waterline sinks her and never strikes her.
 	if (HullIntegrity <= 0.f)
 	{
 		BeginSinking(DamageCauser);
 	}
+	else if (Allegiance == EShipAllegiance::Merchant && !bStruck
+		&& (HullIntegrity <= StrikeBelowFraction * MaxHullIntegrity
+			|| GetRigEfficiency() <= StrikeBelowRig))
+	{
+		Strike(DamageCauser);
+	}
 	return Applied;
+}
+
+void AShipPawn::Strike(AActor* Causer)
+{
+	if (bStruck || IsSinking())
+	{
+		return;
+	}
+	bStruck = true;
+	// The same words as a sinking: whatever the helm was doing stops
+	// mattering. The controller reads HasStruck() and keeps her furled from
+	// here on, because trim input is a RATE and a single order would be
+	// overwritten by its next tick.
+	SailTrimInput = -1.f;
+	SteerInput = 0.f;
+	UE_LOG(LogTemp, Display, TEXT("SHIPLOG %s STRUCK by=%s hull=%.0f/%.0f rig=%.2f t=%.1f"),
+		*GetName(), Causer ? *Causer->GetName() : TEXT("none"),
+		HullIntegrity, MaxHullIntegrity, GetRigEfficiency(),
+		GetWorld()->GetTimeSeconds());
+	OnShipStruck.Broadcast(this, Causer);
+}
+
+void AShipPawn::MakePort()
+{
+	if (bMadePort || bStruck || IsSinking())
+	{
+		return;
+	}
+	bMadePort = true;
+	SailTrimInput = -1.f;
+	SteerInput = 0.f;
+	UE_LOG(LogTemp, Display, TEXT("SHIPLOG %s MADE PORT hull=%.0f/%.0f t=%.1f"),
+		*GetName(), HullIntegrity, MaxHullIntegrity, GetWorld()->GetTimeSeconds());
 }
 
 void AShipPawn::ScuttleHull(bool bStarboard, AActor* Causer)

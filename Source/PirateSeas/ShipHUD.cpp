@@ -366,6 +366,18 @@ void AShipHUD::DrawGuns(AShipPawn* Ship)
 		{
 			const FString Text = FString::Printf(TEXT("SQUADRON  %d of %d afloat"), Afloat, Total);
 			DrawText(Text, Afloat > 1 ? Warn : Faint, X, Y, Small, Scale);
+			Y += Line * 0.95f;
+		}
+		// The mission, when there is one. A raider who cannot see the tally
+		// cannot decide whether the next merchant is worth the beat.
+		if (Sea->GetConvoySize() > 0)
+		{
+			const FString Text = Sea->IsMissionOver()
+				? FString::Printf(TEXT("CONVOY %s"), *Sea->GetMissionResult())
+				: FString::Printf(TEXT("CONVOY  %d of %d stopped, %d through, need %d"),
+					Sea->GetConvoyStopped(), Sea->GetConvoySize(),
+					Sea->GetConvoyThrough(), Sea->GetConvoyNeed());
+			DrawText(Text, Sea->IsMissionOver() ? Good : Warn, X, Y, Small, Scale);
 		}
 	}
 }

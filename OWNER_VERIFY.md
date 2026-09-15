@@ -595,3 +595,31 @@ motorului şi nu se schimbă cu ora — doar soarele, culoarea lui, lumina cerul
 expunerea. Şi timpul nu curge în timpul unei partide: ora se alege la pornire.
 Prima versiune a benzii de expunere chiar a produs silueta de la „cum arată
 prost"; se vede în DEVLOG de ce.
+
+## 25. Convoiul: se vede că un negustor a coborât pavilionul?
+
+**Ce te uiți:** `-Convoy=2 -EnemyCount=0`, vântul liber. Tu eşti raider-ul.
+Convoiul iese la ~1,9 km spre nord-est şi fuge de-a curmezişul vântului. Pune-te
+în vântul lui, coboară pe el şi trage-i în greement (Shift = tir înalt).
+
+**Cum arată bine:** După una-două salve în velatură, negustorul strânge pânza,
+rămâne cu cârma la mijloc şi se leagănă în valuri, iar rândul CONVOY din panou
+trece de la „0 of 2 stopped, 0 through, need 1" la „CONVOY TAKEN", verde. Al
+doilea negustor îşi vede de drum. Dacă mai tragi în cel oprit, îl scufunzi;
+rândul rămâne TAKEN, dar ai pierdut marfa (deocamdată doar în log).
+
+**Cum arată prost:** Negustorul navighează mai departe cu pânza sus după ce
+logul spune STRUCK. Sau rândul CONVOY lipseşte din panou. Sau negustorii ies
+unul peste altul. Sau, cu vântul liber, drumul convoiului cade în zona moartă
+şi unul rămâne în irons cu prova în vânt.
+
+**De ce nu pot eu:** Pot măsura că a coborât pavilionul (`SHIPLOG … STRUCK`),
+că raider-ul AI o lasă în pace din clipa aia (`AILOG target lost`) şi că misiunea
+se închide o singură dată. Dacă o navă oprită ARATĂ oprită e o judecată de ochi.
+
+**Ce știu deja și n-am ascuns:** rada e un punct pe apă, nu un port — nu e
+nimic de văzut acolo. Negustorul nu are mecanica de viraj prin vânt (nu-i
+trebuie pe drumul pe care îl aşez eu, dar vântul liber al jocului nu e pinat).
+Panoul poate depăşi cu un rând dreptunghiul de fundal când apar şi escadronul,
+şi convoiul. Şi în rulările măsurate raider-ul e o navă AI, nu tu: că un om
+poate face ce face căpitanul AI e o presupunere rezonabilă, nu o măsurătoare.

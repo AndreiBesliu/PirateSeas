@@ -70,6 +70,8 @@ enum class EShipZone : uint8
 DECLARE_MULTICAST_DELEGATE_TwoParams(FOnShipSunk, AShipPawn* /*Ship*/, AActor* /*Causer*/);
 /** Fired once, just before the wreck is destroyed. */
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnShipWrecked, AShipPawn* /*Ship*/);
+/** Fired once, when she hauls down her colours. */
+DECLARE_MULTICAST_DELEGATE_TwoParams(FOnShipStruck, AShipPawn* /*Ship*/, AActor* /*Causer*/);
 
 /**
  * A sailing ship driven by real physics and by the wind.
@@ -164,6 +166,25 @@ public:
 	{
 		return Other && Other != this && Other->Allegiance != Allegiance;
 	}
+
+	/** She has hauled down her colours: sail furled, helm amidships, and the
+	 *  hunters do not look at her again. Damage still lands - a raider who
+	 *  keeps firing into a ship that has struck SINKS her, and loses the very
+	 *  thing he was firing for. */
+	bool HasStruck() const { return bStruck; }
+
+	/** In under the guns of the fort, where nobody can follow her. */
+	bool HasMadePort() const { return bMadePort; }
+
+	/** The one test the hunters make. Sunk, struck or safe in port, she is
+	 *  neither a target nor a threat. */
+	bool IsOutOfTheFight() const { return IsSunk() || bStruck || bMadePort; }
+
+	/** Hauls down her colours. Idempotent; a sinking ship cannot strike. */
+	void Strike(AActor* Causer);
+
+	/** Reached the roadstead. Idempotent. */
+	void MakePort();
 
 	/** True from the moment integrity hit zero until the wreck is destroyed. */
 	UFUNCTION(BlueprintPure, Category = "Ship")
@@ -264,6 +285,7 @@ public:
 
 	FOnShipSunk OnShipSunk;
 	FOnShipWrecked OnShipWrecked;
+	FOnShipStruck OnShipStruck;
 
 	/** Drive inputs, so an AI controller can sail the same hull a player does.
 	 *  Trim is a rate: +1 sets more sail, -1 takes it in. */
@@ -561,6 +583,21 @@ protected:
 	 *  which a hull has no side and nothing to go wrong on possession. */
 	UPROPERTY(EditDefaultsOnly, Category = "Ship")
 	EShipAllegiance Allegiance = EShipAllegiance::Player;
+
+	/** A merchant strikes when her hull is down to this fraction, or when her
+	 *  rig is down to StrikeBelowRig. She is nobody's man-of-war: a master
+	 *  who lets his ship be shot to pieces for somebody else's cargo is not
+	 *  a master for long, and a laden hull at seven knots that has lost four
+	 *  sails to a frigate's broadside is not going to outrun anything. The
+	 *  rig test is the one that fires in practice, because the hunters fire
+	 *  HIGH first - cripple her, then sink her - and a rig hit costs 0.12 of
+	 *  a mast, so 0.6 is about five balls aloft. Only the Merchant side ever
+	 *  strikes; a fighting ship sinks. */
+	UPROPERTY(EditDefaultsOnly, Category = "Ship")
+	float StrikeBelowFraction = 0.6f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Ship")
+	float StrikeBelowRig = 0.6f;
 
 	// ---- damage by zone ------------------------------------------------
 	/** Fraction of a mast's rig carried away by one ball. Three hits and a
@@ -881,6 +918,11 @@ private:
 	/** True only inside a scuttle, so a test sinking is never reclassified
 	 *  as a rig or rudder hit. */
 	bool bScuttling = false;
+
+	/** Set once by Strike() / MakePort(). Never cleared: a ship that has
+	 *  struck stays struck for the rest of the run. */
+	bool bStruck = false;
+	bool bMadePort = false;
 	/** True only while a grounding wound is being delivered, so its log lines
 	 *  are tagged GROUNDLOG and never counted as gunnery. */
 	bool bGroundingBlow = false;

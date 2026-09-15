@@ -1,6 +1,7 @@
 ﻿#include "SeaGameMode.h"
 
 #include "EnemyShipPawn.h"
+#include "MerchantShipPawn.h"
 #include "Engine/Engine.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
@@ -33,6 +34,7 @@ ASeaGameMode::ASeaGameMode()
 {
 	DefaultPawnClass = AShipPawn::StaticClass();
 	EnemyShipClass = AEnemyShipPawn::StaticClass();
+	MerchantShipClass = AMerchantShipPawn::StaticClass();
 	HUDClass = AShipHUD::StaticClass();
 }
 
@@ -114,6 +116,9 @@ void ASeaGameMode::BeginPlay()
 				OverrideX, OverrideY);
 		}
 	}
+	// The convoy's stations, its landfall and the raider's station are all
+	// laid here, before the island is, for the same reason the squadron's are.
+	ReadConvoyFlags();
 	SpawnIslands();
 	DumpWorldStaticCensus();
 	// The water mesh only decides whether it is enabled inside its own
@@ -130,6 +135,24 @@ void ASeaGameMode::BeginPlay()
 	{
 		GetWorldTimerManager().SetTimer(QuitTimer, this,
 			&ASeaGameMode::QuitNow, QuitAfterSeconds, false);
+	}
+
+	if (ConvoySize > 0)
+	{
+		// A quarter of a second BEFORE the squadron, so the merchants are on
+		// the water when the raider first looks for a target. Measured the
+		// other way round: her first target was the player's idle hull 1.5 km
+		// off, for the two seconds until she looked again. The counters look
+		// for the raider a second after this and cope with her not being
+		// there yet; the raider does not cope with the convoy not being there.
+		GetWorldTimerManager().SetTimer(ConvoySpawnTimer, this,
+			&ASeaGameMode::SpawnConvoy, FMath::Max(0.05f, EnemySpawnDelay - 0.25f), false);
+		FParse::Value(FCommandLine::Get(), TEXT("ConvoyStrikeTest="), ConvoyStrikeTestAt);
+		if (ConvoyStrikeTestAt > 0.f)
+		{
+			GetWorldTimerManager().SetTimer(ConvoyStrikeTestTimer, this,
+				&ASeaGameMode::StrikeMerchantForTest, ConvoyStrikeTestAt, false);
+		}
 	}
 
 	FParse::Value(FCommandLine::Get(), TEXT("ShipSinkTest="), ShipSinkTestAt);
@@ -363,6 +386,17 @@ void ASeaGameMode::SpawnIslands()
 	{
 		const float Offset = (i - (SquadronSize - 1) * 0.5f) * SquadronSpacingCm;
 		Births.Add(EnemySpawnLocation + FVector(0.f, Offset, 0.f));
+	}
+	// The convoy's stations, and the roadstead she is running for: an island
+	// on the landfall is not a scenario either, it is three merchants driven
+	// ashore by their own orders.
+	for (const FVector& Station : ConvoyStations)
+	{
+		Births.Add(Station);
+	}
+	if (ConvoySize > 0)
+	{
+		Births.Add(Landfall);
 	}
 
 	int32 Built = 0;
@@ -711,6 +745,32 @@ void ASeaGameMode::HandleShipSunk(AShipPawn* Ship, AActor* Causer)
 	const float Now = GetWorld()->GetTimeSeconds();
 	const FString By = Causer ? Causer->GetName() : FString(TEXT("none"));
 
+	if (Ship->GetAllegiance() == EShipAllegiance::Merchant)
+	{
+		// Cargo on the bottom is cargo nobody gets. Not a defeat and not a
+		// victory, and the squadron's accounting below must not see her: with
+		// -EnemyCount=0 it would have read "no enemies left" and declared one.
+		if (Ship->HasStruck())
+		{
+			// Already counted as stopped; sinking her afterwards changes the
+			// prize, not the tally. Said out loud because it is a thing a
+			// raider does by mistake.
+			UE_LOG(LogTemp, Display,
+				TEXT("CONVOYLOG %s sunk AFTER striking by=%s t=%.1f"),
+				*Ship->GetName(), *By, Now);
+			return;
+		}
+		++ConvoySunk;
+		UE_LOG(LogTemp, Display,
+			TEXT("CONVOYLOG %s sunk by=%s t=%.1f (cargo lost) sunk=%d"),
+			*Ship->GetName(), *By, Now, ConvoySunk);
+		if (ConvoyThrough + ConvoySunk > ConvoySize - ConvoyNeed)
+		{
+			FinishMission(TEXT("THROUGH"));
+		}
+		return;
+	}
+
 	if (bPlayer)
 	{
 		++Defeats;
@@ -854,8 +914,311 @@ void ASeaGameMode::TryRespawnEnemy()
 	SpawnSquadron();
 }
 
+void ASeaGameMode::ReadConvoyFlags()
+{
+	FParse::Value(FCommandLine::Get(), TEXT("Convoy="), ConvoySize);
+	ConvoySize = FMath::Clamp(ConvoySize, 0, 6);
+	if (ConvoySize <= 0)
+	{
+		return;
+	}
+	FParse::Value(FCommandLine::Get(), TEXT("ConvoyNeed="), ConvoyNeed);
+	if (ConvoyNeed <= 0)
+	{
+		ConvoyNeed = (ConvoySize + 1) / 2;
+	}
+	ConvoyNeed = FMath::Min(ConvoyNeed, ConvoySize);
+	FParse::Value(FCommandLine::Get(), TEXT("ConvoyX="), ConvoyStart.X);
+	FParse::Value(FCommandLine::Get(), TEXT("ConvoyY="), ConvoyStart.Y);
+	FParse::Value(FCommandLine::Get(), TEXT("ConvoyWindAngle="), ConvoyWindAngleDeg);
+	FParse::Value(FCommandLine::Get(), TEXT("ConvoyRangeM="), ConvoyRangeM);
+	FParse::Value(FCommandLine::Get(), TEXT("RaiderOffingM="), RaiderOffingM);
+
+	// The wind as it stands at BeginPlay: pinned by -WindBearing= a moment
+	// ago, or the subsystem's base bearing. The course is laid ONCE, off this
+	// wind; a wind that wanders afterwards is the merchant's problem, as it
+	// would be.
+	const UWindSubsystem* Wind = GetWorld()->GetSubsystem<UWindSubsystem>();
+	const float WindTo = Wind ? Wind->GetWindBearingDeg() : 0.f;
+	const float WindFrom = FMath::UnwindDegrees(WindTo + 180.f);
+	ConvoyCourseYaw = FMath::UnwindDegrees(WindFrom + ConvoyWindAngleDeg);
+
+	ConvoyStart.X = FMath::Clamp(ConvoyStart.X, -OceanHalfExtentCm, OceanHalfExtentCm);
+	ConvoyStart.Y = FMath::Clamp(ConvoyStart.Y, -OceanHalfExtentCm, OceanHalfExtentCm);
+	ConvoyStart.Z = 0.f;
+
+	// The landfall, INSIDE the ocean box: a roadstead with no water in it is
+	// a merchant sailing off the edge of the sea. If the clamp moves it, the
+	// course is re-laid from the start to where it ended up, so the log's
+	// course and range are the ones actually sailed.
+	const FVector Course = FRotator(0.f, ConvoyCourseYaw, 0.f).Vector();
+	const FVector Asked = ConvoyStart + Course * ConvoyRangeM * 100.f;
+	Landfall = FVector(
+		FMath::Clamp(Asked.X, -OceanHalfExtentCm, OceanHalfExtentCm),
+		FMath::Clamp(Asked.Y, -OceanHalfExtentCm, OceanHalfExtentCm), 0.f);
+	if (!Landfall.Equals(Asked))
+	{
+		ConvoyCourseYaw = (Landfall - ConvoyStart).Rotation().Yaw;
+		ConvoyRangeM = FVector::Dist2D(Landfall, ConvoyStart) * 0.01f;
+		UE_LOG(LogTemp, Warning,
+			TEXT("CONVOYLOG landfall clamped into the ocean box: course re-laid to %.0f, %.0f m"),
+			ConvoyCourseYaw, ConvoyRangeM);
+	}
+
+	const FVector Abeam = FRotationMatrix(FRotator(0.f, ConvoyCourseYaw, 0.f)).GetUnitAxis(EAxis::Y);
+	for (int32 i = 0; i < ConvoySize; ++i)
+	{
+		const float Offset = (i - (ConvoySize - 1) * 0.5f) * ConvoySpacingCm;
+		ConvoyStations.Add(ConvoyStart + Abeam * Offset);
+	}
+	UE_LOG(LogTemp, Display,
+		TEXT("CONVOYLOG convoy of %d laid from (%.0f,%.0f) course %.0f (%.0f off the wind) to landfall (%.0f,%.0f) %.0f m, need %d"),
+		ConvoySize, ConvoyStart.X, ConvoyStart.Y, ConvoyCourseYaw,
+		FMath::Abs(FMath::FindDeltaAngleDegrees(ConvoyCourseYaw, WindFrom)),
+		Landfall.X, Landfall.Y, ConvoyRangeM, ConvoyNeed);
+
+	// -RaiderSide=weather|lee moves the SQUADRON's spawn to that side of the
+	// convoy, along the wind. The raider in a measured run is an ordinary
+	// enemy hull with the ordinary captain, who hunts the nearest hostile
+	// hull - and the merchants are hostile to her. The player's hull stays
+	// where it is, player-controlled and idle, as lee_shore leaves it.
+	FString Side;
+	if (FParse::Value(FCommandLine::Get(), TEXT("RaiderSide="), Side))
+	{
+		RaiderSide = Side.ToLower();
+		const bool bLee = RaiderSide == TEXT("lee");
+		if (!bLee)
+		{
+			RaiderSide = TEXT("weather");
+		}
+		const FVector Downwind = FRotator(0.f, WindTo, 0.f).Vector();
+		const FVector Station = ConvoyStart + Downwind * (bLee ? 1.f : -1.f) * RaiderOffingM * 100.f;
+		EnemySpawnLocation = FVector(
+			FMath::Clamp(Station.X, -OceanHalfExtentCm, OceanHalfExtentCm),
+			FMath::Clamp(Station.Y, -OceanHalfExtentCm, OceanHalfExtentCm), 0.f);
+		EnemySpawnYaw = (ConvoyStart - EnemySpawnLocation).Rotation().Yaw;
+		UE_LOG(LogTemp, Display,
+			TEXT("CONVOYLOG raider placed to %s of the convoy, %.0f m off, at (%.0f,%.0f) heading %.0f"),
+			*RaiderSide, RaiderOffingM, EnemySpawnLocation.X, EnemySpawnLocation.Y,
+			EnemySpawnYaw);
+	}
+}
+
+void ASeaGameMode::SpawnConvoy()
+{
+	if (ConvoySize <= 0 || !MerchantShipClass || !GetWorld())
+	{
+		return;
+	}
+	const FRotator Heading(0.f, ConvoyCourseYaw, 0.f);
+	int32 Born = 0;
+	for (int32 i = 0; i < ConvoyStations.Num(); ++i)
+	{
+		FActorSpawnParameters Params;
+		Params.SpawnCollisionHandlingOverride =
+			ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		APawn* Pawn = GetWorld()->SpawnActor<APawn>(MerchantShipClass,
+			ConvoyStations[i], Heading, Params);
+		AShipPawn* Ship = Cast<AShipPawn>(Pawn);
+		UE_LOG(LogTemp, Display, TEXT("CONVOYLOG merchant spawned=%s station=%d at %s"),
+			Ship ? *Ship->GetName() : TEXT("FAILED"), i, *ConvoyStations[i].ToCompactString());
+		if (!Ship)
+		{
+			continue;
+		}
+		if (!Ship->GetController())
+		{
+			Ship->SpawnDefaultController();
+		}
+		if (AShipAIController* AI = Cast<AShipAIController>(Ship->GetController()))
+		{
+			AI->SetDestination(Landfall);
+		}
+		else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("CONVOYLOG %s has no captain and will drift"),
+				*Ship->GetName());
+		}
+		Convoy.Add(Ship);
+		BindShip(Ship);
+		Ship->OnShipStruck.AddUObject(this, &ASeaGameMode::HandleShipStruck);
+		++Born;
+	}
+	UE_LOG(LogTemp, Display, TEXT("CONVOYLOG convoy of %d stood out for landfall (%.0f,%.0f)"),
+		Born, Landfall.X, Landfall.Y);
+	GetWorldTimerManager().SetTimer(GaugeTimer, this,
+		&ASeaGameMode::SampleWeatherGauge, 1.f, true);
+}
+
+AShipPawn* ASeaGameMode::GetRaider() const
+{
+	if (!RaiderSide.IsEmpty())
+	{
+		for (const TWeakObjectPtr<AShipPawn>& Ptr : Squadron)
+		{
+			if (AShipPawn* Ship = Ptr.Get())
+			{
+				return Ship;
+			}
+		}
+		return nullptr;
+	}
+	return PlayerShip.Get();
+}
+
+AShipPawn* ASeaGameMode::NearestMerchantInTheFight(const FVector& From) const
+{
+	AShipPawn* Best = nullptr;
+	float BestDist = TNumericLimits<float>::Max();
+	for (const TWeakObjectPtr<AShipPawn>& Ptr : Convoy)
+	{
+		AShipPawn* Ship = Ptr.Get();
+		if (!IsValid(Ship) || Ship->IsOutOfTheFight())
+		{
+			continue;
+		}
+		const float Dist = FVector::DistSquared2D(From, Ship->GetActorLocation());
+		if (Dist < BestDist)
+		{
+			BestDist = Dist;
+			Best = Ship;
+		}
+	}
+	return Best;
+}
+
+void ASeaGameMode::SampleWeatherGauge()
+{
+	if (bMissionOver)
+	{
+		return;
+	}
+	const float Now = GetWorld()->GetTimeSeconds();
+
+	// Anyone in the roadstead is safe. Checked here, once a second, rather
+	// than by the merchant herself: the game mode laid the course and owns
+	// the tally, and a second's latency on "made port" is nothing.
+	for (const TWeakObjectPtr<AShipPawn>& Ptr : Convoy)
+	{
+		AShipPawn* Ship = Ptr.Get();
+		if (!IsValid(Ship) || Ship->IsOutOfTheFight())
+		{
+			continue;
+		}
+		if (FVector::Dist2D(Ship->GetActorLocation(), Landfall) <= LandfallRadiusCm)
+		{
+			Ship->MakePort();
+			++ConvoyThrough;
+			UE_LOG(LogTemp, Display,
+				TEXT("CONVOYLOG %s made port t=%.1f through=%d of %d"),
+				*Ship->GetName(), Now, ConvoyThrough, ConvoySize);
+		}
+	}
+	if (ConvoyThrough + ConvoySunk > ConvoySize - ConvoyNeed)
+	{
+		FinishMission(TEXT("THROUGH"));
+		return;
+	}
+
+	AShipPawn* Raider = GetRaider();
+	if (!Raider || Raider->IsSunk())
+	{
+		return;
+	}
+	if (!bRaiderLogged)
+	{
+		bRaiderLogged = true;
+		UE_LOG(LogTemp, Display, TEXT("CONVOYLOG counters follow raider=%s side=%s"),
+			*Raider->GetName(), RaiderSide.IsEmpty() ? TEXT("player") : *RaiderSide);
+	}
+	AShipPawn* Chase = NearestMerchantInTheFight(Raider->GetActorLocation());
+	const UWindSubsystem* Wind = GetWorld()->GetSubsystem<UWindSubsystem>();
+	if (!Chase || !Wind)
+	{
+		return;
+	}
+
+	// The weather gauge: the wind blows FROM the raider TOWARDS her chase.
+	// Beating: the bearing to the chase lies inside the cone the rig cannot
+	// sail, no-go plus the same margin the captain uses.
+	const FVector Bearing = (Chase->GetActorLocation() - Raider->GetActorLocation()).GetSafeNormal2D();
+	const FVector Downwind = Wind->GetWindDirection().GetSafeNormal2D();
+	if (FVector::DotProduct(Bearing, Downwind) > 0.f)
+	{
+		++GaugeTicks;
+	}
+	else
+	{
+		++LeeTicks;
+	}
+	const float WindFrom = FMath::UnwindDegrees(Wind->GetWindBearingDeg() + 180.f);
+	const float ToWind = FMath::Abs(FMath::FindDeltaAngleDegrees(Bearing.Rotation().Yaw, WindFrom));
+	if (ToWind < Raider->GetNoGoAngleDeg() + BeatMarginDeg)
+	{
+		++BeatSeconds;
+	}
+}
+
+void ASeaGameMode::HandleShipStruck(AShipPawn* Ship, AActor* Causer)
+{
+	// Like HandleShipSunk this can run inside a physics hit callback, so it
+	// counts, logs and finishes; it spawns and destroys nothing.
+	const float Now = GetWorld()->GetTimeSeconds();
+	++ConvoyStopped;
+	if (FirstStrikeAt < 0.f)
+	{
+		FirstStrikeAt = Now;
+	}
+	UE_LOG(LogTemp, Display,
+		TEXT("CONVOYLOG %s struck by=%s t=%.1f stopped=%d of %d need=%d"),
+		*Ship->GetName(), Causer ? *Causer->GetName() : TEXT("none"), Now,
+		ConvoyStopped, ConvoySize, ConvoyNeed);
+	if (ConvoyStopped >= ConvoyNeed)
+	{
+		FinishMission(TEXT("TAKEN"));
+	}
+}
+
+void ASeaGameMode::FinishMission(const TCHAR* Result)
+{
+	if (bMissionOver || ConvoySize <= 0)
+	{
+		return;
+	}
+	bMissionOver = true;
+	MissionResult = Result;
+	GetWorldTimerManager().ClearTimer(GaugeTimer);
+	const AShipPawn* Raider = GetRaider();
+	UE_LOG(LogTemp, Display,
+		TEXT("CONVOYLOG MISSION %s t=%.1f stopped=%d through=%d sunk=%d of %d need=%d gauge=%d lee=%d beat=%d firstStrike=%.1f raider=%s side=%s"),
+		Result, GetWorld()->GetTimeSeconds(), ConvoyStopped, ConvoyThrough, ConvoySunk,
+		ConvoySize, ConvoyNeed, GaugeTicks, LeeTicks, BeatSeconds, FirstStrikeAt,
+		Raider ? *Raider->GetName() : TEXT("none"),
+		RaiderSide.IsEmpty() ? TEXT("player") : *RaiderSide);
+}
+
+void ASeaGameMode::StrikeMerchantForTest()
+{
+	for (const TWeakObjectPtr<AShipPawn>& Ptr : Convoy)
+	{
+		AShipPawn* Ship = Ptr.Get();
+		if (!IsValid(Ship) || Ship->IsOutOfTheFight())
+		{
+			continue;
+		}
+		UE_LOG(LogTemp, Display, TEXT("CONVOYLOG strike test: %s strikes t=%.1f"),
+			*Ship->GetName(), GetWorld()->GetTimeSeconds());
+		Ship->Strike(this);
+		return;
+	}
+	UE_LOG(LogTemp, Warning, TEXT("CONVOYLOG strike test: no merchant left running"));
+}
+
 void ASeaGameMode::QuitNow()
 {
+	// A run that ended neither way still prints its one MISSION line, with
+	// the counters as they stood.
+	FinishMission(TEXT("UNRESOLVED"));
 	for (TActorIterator<AShipPawn> It(GetWorld()); It; ++It)
 	{
 		// A counted zero. "No island, so the ground force cannot have fired"
@@ -873,9 +1236,9 @@ void ASeaGameMode::QuitNow()
 		if (const AShipAIController* AI = Cast<AShipAIController>(It->GetController()))
 		{
 			UE_LOG(LogTemp, Display,
-				TEXT("SEALOG %s landTicks=%d clawOffs=%d rejoinTicks=%d avoidTicks=%d"),
+				TEXT("SEALOG %s landTicks=%d clawOffs=%d rejoinTicks=%d avoidTicks=%d pursuitTicks=%d"),
 				*It->GetName(), AI->GetLandTicks(), AI->GetClawOffs(),
-				AI->GetRejoinTicks(), AI->GetAvoidTicks());
+				AI->GetRejoinTicks(), AI->GetAvoidTicks(), AI->GetPursuitTicks());
 		}
 	}
 	UE_LOG(LogTemp, Display, TEXT("SEALOG quitting at t=%.1fs"),

@@ -1,7 +1,8 @@
 # Unde e proiectul, pe scurt
 
 Scris ca o sesiune nouă (sau un model nou) să poată continua fără să recitească
-DEVLOG-ul de 3000 de rânduri. Starea de la 15.09.2026, commit `e55b562`.
+DEVLOG-ul de 3000 de rânduri. Starea de la 15.09.2026, după commit-ul „convoiul" (al doilea din arcul de
+mecanică).
 
 ## Ce e construit
 
@@ -52,17 +53,36 @@ vânt în plante şi greement, `-Hour=` pentru ora din zi.
    (TAA suprimă exact zonele cu vectori de mişcare).
 6. **Sondele de depanare se scalează cu scena:** emissive 1,0 e invizibil la
    110.000 lux.
+7. **Un scenariu cu două jumătăţi care trebuie să iasă DIFERIT** e singura
+   probă că o mecanică înseamnă ceva: convoiul a ieşit identic de pe ambele
+   părţi ale vântului de trei ori la rând (raider prea lent, negustor prea
+   rapid, ţintă care sărea). Fiecare din ele ar fi trecut o poartă „nu crapă".
+8. **Aceeaşi polară nu poate prinde aceeaşi polară.** O vânătoare se
+   dimensionează măsurând-o (viteză, timp până în radă, timp până la prima
+   salvă), nu alegând numere care sună bine.
 
-## Ce urmează: MECANICA
+## Arcul de MECANICĂ (în curs)
 
-Grafica e parcată de owner („deocamdată arată ok"). Următorul arc e mecanica de
-joc. Ce EXISTĂ deja ca fundaţie: vânt, polară de velatură, avarii pe zone,
-reîncărcare, escadron inamic, insule, eşuare, scufundare, reapariţie.
+Grafica e parcată de owner („deocamdată arată ok"). Owner-ul a ales, prin
+întrebare directă: **obiective**, apoi **echipaj + reparaţii**, apoi **economie
++ progresie**. **Abordajul e amânat explicit** („mai vedem cu abordajul") — nu-l
+construi nesolicitat. Autonomie „ca până acum": deciziile de design le iau eu,
+măsor tot, judecăţile vizuale merg în OWNER_VERIFY.
 
-Ce NU există şi e candidat: un motiv să lupţi (obiective/misiuni), abordaj,
-echipaj ca resursă, reparaţii în larg, economie/progresie, navigaţie pe hartă.
+Livrat:
+1. **Apartenenţa** (`ed65e93`): `EShipAllegiance {Player, Crown, Merchant}` pe
+   clasă, `IsHostileTo()` într-un singur loc. Toate cele 10 scenarii nemişcate.
+2. **Convoiul**: `AMerchantShipPawn` (încărcat, 55% viteză), coborârea
+   pavilionului (`Strike()` pe ramura de avarii), rada, `-Convoy= -RaiderSide=`,
+   misiune LUAT / A TRECUT / NEREZOLVAT cu o singură linie `CONVOYLOG MISSION`,
+   contoare zăvorâte gauge/lee/beat. Perechea `convoy_weather` / `convoy_lee`
+   trebuie să iasă DIFERIT. Şi două reparaţii la căpitan, fără de care convoiul
+   era de neluat de pe nicio parte: urmărirea unui fugar (histereză pe distanţă)
+   şi ţinta păstrată până iese din luptă.
 
-Direcţia se alege cu owner-ul, nu se presupune.
+Următorul: echipaj + reparaţii (un cronometru de ţinut poziţia lângă o navă
+care a coborât pavilionul e o operaţiune de echipaj în tot afară de nume), apoi
+economie + progresie (valoarea mărfii, prăzi).
 
 ## Ce aşteaptă ochiul owner-ului
 

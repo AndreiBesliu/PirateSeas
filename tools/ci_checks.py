@@ -383,6 +383,42 @@ def check_comparison():
         fail("the island band read gap=%s scale=%s from a line holding 123.0 and "
              "1.27" % (isle.get("turf_band_gap_cm"), isle.get("island_scale_max")))
 
+    # The convoy's one MISSION line, and the ship's own STRUCK line beside it,
+    # both copied from the first run in which a merchant struck. The STRUCK
+    # line must count as a merchant struck and must NOT count as a ship sunk:
+    # "STRUCK" and "SUNK " are four letters apart and one regex away from each
+    # other.
+    cv = ci_measure.measure("fixture",
+        "LogTemp: Display: SHIPLOG MerchantShipPawn_0 STRUCK by=CannonBall_6 "
+        "hull=1000/1000 rig=0.55 t=71.4" + chr(10) +
+        "LogTemp: Display: CONVOYLOG MISSION TAKEN t=71.4 stopped=1 through=0 "
+        "sunk=0 of 2 need=1 gauge=71 lee=0 beat=0 firstStrike=71.4 "
+        "raider=EnemyShipPawn_0 side=weather" + chr(10))
+    want = {"mission_result": 2, "mission_t": 71.4, "convoy_stopped": 1,
+            "convoy_through": 0, "convoy_sunk": 0, "convoy_size": 2,
+            "convoy_need": 1, "gauge_ticks": 71, "lee_ticks": 0,
+            "beat_seconds": 0, "first_strike_t": 71.4, "merchants_struck": 1,
+            "ships_sunk": 0}
+    got = {k: cv.get(k) for k in want}
+    if got != want:
+        fail("the convoy lines read %s, wanted %s" % (got, want))
+    # The other two verdicts, off the same line with the word changed.
+    for word, code in (("THROUGH", 1), ("UNRESOLVED", 0)):
+        v = ci_measure.measure("fixture",
+            "LogTemp: Display: CONVOYLOG MISSION %s t=316.3 stopped=0 through=2 "
+            "sunk=0 of 2 need=1 gauge=0 lee=315 beat=315 firstStrike=-1.0 "
+            "raider=EnemyShipPawn_0 side=lee" % word + chr(10))
+        if v.get("mission_result") != code or v.get("first_strike_t") != -1.0:
+            fail("MISSION %s read as result=%s firstStrike=%s"
+                 % (word, v.get("mission_result"), v.get("first_strike_t")))
+    # And the captain's pursuit counter, off the quit-time line it rides on.
+    pt = ci_measure.measure("fixture",
+        "LogTemp: Display: SEALOG EnemyShipPawn_0 landTicks=0 clawOffs=0 "
+        "rejoinTicks=0 avoidTicks=0 pursuitTicks=5742" + chr(10))
+    if pt.get("pursuit_ticks_max") != 5742:
+        fail("pursuit_ticks_max read %s from a line holding 5742"
+             % pt.get("pursuit_ticks_max"))
+
     # And the counter the review caught: it must match the line the game really
     # prints. This is the text from ShipPawn.cpp, not a paraphrase of it.
     sunk = ci_measure.measure("fixture", """
@@ -392,7 +428,8 @@ LogTemp: Display: SHIPLOG ShipPawn_0 sink=foundering draught=120
     if sunk != 1:
         fail("ships_sunk read %d from a log holding exactly one SUNK line" % sunk)
     if len(FAILS) == before:
-        ok("the measurement gate reports matches, moves, new and missing numbers")
+        ok("the measurement gate reports matches, moves, new and missing numbers, "
+           "and reads the convoy and pursuit lines")
 
 
 def main():
