@@ -258,10 +258,25 @@ def run(name, flags):
         os.remove(LOG)
 
     args = [EDITOR, UPROJECT] + PINNED + flags
-    subprocess.run(args, cwd=ROOT, capture_output=True)
-    # The editor exits 1 in this project regardless, for an unrelated water
-    # collision-profile complaint, so the exit code proves nothing. The LOG is
-    # the verdict.
+    done = subprocess.run(args, cwd=ROOT, capture_output=True)
+    # THE EXIT CODE IS WORTH SOMETHING AGAIN. For most of this project's life
+    # the editor exited 1 on every single run, because the Water plugin's
+    # collision profile was missing from DefaultEngine.ini - a plugin adds it
+    # itself only if you enable it from the editor's UI, and nothing here has
+    # ever opened that UI. The complaint became scenery, this comment used to
+    # say the exit code proved nothing, and it was right.
+    #
+    # It was found by trying to PACKAGE the game: a cook counts errors and
+    # refuses to build. With that fixed and a handful of constructor physics
+    # calls moved onto BodyInstance, a run's log carries zero errors of any
+    # kind and the editor exits 0 - so this can be a gate now. The log is still
+    # the verdict about the GAME; this is the verdict about the RUN.
+    if done.returncode != 0:
+        raise RuntimeError(
+            "%s: the editor exited %d. That used to be true of every run and "
+            "meant nothing; since the water collision profile was added it "
+            "means something went wrong. Read Saved/Logs/PirateSeas.log for "
+            "lines containing ': Error: '." % (name, done.returncode))
     if not os.path.exists(LOG):
         raise RuntimeError("%s produced no log at all - the editor did not "
                            "start, or wrote nowhere this script can see" % name)

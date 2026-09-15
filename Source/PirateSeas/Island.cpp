@@ -41,7 +41,9 @@ AIsland::AIsland()
 	// a position the physics scene had never heard of, and ships sailed 148 m
 	// through solid rock without one contact.
 	Rock->SetMobility(EComponentMobility::Movable);
-	Rock->SetSimulatePhysics(false);
+	// On the body, not through the setter: the island never simulates, and
+	// saying so through the runtime path costs an error in the cook.
+	Rock->BodyInstance.bSimulatePhysics = false;
 	Rock->SetGenerateOverlapEvents(false);
 
 	// The plants. Hierarchical, so a hundred palms are one draw call and the

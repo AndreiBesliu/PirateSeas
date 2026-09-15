@@ -25,13 +25,19 @@ ACannonBall::ACannonBall()
 	// metres from the muzzle. Splashes come from the surface query in Tick.
 	Collision->SetCollisionResponseToAllChannels(ECR_Ignore);
 	Collision->SetCollisionResponseToChannel(ECC_Pawn, ECR_Block);
-	Collision->SetSimulatePhysics(true);
+	// On the body rather than through the setters - see the same change in
+	// AShipPawn's constructor for why: the setters recompute mass properties
+	// and ask for a physical material before GEngine exists, and the cook
+	// counts that as an error.
+	Collision->BodyInstance.bSimulatePhysics = true;
 	Collision->SetEnableGravity(true);
 	Collision->SetNotifyRigidBodyCollision(true);
-	Collision->SetMassOverrideInKg(NAME_None, ShotMassKg, true);
+	Collision->BodyInstance.SetMassOverride(ShotMassKg, true);
 	// Round shot barely notices the air over the ranges we fire at.
 	Collision->SetLinearDamping(0.02f);
-	Collision->SetUseCCD(true);
+	// Continuous collision, set on the body for the same reason as the mass
+	// above: a round shot crosses its own diameter in well under a tick.
+	Collision->BodyInstance.bUseCCD = true;
 	// A simulated body only reports overlaps if it is asked to.
 	Collision->SetGenerateOverlapEvents(true);
 

@@ -9,6 +9,44 @@ Tot ce e aici a fost generat prin script, fără să deschid editorul: nava e
 modelată procedural în Blender, iar proiectul Unreal e construit prin API-ul
 Python al engine-ului.
 
+## Cum îl joci, fără editor
+
+```
+Packaged\Windows\PirateSeas.exe -windowed
+```
+
+Un build de sine stătător, care nu are nevoie de Unreal instalat. Se face cu:
+
+```
+RunUAT.bat BuildCookRun -project=<abs>\PirateSeas.uproject -noP4 -platform=Win64
+  -clientconfig=Development -cook -build -stage -pak -archive
+  -archivedirectory=<abs>\Packaged
+```
+
+`Development` (nu `Shipping`) fiindcă păstrează logul şi flag-urile de linie de
+comandă — toată verificarea proiectului trece prin ele, şi exact aceleaşi
+flag-uri merg pe executabil ca pe editor: `-ShipQuitAfter=`, `-Convoy=`,
+`-Port=`, tot tabelul de mai jos.
+
+Logul lui NU e în proiect, ci la
+`%LOCALAPPDATA%\PirateSeas\Saved\Logs\PirateSeas.log`.
+
+**Pentru prima împachetare a trebuit reparat ce editorul tolera de doi ani.**
+Cook-ul numără erorile şi refuză să producă un build; editorul doar le derula pe
+ecran. Erau două feluri, amândouă în fiecare rulare de până acum:
+
+- şapte `FBodyInstance::GetSimplePhysicalMaterial: GEngine not initialized`,
+  fiindcă nişte constructori chemau `SetSimulatePhysics` / `SetMassOverrideInKg`
+  / `SetCenterOfMass` / `SetUseCCD` — apeluri care recalculează masa şi cer
+  materialul fizic, în timp ce se construieşte obiectul implicit al clasei,
+  înainte să existe motorul. Scrise acum direct pe `BodyInstance`, ceea ce pune
+  exact aceleaşi câmpuri. **Măsurat: nu mişcă niciun număr din suită.**
+- lipsea profilul de coliziune al apei. Plugin-ul Water şi-l adaugă singur când
+  îl porneşti din interfaţa editorului; proiectul ăsta a fost făcut integral
+  prin script şi n-a deschis niciodată interfaţa aia, deci apa a mers de la
+  început pe un comportament de rezervă. Adăugat în `DefaultEngine.ini` —
+  **şi ASTA a mişcat 24 de numere**, izolat printr-o rulare separată.
+
 ## Cum îl deschizi
 
 Dublu-click pe `PirateSeas.uproject`. La prima deschidere Unreal compilează

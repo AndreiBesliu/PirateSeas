@@ -47,6 +47,12 @@ vânt în plante şi greement, `-Hour=` pentru ora din zi.
   Niagara.
 - **Build:** `Build.bat PirateSeasEditor Win64 Development -Project=<abs>.uproject`
 - **Un script de material:** `.\Scripts\run_py.ps1 -Script <x>.py -Tag "<filtru>"`
+- **Build de sine stătător (exe):** `RunUAT.bat BuildCookRun -project=<abs> -noP4
+  -platform=Win64 -clientconfig=Development -cook -build -stage -pak -archive
+  -archivedirectory=<abs>\Packaged`. Iese la
+  `Packaged\Windows\PirateSeas.exe`, ia ACELEAŞI flag-uri ca editorul, şi îşi
+  scrie logul la `%LOCALAPPDATA%\PirateSeas\Saved\Logs\`. `Packaged/` e în
+  `.gitignore`.
 - **Porţile:**
   - `python tools/ci_checks.py` — fără motor, rulează şi în CI hosted
   - `python tools/ci_measure.py` — 10 scenarii headless vs `tools/measurement_baseline.json`
@@ -103,7 +109,13 @@ vânt în plante şi greement, `-Hour=` pentru ora din zi.
    citit 0 la 400 s şi la 500 s; cauza nu era timpul, ci că ţinta rămăsese la
    350 m SUB VÂNT, ceea ce polara proiectului preţuieşte la sute de secunde.
    Refuzul s-a făcut determinist, nu răbdător.
-13. **Un număr derivat se scrie cu ingredientele pe aceeaşi linie**
+13. **Ce toleră editorul, cook-ul refuză.** Prima împachetare a picat pe opt
+   erori care se scriau în log de la începutul proiectului şi pe care nimeni nu
+   le citea: apeluri de fizică din constructori (mutate pe `BodyInstance` —
+   zero numere mişcate) şi profilul de coliziune al apei, pe care plugin-ul şi-l
+   adaugă singur doar dacă îl porneşti din INTERFAŢA editorului. Un proiect
+   făcut integral prin script nu trece niciodată pe acolo.
+14. **Un număr derivat se scrie cu ingredientele pe aceeaşi linie**
    (`value=1200 cargo=1200 hull=1.00`), şi suma lui se re-derivă într-o
    fixtură (`purse_balances`): altfel o greşeală de transcriere în bani e o
    cifră pe care trebuie s-o vadă cineva cu ochiul.

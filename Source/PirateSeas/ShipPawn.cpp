@@ -75,19 +75,30 @@ AShipPawn::AShipPawn()
 	// this a hull "floating" on something solid is indistinguishable from
 	// a hull floating on water.
 	HullCollision->SetNotifyRigidBodyCollision(true);
-	HullCollision->SetSimulatePhysics(true);
+	// SET ON THE BODY, NOT THROUGH THE RUNTIME SETTERS. SetSimulatePhysics and
+	// SetMassOverrideInKg go on to recompute mass properties, which asks the
+	// body for its physical material - and a CONSTRUCTOR runs during class
+	// default object construction, before GEngine exists. The engine logs that
+	// as an error, seven times, every single run. The editor shrugged; the
+	// COOK counts errors and refuses to produce a build, which is how a
+	// complaint that had been scrolling past all along finally had to be paid.
+	// Writing the same fields on BodyInstance sets exactly what the setters
+	// would have set on an instance, without the runtime path.
+	HullCollision->BodyInstance.bSimulatePhysics = true;
 	// A hull with no sail set moves slowly enough for Chaos to put it to
 	// sleep, and the buoyancy forces do not wake it: measured, the player's
 	// ship froze at z=-165 with lift=1.3 and vz=0 while the enemy, under way
 	// at 6 m/s, bobbed normally. A ship on the sea is never at rest.
-	HullCollision->GetBodyInstance()->SleepFamily = ESleepFamily::Custom;
-	HullCollision->GetBodyInstance()->CustomSleepThresholdMultiplier = 0.f;
+	HullCollision->BodyInstance.SleepFamily = ESleepFamily::Custom;
+	HullCollision->BodyInstance.CustomSleepThresholdMultiplier = 0.f;
 	HullCollision->SetEnableGravity(true);
-	HullCollision->SetMassOverrideInKg(NAME_None, ShipMassKg, true);
+	HullCollision->BodyInstance.SetMassOverride(ShipMassKg, true);
 	HullCollision->SetLinearDamping(0.5f);
 	HullCollision->SetAngularDamping(2.0f);
 	// Weight low in the hull so the ship rights itself instead of rolling over.
-	HullCollision->SetCenterOfMass(FVector(0.f, 0.f, -180.f));
+	// COMNudge is what SetCenterOfMass writes; setting it here skips the mass
+	// recompute that asks for a physical material before GEngine exists.
+	HullCollision->BodyInstance.COMNudge = FVector(0.f, 0.f, -180.f);
 
 	// --- visible hull, no collision of its own ---------------------------
 	HullMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("HullMesh"));

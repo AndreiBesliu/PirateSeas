@@ -32,3 +32,12 @@ tools/last_measurement.json
 # ci_checks.py imports Scripts/textures.py, which leaves one of these behind.
 __pycache__/
 *.pyc
+
+# ---------------------------------------------------------------- packaging
+# The standalone build. Gigabytes of cooked content and engine DLLs, all of it
+# regenerable from this tree by RunUAT, none of it source.
+Packaged/
+# And what the cook leaves in the project on its way past: open-order
+# logs it writes so a later cook can lay the pak out better. Regenerated
+# every package, useful to nobody reading this tree.
+Build/Windows/FileOpenOrder/

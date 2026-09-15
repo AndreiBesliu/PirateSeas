@@ -3605,3 +3605,70 @@ oamenii înapoi; tunuri, oameni noi şi reparaţii de cocă pe bani sunt felia
 următoare. Şi nimeni nu încearcă să recaptureze o pradă pe drum.
 
 **Task Completed.**
+
+---
+
+## Task Started — 15.09.2026 (un executabil care porneşte jocul)
+
+**Prompt:** „ok, vreau un executabil care sa porneasca jocul"
+**Model:** Claude Opus 5
+
+`Packaged\Windows\PirateSeas.exe` — build de sine stătător, 0,84 GB, care nu are
+nevoie de Unreal instalat. Două scurtături lângă celelalte proiecte, în
+`MyWork\Apps\games`, amândouă cu `-windowed`: un build care porneşte pe tot
+ecranul şi prinde mouse-ul e cel mai prost prim lucru pe care i-l dai cuiva.
+
+`Development`, nu `Shipping`, fiindcă păstrează logul şi flag-urile de linie de
+comandă — **executabilul ia exact aceleaşi flag-uri ca editorul**: `-Convoy=`,
+`-Port=`, `-AIPrize=`, `-ShipQuitAfter=`, tot tabelul.
+
+### Prima împachetare a picat, şi a scos la iveală ce tolera editorul de luni
+
+Cook-ul **numără erorile şi refuză să producă un build**. Editorul doar le derula
+pe ecran. Erau opt, în două feluri, şi amândouă existau în FIECARE rulare de până
+acum — inclusiv în toate cele de pe care e construită linia de bază:
+
+1. **Şapte `GetSimplePhysicalMaterial: GEngine not initialized`.** Constructorii
+   chemau `SetSimulatePhysics`, `SetMassOverrideInKg`, `SetCenterOfMass` şi
+   `SetUseCCD` — apeluri care recalculează proprietăţile de masă şi cer
+   materialul fizic, în timp ce se construieşte obiectul implicit al clasei,
+   înainte să existe motorul. Scrise acum direct pe `BodyInstance`, care pune
+   exact aceleaşi câmpuri fără drumul de runtime.
+2. **Lipsea profilul de coliziune al apei.** Plugin-ul Water şi-l adaugă singur
+   în `DefaultEngine.ini` — dar numai când îl porneşti din INTERFAŢA editorului.
+   Proiectul ăsta e făcut integral prin script şi n-a deschis niciodată
+   interfaţa aia. Deci apa a mers de la bun început pe un comportament de
+   rezervă, iar `ci_measure.py` avea scris negru pe alb că „editorul iese cu 1
+   la fiecare rulare, deci codul de ieşire nu dovedeşte nimic".
+
+### Care din cele două a mutat numerele
+
+Amândouă au intrat odată şi **24 de măsurători s-au mişcat**. Să dau vina pe una
+prin raţionament ar fi fost o ghicitoare, aşa că am scos DOAR modificarea din
+`.ini` şi am rulat suita:
+
+**Zero mutate.** Deci mutarea apelurilor pe `BodyInstance` nu schimbă nimic —
+e curată — iar toate cele 24 vin de la apă, care acum se comportă cum cere
+plugin-ul. **Linia de bază veche descria comportamentul de rezervă.** Cele mai
+multe mişcări sunt de un cadru sau o unitate (`pursuit_ticks` 2619→2620,
+`first_broadside_t` 6,7→6,8); câteva sunt reale (în `gunnery` o ghiulea care
+lovea acum face stropi: `struck` 10→9, `splashes` 6→7).
+
+### Ce am câştigat pe lângă executabil
+
+Un log cu **zero erori de orice fel**, prima dată în proiect — şi, ca urmare,
+editorul iese acum cu **0**. Aşa că poarta de măsurare citeşte de acum codul de
+ieşire şi crapă dacă nu e zero. Un comentariu care spunea de luni „asta nu
+dovedeşte nimic" a devenit o verificare care poate ieşi roşie.
+
+### Verificarea executabilului
+
+Nu „s-a deschis o fereastră". Pornit cu propriile lui flag-uri şi citit din
+propriul lui log, care NU e în proiect ci lângă exe, în
+`Packaged\Windows\PirateSeas\Saved\Logs\` (am căutat întâi în `%LOCALAPPDATA%`
+şi n-am găsit nimic): harta încărcată, game mode-ul nostru viu, marea
+construită, nava care pluteşte (**1,002 medie pe 90 de eşantioane**, acelaşi
+număr ca în editor), panoul care desenează, tunurile care trag, ieşirea pe
+`-ShipQuitAfter=`. Şapte din şapte, zero erori fatale.
+
+**Task Completed.**
