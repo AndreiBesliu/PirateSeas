@@ -287,7 +287,12 @@ void AShipHUD::DrawCondition(AShipPawn* Ship)
 	float Y = Canvas->SizeY * 0.735f;
 
 	DrawRect(Panel, X - 12.f * Scale, Y - Line * 0.9f,
-		Width + Canvas->SizeX * 0.050f, Line * 6.25f);
+		// Tall enough for what is actually drawn in it. Six bars at 0.82 of a
+		// line, from a top edge 0.9 of a line above the first, is 5.85; the
+		// rect was 6.25 when the panel held five bars and stayed there when
+		// HANDS and SHOT were added. Nothing measured it, because -NullRHI
+		// never calls DrawHUD at all.
+		Width + Canvas->SizeX * 0.050f, Line * 7.1f);
 	DrawText(TEXT("CONDITION"), Faint, X, Y - Line * 0.75f, Small, Scale);
 
 	Y = DrawBar(X, Y, Width, TEXT("HULL"),
@@ -478,8 +483,16 @@ void AShipHUD::DrawWarnings(AShipPawn* Ship, UWindSubsystem* Wind)
 		{
 			Lines.Add(TPair<FString, FLinearColor>(TEXT("RUDDER GONE"), Bad));
 		}
-		if (Ship->HasMagazine() && Ship->GetShot() < Ship->GetGunsRemaining(true)
-			&& Ship->GetShot() < Ship->GetGunsRemaining(false))
+		// She is dry when no side she still has guns on can be served. The old
+		// test asked for the shot to be below BOTH sides' gun counts, and a
+		// side whose carriages are all wreckage counts zero - so it reduced to
+		// "shot below zero", unsatisfiable, and the warning vanished exactly
+		// when half her battery was gone and it mattered most.
+		const int32 Port = Ship->GetGunsRemaining(false);
+		const int32 Stbd = Ship->GetGunsRemaining(true);
+		const int32 Fewest = (Port > 0 && Stbd > 0) ? FMath::Min(Port, Stbd)
+			: FMath::Max(Port, Stbd);
+		if (Ship->HasMagazine() && Fewest > 0 && Ship->GetShot() < Fewest)
 		{
 			Lines.Add(TPair<FString, FLinearColor>(TEXT("MAGAZINE DRY"), Bad));
 		}

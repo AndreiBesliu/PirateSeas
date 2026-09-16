@@ -176,6 +176,10 @@ public:
 	/** In under the guns of the fort, where nobody can follow her. */
 	bool HasMadePort() const { return bMadePort; }
 
+	/** A prize that has reached the roadstead. She is finished: no crew, no
+	 *  destination, no more sailing. */
+	bool HasLandedAsPrize() const { return bPrizeLanded; }
+
 	/** --- prizes ------------------------------------------------------
 	 *
 	 *  A ship that has struck is stopped. She is not YOURS until your men are
@@ -192,9 +196,17 @@ public:
 	int32 GetHandsInPrizes() const { return HandsInPrizes; }
 	int32 GetMinHandsAboard() const { return MinHandsAboard; }
 
-	/** How many men she is short of a full complement, for whatever reason -
-	 *  killed, or away in a prize. A port sells men; it does not ask which. */
-	int32 GetHandsShort() const { return FMath::Max(0, HandsMax - Hands); }
+	/** How many men she is short FOR GOOD - killed, or in a prize that will
+	 *  never come home because it is already landed. Men still at sea in a
+	 *  prize are NOT empty berths: they are coming back.
+	 *
+	 *  It used to be HandsMax - Hands, which counted them, so the port sold
+	 *  replacements for men who then returned and the complement ended above
+	 *  HandsMax: a review reproduced 72 hands on a 60-berth ship. */
+	int32 GetHandsShort() const
+	{
+		return FMath::Max(0, HandsMax - Hands - GetHandsAway());
+	}
 
 	/** Signing on one man in port. Returns true if there was room for him. */
 	bool RecruitHand();

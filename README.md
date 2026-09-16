@@ -461,9 +461,17 @@ Asta pune preţ pe alegerea pe care tunurile o oferă de mult şi care până ac
 costa nimic: **unde tragi**. Ţinut pe Shift, echipajele ochesc în greement —
 cinci ghiulele sus îi rup velatura sub 0,6 şi coboară pavilionul cu coca
 neatinsă, deci plăteşte **1200**, tot. Tras în cocă, îi trebuie şapte ghiulele
-ca s-o aduci la 580 din 1000, ia mai mult, şi marfa udată plăteşte **696**.
-Măsurat, nu estimat: perechea `prize_rig` / `prize_hull` diferă într-un singur
-flag (`-AIAimHigh=`) şi dă fix cifrele astea, la 70,9 s şi 83,1 s.
+ca s-o aduci la 580 din 1000, si marfa udata plateste **696**.
+
+Masurat, nu estimat: perechea `convoy_weather` / `prize_hull` difera intr-un
+singur flag (`-AIAimHigh=0`) si da fix cifrele astea.
+
+**Ce NU mai e adevarat, si a fost pana la recenzia din 16.09:** ca tirul in coca
+ar fi drumul mai LENT. Parea asa - 83,1 s fata de 70,9 - dar numai fiindca
+negustorul carase pana atunci opt guri de tun pentru care n-avea tunuri, deci
+primele patru lovituri pe fiecare bord erau inghitite ca "scoate un tun" si nu-l
+costau nicio coca. Cu gurile alea scoase, ambele feluri de a trage o opresc in
+aceeasi clipa. Alegerea a ramas curata: **aceeasi treaba, alt pret.**
 
 Punga se vede în panou sub rândul CONVOY şi se scrie la sfârşitul fiecărei
 rulări (`PRIZELOG PURSE`), inclusiv într-o rulare fără convoi — un zero numărat.
@@ -1032,6 +1040,10 @@ toată nava, fiindcă `ObjectBounds` întorcea zero pentru mesh-ul ăla.
   exista salvare
 - preturile sunt alese ca sa se raporteze la valoarea unei prazi, nu masurate
 - magazia e fara fund IMPLICIT; daca ar fi finita din start, ar schimba
+- negustorul nu mai are guri de tun (n-are tunuri), deci o ghiulea in banda
+  puntii de tun ii intra in COCA - pana la recenzia din 16.09 primele patru
+  lovituri pe fiecare bord nu-l costau nimic
+- portul NU mai cere un convoi ca sa existe: `-Port=1` singur e de ajuns
   fiecare numar de tir din suita si ar schimba ce fel de joc e - decizia e
   a owner-ului, intrebata in OWNER_VERIFY
   din ceva real

@@ -197,10 +197,33 @@ Livrat:
    intr-o urmarire lunga, 44 in duelul de 360 s, deci 40 se goleste exact
    acolo. `-Shot=0` / `-EnemyShot=0` fac magazia fara fund la loc.
 
-Urmatorul: de ales cu owner-ul. Candidati: escorta convoiului (singura piesa care
-lipseste din obiectiv), recapturarea unei prazi pe drum spre rada, sau o pasa
-adversariala peste tot arcul de mecanica - noua commit-uri fara nicio recenzie
-independenta. **Abordajul ramane AMANAT.**
+10. **PASA ADVERSARIALA peste tot arcul** (16.09): 6 lentile independente, 49
+   de constatari brute, 16 verificate de agenti pusi sa le RESPINGA, 10
+   confirmate + 4 de la un critic de completitudine. Dupa unirea duplicatelor:
+   11 defecte, toate reparate in doua commit-uri.
+
+   **Ce a gasit, pe categorii** (merita citit inainte de urmatoarea felie,
+   fiindca sunt tiparele acestui proiect):
+   - instrumente care nu pot iesi rosii: o cheie pe care niciun cod n-o putea
+     misca, o ramura pe care niciun scenariu n-o atingea, TREI scenarii
+     identice bit cu bit si un al patrulea aproape-duplicat;
+   - contoare cu doua meserii: un total de rulare ATRIBUIT din contorul privat
+     al unei nave, morti dintr-o echipa de prada intorsi vii la chei, oameni
+     cumparati pentru locuri care nu erau goale;
+   - stari fara iesire: o prada ajunsa in rada care navigheaza la infinit, un
+     negustor ajuns in port care poate inca sa coboare pavilionul;
+   - GRANITA DINTRE FELII, punctul orb numit de critic: negustorul mostenea
+     opt guri de tun pe o coca fara tunuri, si `-Port=` se citea dupa iesirea
+     devreme pentru convoi.
+
+   **Verdictul criticului, de tinut minte:** „arcul e neobisnuit de solid acolo
+   unde autorul se uita si neobisnuit de orb acolo unde nu se uita; ce nu are e
+   vreo verificare pe granita DINTRE felii."
+
+Urmatorul: DARELE IN SPATELE GHIULELELOR, cerute de owner pe 16.09 - nu se vede
+unde se duc. E lizibilitate, nu grafica parcata. De intrebat inainte: dara
+apare si pe ghiulelele INAMICULUI? Asta schimba jocul, nu doar imaginea.
+**Abordajul ramane AMANAT.**
 
 ## Ce aşteaptă ochiul owner-ului
 

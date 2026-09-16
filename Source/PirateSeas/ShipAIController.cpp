@@ -134,7 +134,13 @@ void AShipAIController::TickMerchant(AShipPawn* Me, float DeltaSeconds)
 	// mode gave her, down exactly the same three lines a merchant uses to
 	// make her landfall. That is the whole of "sail a prize home": no new
 	// behaviour, the same seamanship pointed somewhere else.
-	const bool bSailingAsPrize = Me->IsPrize() && !Me->IsSunk() && bHasDestination;
+	// ...and NOT one that has already landed. Without that term a prize kept
+	// full canvas set after she reached the roadstead: LandPrize's own furl is
+	// a trim RATE the pawn integrates, overwritten on the very next controller
+	// frame, and the merchant's ordinary stop cannot fire on a ship that has
+	// struck. A crewless hull sailed on past the quay to the end of the run.
+	const bool bSailingAsPrize = Me->IsPrize() && !Me->IsSunk()
+		&& !Me->HasLandedAsPrize() && bHasDestination;
 	if ((Me->IsOutOfTheFight() && !bSailingAsPrize) || !bHasDestination)
 	{
 		Me->SetSailTrimInput(-1.f);
@@ -591,6 +597,18 @@ void AShipAIController::Tick(float DeltaSeconds)
 		}
 		else
 		{
+			// Her hands are idle while she lies by a prize, so the carpenter
+			// gets them if she is hurt. Without this the share set in the
+			// fight branch STUCK: a captain who sent half her crew aloft while
+			// out of range kept them there through the prize and the port,
+			// because every one of those branches returns before the line that
+			// sets it.
+			if (bRepairsAtSea)
+			{
+				const bool bHurtHere = Me->GetRigEfficiency() < RepairBelow
+					|| Me->GetRudderIntegrity() < RepairBelow;
+				Me->SetRepairShare(bHurtHere ? RepairShareWhenHurt : 0.f);
+			}
 			++PrizeTicks;
 			PrizeChaseSeconds += DeltaSeconds;
 			const FVector ToHer = PrizeToMan->GetActorLocation() - Me->GetActorLocation();

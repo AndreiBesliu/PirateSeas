@@ -277,6 +277,25 @@ void AShipPawn::BeginPlay()
 	// constructor, which runs after this class's.
 	Hands = HandsMax;
 
+	// A MERCHANT HAS NO GUNS, so she must have no gun PORTS to lose either.
+	// AMerchantShipPawn's class comment says "No guns"; her constructor
+	// overrode the fields the author was thinking about and left bGunDown all
+	// false, so every ball that landed in the gun-deck band took the "dismount
+	// a carriage" branch instead of the hull branch: the first four beam hits
+	// a side cost her NO HULL AT ALL and killed three hands instead of two.
+	// That happened in prize_hull - the scenario whose entire purpose is to
+	// price hull damage.
+	if (Allegiance == EShipAllegiance::Merchant)
+	{
+		for (int32 Side = 0; Side < 2; ++Side)
+		{
+			for (int32 g = 0; g < UE_ARRAY_COUNT(bGunDown[0]); ++g)
+			{
+				bGunDown[Side][g] = true;
+			}
+		}
+	}
+
 	Super::BeginPlay();
 
 	int32 Flag = -1;
@@ -1124,7 +1143,12 @@ float AShipPawn::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent,
 
 void AShipPawn::Strike(AActor* Causer)
 {
-	if (bStruck || IsSinking())
+	// bMadePort as well as bStruck. MakePort() has always refused to run on a
+	// ship that had struck; the reverse guard was missing, so a merchant who
+	// was already safe under the fort could still haul down her colours to a
+	// shot fired before she got there - and be counted BOTH through and
+	// stopped, from one hull, which can decide the mission on its own.
+	if (bStruck || bMadePort || IsSinking())
 	{
 		return;
 	}
@@ -1278,9 +1302,23 @@ int32 AShipPawn::TakeBackPrizeCrew(int32 Count)
 	{
 		return 0;
 	}
-	Hands += Count;
-	HandsReturned += Count;
-	return Count;
+	// A deck only holds so many. With the port selling replacements this could
+	// overflow: buy twelve men while a prize crew is still at sea, then have
+	// that crew come home, and the ship carried 72 of a complement of 60.
+	// GetHandsShort no longer sells those berths, and this is the belt to that
+	// pair of braces - said out loud, because men turned away at the gangway
+	// are men who were paid for twice.
+	const int32 Room = FMath::Max(0, HandsMax - Hands);
+	const int32 Back = FMath::Min(Count, Room);
+	if (Back < Count)
+	{
+		UE_LOG(LogTemp, Warning,
+			TEXT("CREWLOG %s has no berth for %d of %d men home from a prize"),
+			*GetName(), Count - Back, Count);
+	}
+	Hands += Back;
+	HandsReturned += Back;
+	return Back;
 }
 
 void AShipPawn::ManAsPrize(AShipPawn* Taker, int32 CrewAboard)
@@ -1310,7 +1348,12 @@ bool AShipPawn::LandPrize(int32& OutReturned)
 		return false;
 	}
 	bPrizeLanded = true;
-	const int32 Home = PrizeCrewAboard;
+	// THE MEN STILL ALIVE, not the men who went across. PrizeCrewAboard is a
+	// second copy of the number that boarded and is never decremented, while
+	// shot taken on the run home comes off Hands - so returning PrizeCrewAboard
+	// counted a casualty on the prize AND put the same man back on the
+	// captor's deck. Hands is the roster that LoseHands actually maintains.
+	const int32 Home = FMath::Min(PrizeCrewAboard, Hands);
 	PrizeCrewAboard = 0;
 	Hands = 0;
 	SailTrimInput = -1.f;

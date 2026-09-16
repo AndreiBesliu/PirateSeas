@@ -385,6 +385,18 @@ private:
 	 *  the squadron's spawn and that has to be known for the same reason. */
 	void ReadConvoyFlags();
 
+	/** The port, read SEPARATELY from the convoy. It used to sit inside
+	 *  ReadConvoyFlags, sixty lines past that function's `if (ConvoySize <= 0)
+	 *  return`, so -Port= was accepted and discarded whenever there was no
+	 *  convoy - and with it the roadstead, the refit, the prize timer and the
+	 *  whole economy, silently and with nothing in the log to say so. A port
+	 *  is a place on the water; it does not need a convoy to exist. */
+	void ReadPortFlags();
+
+	/** Starts the half-second prize-and-refit timer if it is not already
+	 *  running. Called by the convoy and by a port with no convoy. */
+	void StartPrizeTimer();
+
 	UFUNCTION()
 	void SpawnConvoy();
 

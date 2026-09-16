@@ -119,6 +119,13 @@ void ASeaGameMode::BeginPlay()
 	// The convoy's stations, its landfall and the raider's station are all
 	// laid here, before the island is, for the same reason the squadron's are.
 	ReadConvoyFlags();
+	// AFTER the convoy, because the roadstead is laid relative to where the
+	// convoy is sighted - and OUTSIDE it, because a port does not need one.
+	ReadPortFlags();
+	if (bHasPort)
+	{
+		StartPrizeTimer();
+	}
 	SpawnIslands();
 	DumpWorldStaticCensus();
 	// The water mesh only decides whether it is enabled inside its own
@@ -1003,36 +1010,6 @@ void ASeaGameMode::ReadConvoyFlags()
 		Landfall.X, Landfall.Y, ConvoyRangeM, ConvoyNeed);
 
 
-	// The port. Downwind of the convoy by default, because twelve men do not
-	// beat a laden hull home; -PortX/-PortY put it wherever you like.
-	int32 PortOn = 0;
-	if (FParse::Value(FCommandLine::Get(), TEXT("Port="), PortOn) && PortOn > 0)
-	{
-		bHasPort = true;
-	}
-	if (bHasPort)
-	{
-		FParse::Value(FCommandLine::Get(), TEXT("PortOffingM="), PortOffingM);
-		FParse::Value(FCommandLine::Get(), TEXT("HandCost="), HandCost);
-		FParse::Value(FCommandLine::Get(), TEXT("HullPointCost="), HullPointCost);
-		FParse::Value(FCommandLine::Get(), TEXT("ShotCost="), ShotCost);
-		float PortRadiusM = PortRadiusCm * 0.01f;
-		if (FParse::Value(FCommandLine::Get(), TEXT("PortRadiusM="), PortRadiusM))
-		{
-			PortRadiusCm = PortRadiusM * 100.f;
-		}
-		const FVector Downwind = FRotator(0.f, WindTo, 0.f).Vector();
-		FVector Where = ConvoyStart + Downwind * PortOffingM * 100.f;
-		FParse::Value(FCommandLine::Get(), TEXT("PortX="), Where.X);
-		FParse::Value(FCommandLine::Get(), TEXT("PortY="), Where.Y);
-		PortLocation = FVector(
-			FMath::Clamp(Where.X, -OceanHalfExtentCm, OceanHalfExtentCm),
-			FMath::Clamp(Where.Y, -OceanHalfExtentCm, OceanHalfExtentCm), 0.f);
-		UE_LOG(LogTemp, Display,
-			TEXT("PORTLOG roadstead at (%.0f,%.0f), radius %.0f m, %.0f m downwind of the convoy"),
-			PortLocation.X, PortLocation.Y, PortRadiusCm * 0.01f, PortOffingM);
-	}
-
 	// -RaiderSide=weather|lee moves the SQUADRON's spawn to that side of the
 	// convoy, along the wind. The raider in a measured run is an ordinary
 	// enemy hull with the ordinary captain, who hunts the nearest hostile
@@ -1058,6 +1035,42 @@ void ASeaGameMode::ReadConvoyFlags()
 			*RaiderSide, RaiderOffingM, EnemySpawnLocation.X, EnemySpawnLocation.Y,
 			EnemySpawnYaw);
 	}
+}
+
+void ASeaGameMode::ReadPortFlags()
+{
+	int32 PortOn = 0;
+	if (!FParse::Value(FCommandLine::Get(), TEXT("Port="), PortOn) || PortOn <= 0)
+	{
+		return;
+	}
+	bHasPort = true;
+	FParse::Value(FCommandLine::Get(), TEXT("PortOffingM="), PortOffingM);
+	FParse::Value(FCommandLine::Get(), TEXT("HandCost="), HandCost);
+	FParse::Value(FCommandLine::Get(), TEXT("HullPointCost="), HullPointCost);
+	FParse::Value(FCommandLine::Get(), TEXT("ShotCost="), ShotCost);
+	float PortRadiusM = PortRadiusCm * 0.01f;
+	if (FParse::Value(FCommandLine::Get(), TEXT("PortRadiusM="), PortRadiusM))
+	{
+		PortRadiusCm = PortRadiusM * 100.f;
+	}
+
+	// Downwind of where the convoy is sighted, because twelve men do not beat
+	// a laden hull home. With no convoy on the water ConvoyStart is still the
+	// default sighting point, so the roadstead lands somewhere sensible rather
+	// than on the origin where the player's own hull sits.
+	const UWindSubsystem* Wind = GetWorld()->GetSubsystem<UWindSubsystem>();
+	const float WindTo = Wind ? Wind->GetWindBearingDeg() : 0.f;
+	const FVector Downwind = FRotator(0.f, WindTo, 0.f).Vector();
+	FVector Where = ConvoyStart + Downwind * PortOffingM * 100.f;
+	FParse::Value(FCommandLine::Get(), TEXT("PortX="), Where.X);
+	FParse::Value(FCommandLine::Get(), TEXT("PortY="), Where.Y);
+	PortLocation = FVector(
+		FMath::Clamp(Where.X, -OceanHalfExtentCm, OceanHalfExtentCm),
+		FMath::Clamp(Where.Y, -OceanHalfExtentCm, OceanHalfExtentCm), 0.f);
+	UE_LOG(LogTemp, Display,
+		TEXT("PORTLOG roadstead at (%.0f,%.0f), radius %.0f m, %.0f m downwind of the convoy"),
+		PortLocation.X, PortLocation.Y, PortRadiusCm * 0.01f, PortOffingM);
 }
 
 void ASeaGameMode::SpawnConvoy()
@@ -1108,8 +1121,20 @@ void ASeaGameMode::SpawnConvoy()
 		Born, Landfall.X, Landfall.Y);
 	GetWorldTimerManager().SetTimer(GaugeTimer, this,
 		&ASeaGameMode::SampleWeatherGauge, 1.f, true);
-	GetWorldTimerManager().SetTimer(PrizeTimer, this,
-		&ASeaGameMode::SamplePrizes, 0.5f, true);
+	StartPrizeTimer();
+}
+
+void ASeaGameMode::StartPrizeTimer()
+{
+	// Idempotent, and called from two places: the convoy standing out, and
+	// BeginPlay when there is a port but no convoy. SamplePrizes does the
+	// refit as well as the prizes, so without this second call a raider with
+	// a roadstead and no convoy could never spend a penny.
+	if (!GetWorldTimerManager().IsTimerActive(PrizeTimer))
+	{
+		GetWorldTimerManager().SetTimer(PrizeTimer, this,
+			&ASeaGameMode::SamplePrizes, 0.5f, true);
+	}
 }
 
 void ASeaGameMode::RefitInPort()
@@ -1318,9 +1343,14 @@ void ASeaGameMode::SamplePrizes()
 				}
 			}
 			++PrizesManned;
-			// Cumulative SENT, mirrored here so a raider who is sunk with men
-			// still at sea does not take the number down with her.
-			HandsOutInPrizes = Taker->GetHandsInPrizes();
+			// SUMMED, not assigned. This mirrored one hull's private total into
+			// a run-wide counter, so with two hunters - and SquadronSize
+			// defaults to two - the second take OVERWROTE the first: handsSent
+			// could fall, handsHome could exceed it, and the derived "away now"
+			// went negative, which the panel then hid because it only prints
+			// that clause when the number is positive. Four of the six review
+			// lenses found this independently.
+			HandsOutInPrizes += PrizeCrewHands;
 			UE_LOG(LogTemp, Display,
 				TEXT("PRIZELOG %s manned by=%s crew=%d closest=%.0fm spent=%.1f t=%.1f manned=%d handsSent=%d"),
 				*Prize->GetName(), *Taker->GetName(), PrizeCrewHands, BestM,
