@@ -490,6 +490,26 @@ void AShipPawn::BeginPlay()
 			*GetName(), HullIntegrity, MaxHullIntegrity);
 	}
 
+	// -Shot=N gives the PLAYER a magazine of N rounds, -EnemyShot=N a Crown
+	// ship one. Without either, ShotMax stays zero and the magazine is
+	// bottomless, which is what every scenario measured before this commit
+	// assumed without saying so.
+	{
+		int32 Rounds = 0;
+		// ShotFlag, not Flag: there is already a local of that name in this
+		// function and the project compiles shadowing as an error.
+		const TCHAR* ShotFlag = (Allegiance == EShipAllegiance::Crown)
+			? TEXT("EnemyShot=") : TEXT("Shot=");
+		if (Allegiance != EShipAllegiance::Merchant
+			&& FParse::Value(FCommandLine::Get(), ShotFlag, Rounds) && Rounds > 0)
+		{
+			ShotMax = Rounds;
+			Shot = Rounds;
+			UE_LOG(LogTemp, Display, TEXT("SHOTLOG %s magazine: %d rounds"),
+				*GetName(), Shot);
+		}
+	}
+
 	// -ShipHullTest=N starts the PLAYER's first ship with N integrity, so a
 	// sinking by real gunfire can be measured in a couple of broadsides
 	// instead of seventeen hits. The enemy is never weakened.
@@ -716,8 +736,37 @@ bool AShipPawn::FireBroadside(bool bStarboard, AActor* AimAt, bool bHigh)
 	const FVector CarriedVel = bInheritShipVelocity
 		? FVector(VelBeforeRecoil.X, VelBeforeRecoil.Y, 0.f) : FVector::ZeroVector;
 
-	int32 Fired = 0;
 	const int32 SideIndex = bStarboard ? 1 : 0;
+
+	// THE MAGAZINE, CHECKED BEFORE THE LOOP AND ALL OR NOTHING. Not inside it,
+	// and this is not a stylistic choice: the loop draws FMath::FRandRange
+	// twice per gun for train and elevation, off the -ShipSeed stream, so a
+	// gun that quietly declined to fire would skip its draws and move every
+	// ball fired afterwards in that run. Every before/after comparison this
+	// project makes would be reading the seed instead of the change.
+	//
+	// So either the whole broadside goes or none of it does, and the loop below
+	// is byte for byte the loop that was there before. She needs a round for
+	// every gun that still bears; with fewer she cannot fire that side at all.
+	const int32 GunsThatBear = GetGunsRemaining(bStarboard);
+	if (HasMagazine() && Shot < GunsThatBear)
+	{
+		// Counted once per dry spell. The AI asks to fire on every tick her
+		// guns bear, so counting attempts here would count frames - the defect
+		// the review named in this exact function before it was written.
+		if (!bReportedDry)
+		{
+			bReportedDry = true;
+			++DryRefusals;
+			UE_LOG(LogTemp, Display,
+				TEXT("SHOTLOG %s DRY side=%s shot=%d guns=%d refusals=%d t=%.1f"),
+				*GetName(), bStarboard ? TEXT("starboard") : TEXT("port"),
+				Shot, GunsThatBear, DryRefusals, GetWorld()->GetTimeSeconds());
+		}
+		return false;   // and no reload is burned on a broadside that never was
+	}
+
+	int32 Fired = 0;
 	for (int32 g = 0; g < UE_ARRAY_COUNT(GGunPortsX); ++g)
 	{
 		if (bGunDown[SideIndex][g])
@@ -849,6 +898,15 @@ bool AShipPawn::FireBroadside(bool bStarboard, AActor* AimAt, bool bHigh)
 		// broadside that never happened.
 		return false;
 	}
+
+	// Spent AFTER the loop, by exactly the number that went off, so the draw
+	// sequence above never depends on the magazine.
+	if (HasMagazine())
+	{
+		Shot = FMath::Max(0, Shot - Fired);
+	}
+	ShotFired += Fired;
+	bReportedDry = false;
 
 	Reload = ReloadSeconds;
 	// Enough state to explain a range bias between two ships firing the same
@@ -1169,6 +1227,16 @@ bool AShipPawn::DetachPrizeCrew(int32 Count)
 	UE_LOG(LogTemp, Display,
 		TEXT("CREWLOG %s sent %d hands away to a prize, %d/%d left aboard (%d away in all)"),
 		*GetName(), Count, Hands, HandsMax, HandsInPrizes);
+	return true;
+}
+
+bool AShipPawn::LoadShot(int32 Rounds)
+{
+	if (Rounds <= 0 || !HasMagazine() || Shot >= ShotMax)
+	{
+		return false;
+	}
+	Shot = FMath::Min(ShotMax, Shot + Rounds);
 	return true;
 }
 

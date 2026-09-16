@@ -199,6 +199,28 @@ public:
 	/** Signing on one man in port. Returns true if there was room for him. */
 	bool RecruitHand();
 
+	/** --- the magazine ----------------------------------------------------
+	 *
+	 *  Round shot, and there is only so much of it. UNLIMITED BY DEFAULT:
+	 *  ShotMax of zero means the magazine is bottomless and nothing in any
+	 *  measured fight changes. -Shot=N and -EnemyShot=N fill a real one.
+	 *
+	 *  Whether a finite magazine should be the DEFAULT is an owner's decision,
+	 *  not mine: it would change every gunnery number in the suite at once, and
+	 *  it changes what the game is - a fight you can lose by running out is a
+	 *  different fight. Asked in OWNER_VERIFY. */
+	bool HasMagazine() const { return ShotMax > 0; }
+	int32 GetShot() const { return Shot; }
+	int32 GetShotMax() const { return ShotMax; }
+	/** Latched: broadsides refused for want of shot, counted once per spell
+	 *  rather than once per tick - the AI asks to fire every frame her guns
+	 *  bear, so a per-tick counter would measure the frame rate. */
+	int32 GetDryRefusals() const { return DryRefusals; }
+	int32 GetShotFired() const { return ShotFired; }
+
+	/** Powder and shot bought in port. Returns true if there was room. */
+	bool LoadShot(int32 Rounds);
+
 	/** Timber and tar: hull integrity the SEA cannot give back. Returns how
 	 *  much was actually put in, which is less than asked for when she is
 	 *  nearly whole. */
@@ -748,6 +770,10 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Prize")
 	int32 MinHandsAboard = 20;
 
+	/** Rounds in the magazine. ZERO MEANS UNLIMITED - see HasMagazine. */
+	UPROPERTY(EditDefaultsOnly, Category = "Magazine")
+	int32 ShotMax = 0;
+
 	// ---- damage by zone ------------------------------------------------
 	/** Fraction of a mast's rig carried away by one ball. Three hits and a
 	 *  mast is a bare pole: round shot cuts shrouds and halyards, and a sail
@@ -1082,6 +1108,13 @@ private:
 	 *  longer equals HandsMax. The missing men are here. */
 	int32 HandsInPrizes = 0;
 	int32 HandsReturned = 0;
+	int32 Shot = 0;
+	/** Both latched, both cumulative. */
+	int32 ShotFired = 0;
+	int32 DryRefusals = 0;
+	/** True while she has already been refused for this dry spell, so the
+	 *  counter counts spells and not frames. Cleared when she fires. */
+	bool bReportedDry = false;
 	bool bIsPrize = false;
 	bool bPrizeLanded = false;
 	int32 PrizeValue = 0;

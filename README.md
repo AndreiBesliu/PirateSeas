@@ -468,6 +468,34 @@ flag (`-AIAimHigh=`) şi dă fix cifrele astea, la 70,9 s şi 83,1 s.
 Punga se vede în panou sub rândul CONVOY şi se scrie la sfârşitul fiecărei
 rulări (`PRIZELOG PURSE`), inclusiv într-o rulare fără convoi — un zero numărat.
 
+### Magazia: ghiulelele se termina
+
+`-Shot=N` iti da o magazie de N ghiulele, `-EnemyShot=N` ii da inamicului una.
+**Fara flag, magazia e fara fund** - adica exact cum a mers jocul pana acum, si
+de aceea niciun numar masurat inainte de commit-ul asta nu se misca.
+
+O salva cheltuie cate o ghiulea de tun. Daca n-ai cate una pentru fiecare tun
+care mai trage pe bordul ala, **salva nu pleaca deloc** - si nu-ti arde nici
+reincarcarea. Panoul are o bara SHOT cand exista o magazie, si scrie MAGAZINE
+DRY cand nu mai poti trage pe niciun bord.
+
+Portul vinde ghiulele cu 2 bucata - cel mai ieftin lucru de pe lista, si primul
+cumparat la refit: un echipaj intreg pe o coca sanatoasa cu magazia goala e un
+transport, nu o nava de lupta. Capitanul inamic pleaca spre port si cand magazia
+scade sub un sfert.
+
+Masurat, cu perechea `magazine_dry` / `magazine_full`, un singur flag diferenta:
+cu **patru** ghiulele trage o salva, ramane uscata la 68 s si convoiul TRECE; cu
+**patruzeci** trage douazeci, nu ramane niciodata uscata, si convoiul e LUAT la
+70,9 s. Magazia schimba deznodamantul, nu doar contabilitatea.
+
+**Garda e INAINTE de bucla tunurilor, si e totul-sau-nimic.** Nu din stil: bucla
+trage doua numere aleatoare per tun (deriva si inaltimea), din acelasi sir pe
+care `-ShipSeed` il fixeaza, deci un tun care ar refuza tacut sa traga ar sari
+peste trageri si ar muta FIECARE ghiulea de dupa el in rularea aia. Orice
+comparatie inainte/dupa ar citi samanta in loc de schimbare.
+
+
 ### Ce cumpara punga
 
 Portul vinde exact cele doua lucruri pe care marea nu ti le da inapoi:
@@ -719,6 +747,9 @@ pereche de rulări citea împrăștiere și credea că citește semnal.
 | `-EnemyHull=N` | inamicul porneste cu N din 1000 coca (doar navele Coroanei) |
 | `-AIRefit=1` | capitanul inamic pleaca spre port sa se refaca, daca are bani (implicit NU) |
 | `-HandCost=N -HullPointCost=x` | preturile din port (implicit 20 si 0,5) |
+| `-Shot=N` | magazia TA, N ghiulele (fara flag: fara fund) |
+| `-EnemyShot=N` | magazia inamicului (doar navele Coroanei) |
+| `-ShotCost=N` | cat costa o ghiulea in port (implicit 2) |
 | `-Port=1` | pune o radă prietenă unde prăzile se duc acasă (implicit NU există) |
 | `-PortOffingM=N` | la câți metri SUB VÂNTUL convoiului e rada (implicit 900) |
 | `-PortX= -PortY=` | poziția exactă a radei, dacă nu vrei una sub vânt |
@@ -989,6 +1020,9 @@ toată nava, fiindcă `ObjectBounds` întorcea zero pentru mesh-ul ăla.
   inca), nu nave mai bune, si nimic nu trece dintr-o rulare in alta - nu
   exista salvare
 - preturile sunt alese ca sa se raporteze la valoarea unei prazi, nu masurate
+- magazia e fara fund IMPLICIT; daca ar fi finita din start, ar schimba
+  fiecare numar de tir din suita si ar schimba ce fel de joc e - decizia e
+  a owner-ului, intrebata in OWNER_VERIFY
   din ceva real
 - nimeni nu recapturează o pradă care merge singură spre radă
 - abordajul e AMÂNAT explicit de owner; echipajul + reparaţiile şi economia +

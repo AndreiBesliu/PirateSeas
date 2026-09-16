@@ -284,6 +284,27 @@ SCENARIOS = {
                   "-RaiderOffingM=600", "-ConvoyCargo=1200", "-AIAimHigh=1",
                   "-AIPrize=1", "-Port=1", "-EnemyHull=600", "-EnemyHands=40",
                   "-AIRefit=0", "-ShipQuitAfter=800"],
+    # THE MAGAZINE. Round shot is finite when a flag says so, and these two are
+    # one flag apart: four rounds against forty. Four is a single broadside -
+    # not enough to bring even the first merchant to strike, which takes about
+    # two - so the magazine changes the OUTCOME here and not merely the
+    # bookkeeping. Keys that must differ: shot_fired, shot_left, dry_refusals,
+    # and mission_result itself.
+    #
+    # Unlimited is still the default everywhere else, which is why the twenty
+    # existing scenarios do not move. Whether a real magazine should be the
+    # default is an owner's question - it would change every gunnery number at
+    # once and it changes what the game is - and it is asked in OWNER_VERIFY.
+    "magazine_dry": ["-WindBearing=0", "-WindSpeed=12", "-Convoy=2",
+                     "-ConvoyX=120000", "-ConvoyY=150000", "-ConvoyWindAngle=90",
+                     "-ConvoyRangeM=1200", "-EnemyCount=1", "-RaiderSide=weather",
+                     "-RaiderOffingM=600", "-ConvoyCargo=1200", "-AIAimHigh=1",
+                     "-EnemyShot=4", "-ShipQuitAfter=400"],
+    "magazine_full": ["-WindBearing=0", "-WindSpeed=12", "-Convoy=2",
+                      "-ConvoyX=120000", "-ConvoyY=150000", "-ConvoyWindAngle=90",
+                      "-ConvoyRangeM=1200", "-EnemyCount=1", "-RaiderSide=weather",
+                      "-RaiderOffingM=600", "-ConvoyCargo=1200", "-AIAimHigh=1",
+                      "-EnemyShot=40", "-ShipQuitAfter=400"],
 }
 
 
@@ -598,18 +619,32 @@ def measure(name, text):
     pursuit = [int(v) for v in re.findall(r"SEALOG \S+ landTicks=.*?pursuitTicks=(\d+)", text)]
     if pursuit:
         m["pursuit_ticks_max"] = max(pursuit)
+    # The magazine, off the ENEMY's line by name - the player and the merchants
+    # print the same line with zeros, and a max over hulls would read whichever
+    # happened to be largest. shot_left beside shot_fired because one without
+    # the other cannot tell a ship that never fired from one that fired all she
+    # had.
+    mag = re.search(r"SHOTLOG EnemyShipPawn_\d+ magazine shot=(\d+)/(\d+) "
+                    r"fired=(\d+) dry=(\d+)", text)
+    if mag:
+        m["shot_left"] = int(mag.group(1))
+        m["shot_max"] = int(mag.group(2))
+        m["shot_fired"] = int(mag.group(3))
+        m["dry_refusals"] = int(mag.group(4))
+
     # What the money BOUGHT. Printed at every quit whether there is a port or
     # not, so these are counted zeros rather than absences - and spent beside
     # coffers, because either one alone cannot be told from a ship that had
     # nothing to spend in the first place.
     refit = re.search(r"PORTLOG REFIT spent=(\d+) coffers=(-?\d+) handsBought=(\d+) "
-                      r"hullBought=(\d+) refitSeconds=([0-9.]+)", text)
+                      r"hullBought=(\d+) shotBought=(\d+) refitSeconds=([0-9.]+)", text)
     if refit:
         m["refit_spent"] = int(refit.group(1))
         m["refit_coffers_end"] = int(refit.group(2))
         m["refit_hands_bought"] = int(refit.group(3))
         m["refit_hull_bought"] = int(refit.group(4))
-        m["refit_seconds"] = round(float(refit.group(5)), 1)
+        m["refit_shot_bought"] = int(refit.group(5))
+        m["refit_seconds"] = round(float(refit.group(6)), 1)
     # Ticks a captain spent making for the port instead of hunting.
     port_ticks = [int(v) for v in
                   re.findall(r"SEALOG \S+ landTicks=.*?portTicks=(\d+)", text)]

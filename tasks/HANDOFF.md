@@ -184,8 +184,17 @@ Livrat:
    (prada acasa la 359, rada la 764, gata la 776 - de aia ruleaza 800 s):
    600 cheltuiti contra 0, 20 de oameni si 400 de coca contra nimic.
 
-Urmatorul: magazia (munitie finita) - singurul lucru pe care portul ar putea
-sa-l vanda si inca nu exista. **Abordajul ramane AMANAT.**
+8. **Magazia**: `-Shot=N` / `-EnemyShot=N`; fara flag e FARA FUND, deci suita
+   nu se misca. Garda e INAINTE de bucla tunurilor si e totul-sau-nimic,
+   fiindca bucla trage doua numere aleatoare per tun din sirul lui `-ShipSeed`
+   si un tun sarit ar muta fiecare ghiulea de dupa. Refuzurile se numara pe
+   REPRIZE, nu pe cadre (AI-ul cere sa traga la fiecare tick). Portul vinde
+   ghiulele cu 2 si le cumpara PRIMELE. Perechea `magazine_dry`/`magazine_full`
+   schimba si deznodamantul: 4 ghiulele -> convoiul TRECE, 40 -> convoiul e LUAT.
+
+Urmatorul: **decizia owner-ului** daca magazia devine finita IMPLICIT
+(OWNER_VERIFY 31) - nu se poate face pe jumatate, muta toata linia de baza de
+tir odata. **Abordajul ramane AMANAT.**
 
 ## Ce aşteaptă ochiul owner-ului
 

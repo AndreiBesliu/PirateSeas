@@ -75,6 +75,7 @@ public:
 	int32 GetSpent() const { return Spent; }
 	int32 GetCoffers() const { return Landed - Spent; }
 	int32 GetHandsBought() const { return HandsBought; }
+	int32 GetShotBought() const { return ShotBought; }
 	int32 GetHullBought() const { return FMath::RoundToInt(HullBought); }
 
 protected:
@@ -257,6 +258,15 @@ protected:
 	 *  early a decision rather than an oversight. */
 	UPROPERTY(EditDefaultsOnly, Category = "Port")
 	float HullPointsPerTick = 20.f;
+
+	/** Powder and shot. A round costs less than a man and far less than a
+	 *  plank: it is the cheap thing you should never be without, and a ship
+	 *  that came home empty fills up for the price of two hands. */
+	UPROPERTY(EditDefaultsOnly, Category = "Port")
+	int32 ShotCost = 2;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Port")
+	int32 ShotPerTick = 8;
 
 	/** How far off the convoy -RaiderSide= puts the raider, in metres, along
 	 *  the wind. -RaiderOffingM=. */
@@ -475,6 +485,7 @@ private:
 	int32 Landed = 0;
 	int32 Spent = 0;
 	int32 HandsBought = 0;
+	int32 ShotBought = 0;
 	float HullBought = 0.f;
 	/** Latched: seconds any hull spent refitting, over the run. */
 	float RefitSeconds = 0.f;

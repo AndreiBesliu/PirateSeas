@@ -3754,3 +3754,68 @@ câştigă la fel, doar una cheltuie.
 **Suita: zero numere mutate** în cele 20 de scenarii existente.
 
 **Task Completed.**
+
+---
+
+## Task Started — 16.09.2026 (mecanica, commit 9: magazia)
+
+**Prompt:** „continua"
+**Model:** Claude Opus 5
+
+Ghiulelele se termină. `-Shot=N` / `-EnemyShot=N` umplu o magazie reală; **fără
+flag e fără fund**, adică exact cum a mers jocul până acum — şi de aceea niciun
+număr din cele 22 de scenarii existente nu se mişcă.
+
+O salvă cheltuie câte o ghiulea de tun. Dacă n-ai câte una pentru fiecare tun
+care mai trage pe bordul ăla, salva nu pleacă deloc şi nu-ţi arde nici
+reîncărcarea. Bara SHOT în panou, avertisment MAGAZINE DRY, portul vinde ghiulele
+cu 2 bucata şi le cumpără PRIMELE la refit — un echipaj întreg pe o cocă sănătoasă
+cu magazia goală e un transport, nu o navă de luptă.
+
+### Garda e înainte de buclă, şi e totul-sau-nimic
+
+Recenzia de design de acum câteva commit-uri numise capcana înainte să fie
+scrisă: `FireBroadside` e locul cel mai sensibil la sămânţă din proiect, fiindcă
+bucla trage **două numere aleatoare per tun** (deriva şi înălţimea) din şirul pe
+care `-ShipSeed` îl fixează. Un tun care ar refuza tăcut să tragă ar sări peste
+tragerile lui şi ar muta FIECARE ghiulea de după el în rularea aia — şi orice
+comparaţie înainte/după ar citi sămânţa în loc de schimbare.
+
+Deci verificarea stă **înaintea** buclei şi e totul-sau-nimic: ori pleacă toată
+salva, ori niciuna, iar bucla de dedesubt e bit cu bit cea dinainte. Proba că a
+mers: **suita a ieşit nemişcată.**
+
+### Contorul se numără pe reprize, nu pe cadre
+
+AI-ul cere să tragă la FIECARE tick în care tunurile ei poartă. Un contor de
+refuzuri pus acolo ar număra cadre. Mutaţia B îl deblochează şi citeşte **1197
+în loc de 1** — un număr care ar fi arătat plauzibil şi ar fi însemnat „rata de
+cadre", nu „de câte ori a rămas fără".
+
+### Perechea schimbă deznodământul
+
+`magazine_dry` / `magazine_full`, un singur flag:
+
+| | trase | rămase | uscată | misiune |
+|---|---|---|---|---|
+| 4 ghiulele | 4 | 0 | 1 | **A TRECUT** |
+| 40 de ghiulele | 20 | 20 | 0 | **LUAT** |
+
+Cu o singură salvă în magazie nu poate aduce niciun negustor la pavilion, şi
+convoiul scapă. Nu e contabilitate, e rezultatul.
+
+### Mutaţii
+
+(A) magazia nu se termină niciodată — `magazine_dry` devine identic cu
+`magazine_full` (20 trase, 0 uscată, LUAT) şi perechea moare; (B) contorul
+nezăvorât — 1197; (C) pristin — 4/1/A TRECUT contra 20/0/LUAT.
+
+### O întrebare pentru owner, nu o verificare
+
+OWNER_VERIFY 31 e prima intrare care cere o DECIZIE, nu o privire: **ar trebui
+magazia să fie finită implicit?** Pot măsura tot ce face; nu pot şti dacă face
+jocul mai bun sau doar mai enervant. Şi e o schimbare care nu se poate face pe
+jumătate — ar muta fiecare număr de tir din linia de bază odată, şi toate
+scenariile de până acum ar descrie alt joc.
+
+**Task Completed.**

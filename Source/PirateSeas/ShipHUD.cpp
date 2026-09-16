@@ -300,6 +300,14 @@ void AShipHUD::DrawCondition(AShipPawn* Ship)
 		FString::Printf(TEXT("%.0f%%"), Ship->GetSailTrim() * 100.f));
 	// The men, and where they are. R moves a quarter of them at a time.
 	const int32 OnRepair = Ship->GetHandsOnRepair();
+	// The magazine, only when there is one: a bar that always read full would
+	// be a bar that says nothing.
+	if (Ship->HasMagazine())
+	{
+		Y = DrawBar(X, Y, Width, TEXT("SHOT"),
+			Ship->GetShot() / FMath::Max(1.f, (float)Ship->GetShotMax()),
+			FString::Printf(TEXT("%d/%d"), Ship->GetShot(), Ship->GetShotMax()));
+	}
 	Y = DrawBar(X, Y, Width, TEXT("HANDS"),
 		Ship->GetHands() / FMath::Max(1.f, (float)Ship->GetHandsMax()),
 		OnRepair > 0
@@ -469,6 +477,11 @@ void AShipHUD::DrawWarnings(AShipPawn* Ship, UWindSubsystem* Wind)
 		if (Ship->GetRudderIntegrity() <= 0.02f)
 		{
 			Lines.Add(TPair<FString, FLinearColor>(TEXT("RUDDER GONE"), Bad));
+		}
+		if (Ship->HasMagazine() && Ship->GetShot() < Ship->GetGunsRemaining(true)
+			&& Ship->GetShot() < Ship->GetGunsRemaining(false))
+		{
+			Lines.Add(TPair<FString, FLinearColor>(TEXT("MAGAZINE DRY"), Bad));
 		}
 		// A rudder needs water flowing past it, and a ship lying still with her
 		// canvas furled has neither way on nor backed yards: she cannot turn at

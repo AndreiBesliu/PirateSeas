@@ -411,6 +411,11 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Port")
 	int32 RefitNeedsCoffers = 100;
 
+	/** She also makes for port when the magazine is this low, if she has one
+	 *  and can pay: a ship with nothing to fire has no other business at sea. */
+	UPROPERTY(EditAnywhere, Category = "Port")
+	float RefitBelowShot = 0.25f;
+
 private:
 	/** Nearest heading we can actually sail that is closest to what we want. */
 	float ResolveSailableHeading(float DesiredYawDeg, float WindFromBearingDeg,

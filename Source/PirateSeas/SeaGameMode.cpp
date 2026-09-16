@@ -1009,6 +1009,7 @@ void ASeaGameMode::ReadConvoyFlags()
 		FParse::Value(FCommandLine::Get(), TEXT("PortOffingM="), PortOffingM);
 		FParse::Value(FCommandLine::Get(), TEXT("HandCost="), HandCost);
 		FParse::Value(FCommandLine::Get(), TEXT("HullPointCost="), HullPointCost);
+		FParse::Value(FCommandLine::Get(), TEXT("ShotCost="), ShotCost);
 		float PortRadiusM = PortRadiusCm * 0.01f;
 		if (FParse::Value(FCommandLine::Get(), TEXT("PortRadiusM="), PortRadiusM))
 		{
@@ -1127,9 +1128,25 @@ void ASeaGameMode::RefitInPort()
 		const int32 Coffers = GetCoffers();
 		bool bBought = false;
 
-		// Men first. A ship with no crew cannot use a sound hull, and the
+		// Powder and shot FIRST: it is the cheapest thing on the list and the
+		// one without which none of the rest matters. A whole crew on a sound
+		// hull with an empty magazine is a transport.
+		if (Ship->HasMagazine() && Ship->GetShot() < Ship->GetShotMax()
+			&& Coffers >= ShotCost)
+		{
+			const int32 Afford = FMath::Min(ShotPerTick, Coffers / FMath::Max(1, ShotCost));
+			const int32 Room = Ship->GetShotMax() - Ship->GetShot();
+			const int32 Take = FMath::Min(Afford, Room);
+			if (Take > 0 && Ship->LoadShot(Take))
+			{
+				Spent += Take * ShotCost;
+				ShotBought += Take;
+				bBought = true;
+			}
+		}
+		// Then men. A ship with no crew cannot use a sound hull, and the
 		// cheaper thing should be the one she gets when the money is short.
-		if (Ship->GetHandsShort() > 0 && Coffers >= HandCost && Ship->RecruitHand())
+		else if (Ship->GetHandsShort() > 0 && Coffers >= HandCost && Ship->RecruitHand())
 		{
 			Spent += HandCost;
 			++HandsBought;
@@ -1548,6 +1565,10 @@ void ASeaGameMode::QuitNow()
 		// what they gave back. One line per hull so the gate can read the
 		// enemy's and the player's apart.
 		UE_LOG(LogTemp, Display,
+			TEXT("SHOTLOG %s magazine shot=%d/%d fired=%d dry=%d"),
+			*It->GetName(), It->GetShot(), It->GetShotMax(), It->GetShotFired(),
+			It->GetDryRefusals());
+		UE_LOG(LogTemp, Display,
 			TEXT("CREWLOG %s hands=%d/%d casualties=%d repairShare=%.2f repaired=%.3f gunCrew=%.2f rig=%.2f rudder=%.2f"),
 			*It->GetName(), It->GetHands(), It->GetHandsMax(), It->GetCasualties(),
 			It->GetRepairShare(), It->GetRepairedTotal(), It->GetGunCrewFactor(),
@@ -1565,8 +1586,8 @@ void ASeaGameMode::QuitNow()
 	// counted zero. spent and coffers are printed together because one without
 	// the other cannot be told from a ship that had nothing to spend.
 	UE_LOG(LogTemp, Display,
-		TEXT("PORTLOG REFIT spent=%d coffers=%d handsBought=%d hullBought=%d refitSeconds=%.1f"),
-		Spent, GetCoffers(), HandsBought, GetHullBought(), RefitSeconds);
+		TEXT("PORTLOG REFIT spent=%d coffers=%d handsBought=%d hullBought=%d shotBought=%d refitSeconds=%.1f"),
+		Spent, GetCoffers(), HandsBought, GetHullBought(), ShotBought, RefitSeconds);
 	UE_LOG(LogTemp, Display, TEXT("SEALOG quitting at t=%.1fs"),
 		GetWorld()->GetTimeSeconds());
 	if (GEngine)

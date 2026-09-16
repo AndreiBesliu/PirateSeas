@@ -727,8 +727,10 @@ void AShipAIController::Tick(float DeltaSeconds)
 		const ASeaGameMode* Sea = GetWorld()
 			? GetWorld()->GetAuthGameMode<ASeaGameMode>() : nullptr;
 		const int32 Coffers = Sea ? Sea->GetCoffers() : 0;
+		const bool bDry = Me->HasMagazine()
+			&& Me->GetShot() < RefitBelowShot * Me->GetShotMax();
 		const bool bWants = (Me->GetHandsShort() >= RefitWhenShort
-			|| HullFrac < RefitBelowHull) && Coffers >= RefitNeedsCoffers;
+			|| HullFrac < RefitBelowHull || bDry) && Coffers >= RefitNeedsCoffers;
 		const float ToPortM = FVector::Dist2D(Me->GetActorLocation(), PortWhere) * 0.01f;
 		if (bWants)
 		{

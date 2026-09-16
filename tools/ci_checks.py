@@ -540,7 +540,7 @@ def check_comparison():
     # this one.
     rf = ci_measure.measure("fixture",
         "LogTemp: Display: PORTLOG REFIT spent=600 coffers=600 handsBought=20 "
-        "hullBought=400 refitSeconds=20.0" + chr(10) +
+        "hullBought=400 shotBought=0 refitSeconds=20.0" + chr(10) +
         "LogTemp: Display: SEALOG EnemyShipPawn_0 landTicks=0 clawOffs=0 "
         "rejoinTicks=0 avoidTicks=0 pursuitTicks=2620 prizeTicks=8500 "
         "portTicks=4200" + chr(10))
@@ -559,12 +559,35 @@ def check_comparison():
     # printed in every run, convoy or none.
     rz = ci_measure.measure("fixture",
         "LogTemp: Display: PORTLOG REFIT spent=0 coffers=0 handsBought=0 "
-        "hullBought=0 refitSeconds=0.0" + chr(10))
+        "hullBought=0 shotBought=0 refitSeconds=0.0" + chr(10))
     if (rz.get("refit_spent"), rz.get("refit_hands_bought"),
             rz.get("refit_seconds")) != (0, 0, 0.0):
         fail("a run that bought nothing read %s"
              % ((rz.get("refit_spent"), rz.get("refit_hands_bought"),
                  rz.get("refit_seconds")),))
+
+    # The magazine, off the enemy's own line. shot_left beside shot_fired
+    # because one without the other cannot tell a ship that never fired from
+    # one that fired everything she had - both read 0 in the first case and
+    # 0 / max in the second.
+    mg = ci_measure.measure("fixture",
+        "LogTemp: Display: SHOTLOG ShipPawn_0 magazine shot=0/0 fired=0 dry=0"
+        + chr(10) +
+        "LogTemp: Display: SHOTLOG EnemyShipPawn_0 magazine shot=20/40 fired=20 "
+        "dry=0" + chr(10))
+    want = {"shot_left": 20, "shot_max": 40, "shot_fired": 20, "dry_refusals": 0}
+    got = {k: mg.get(k) for k in want}
+    if got != want:
+        fail("the magazine line read %s, wanted %s - and note the PLAYER's line "
+             "of zeros comes first, so a reader that took the first match would "
+             "report her instead" % (got, want))
+
+    md = ci_measure.measure("fixture",
+        "LogTemp: Display: SHOTLOG EnemyShipPawn_0 magazine shot=0/4 fired=4 "
+        "dry=1" + chr(10))
+    if (md.get("shot_left"), md.get("shot_fired"), md.get("dry_refusals")) != (0, 4, 1):
+        fail("an empty magazine read %s"
+             % ((md.get("shot_left"), md.get("shot_fired"), md.get("dry_refusals")),))
 
     # The enemy's gun crew, read BY NAME off her own line. The convoy runs
     # prove why: gun_crew_min is 0.25 in both halves because a merchant
@@ -599,8 +622,8 @@ LogTemp: Display: SHIPLOG ShipPawn_0 sink=foundering draught=120
         fail("ships_sunk read %d from a log holding exactly one SUNK line" % sunk)
     if len(FAILS) == before:
         ok("the measurement gate reports matches, moves, new and missing numbers, "
-           "and reads the convoy, crew, prize, possession, refit and pursuit "
-           "lines")
+           "and reads the convoy, crew, prize, possession, refit, magazine and "
+           "pursuit lines")
 
 
 def main():
