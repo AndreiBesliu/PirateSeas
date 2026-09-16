@@ -3819,3 +3819,63 @@ jumătate — ar muta fiecare număr de tir din linia de bază odată, şi toate
 scenariile de până acum ar descrie alt joc.
 
 **Task Completed.**
+
+---
+
+## Task Started — 16.09.2026 (magazia devine finită implicit)
+
+**Prompt:** „da, fa magazia finita implicit"
+**Model:** Claude Opus 5
+
+Owner-ul a răspuns la întrebarea din OWNER_VERIFY 31. Magazia e acum **finită
+implicit: patruzeci de ghiulele, zece salve, cinci pe bord.**
+
+### Numărul vine din suită, nu din gust
+
+Înainte să aleg, am citit ce trage fiecare scenariu — cheia `shot_fired` exista
+deja din commit-ul trecut, pentru toate cele 24 de scenarii, chiar şi acolo unde
+magazia era fără fund. Inamicul trage:
+
+| | ghiulele |
+|---|---|
+| aproape toate scenariile | 0–20 |
+| `crew_repair` (urmărire lungă) | 24 |
+| **`crew_fight` (duel de 360 s)** | **44** |
+
+Patruzeci acoperă orice acţiune scurtă şi se goleşte exact în singurul loc unde
+o magazie ar trebui să conteze. Orice număr peste 44 n-ar lega nicăieri în suită
+— şi **un implicit care nu leagă nicăieri nu se poate deosebi de lipsa lui.**
+
+### O linie care ar fi făcut defectul să arate ca funcţionalitate
+
+`Shot` porneşte de la zero. Cu un `ShotMax` implicit şi fără flag, fiecare navă
+ar fi pornit **uscată din primul tick** — şi asta ar fi arătat exact ca „magazia
+finită funcţionează". Un `Shot = ShotMax` la BeginPlay, cu motivul scris acolo.
+
+Negustorii primesc `ShotMax = 0`: n-au tunuri, deci n-au magazie.
+
+### Ce s-a mutat, şi predicţia pe care am ratat-o
+
+Am scris înainte de rulare că singurul scenariu care ar trebui să se mişte e
+`crew_fight`. **Am avut dreptate pe jumătate.** Din 51 de mişcări:
+
+- **43 sunt contabilitate pură** — cheile `shot_left` şi `shot_max`, care până
+  acum citeau zero peste tot şi acum citesc valori reale.
+- **8 sunt comportament, în DOUĂ scenarii:**
+  - `crew_fight`, exact cum am prezis: 44 → 40 ghiulele, 11 → 10 salve, o
+    refuzare pe uscat. A unsprezecea salvă nu mai pleacă.
+  - `refit_on`, pe care l-am ratat: raider-ul **cumpără acum 20 de ghiulele cu
+    40** la refit, fiindcă portul le vinde şi le cumpără primele. Asta nu e un
+    defect, e bucla care se închide — dar n-am prevăzut-o, şi diferenţa dintre
+    „am prezis" şi „am înţeles după" merită scrisă.
+
+Aritmetica lui `refit_on` se închide până la ultimul ban: 20 de ghiulele × 2 = 40
+în plus, 600 → **640** cheltuiţi, 1200 − 640 = **560** rămaşi, iar 20 de ghiulele
+la 8 pe reprize sunt 2,5 reprize a câte 0,5 s = 1,5 s în plus, 20,0 → **21,5**.
+Fiecare cifră măsurată se potriveşte cu cea calculată.
+
+Şi `crew_fight` nu şi-a mişcat nici avariile, nici pierderile: a unsprezecea
+salvă pleca pe la 348 s dintr-o rulare care se termină la 360, deci ghiulelele
+ei n-apucau oricum să cadă.
+
+**Task Completed.**

@@ -12,6 +12,9 @@ AMerchantShipPawn::AMerchantShipPawn()
 	// slice, so what a broadside breaks stays broken - which is why she
 	// strikes.
 	HandsMax = 14;
+	// No guns, so no magazine. Without this she would carry forty rounds she
+	// can never fire and print a SHOT bar's worth of numbers that mean nothing.
+	ShotMax = 0;
 
 	AIControllerClass = AShipAIController::StaticClass();
 	AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;

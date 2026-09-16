@@ -192,9 +192,15 @@ Livrat:
    ghiulele cu 2 si le cumpara PRIMELE. Perechea `magazine_dry`/`magazine_full`
    schimba si deznodamantul: 4 ghiulele -> convoiul TRECE, 40 -> convoiul e LUAT.
 
-Urmatorul: **decizia owner-ului** daca magazia devine finita IMPLICIT
-(OWNER_VERIFY 31) - nu se poate face pe jumatate, muta toata linia de baza de
-tir odata. **Abordajul ramane AMANAT.**
+9. **Magazia FINITA IMPLICIT** (decizie owner, 16.09): 40 de ghiulele, zece
+   salve. Numarul ales din suita - inamicul trage 0-20 aproape peste tot, 24
+   intr-o urmarire lunga, 44 in duelul de 360 s, deci 40 se goleste exact
+   acolo. `-Shot=0` / `-EnemyShot=0` fac magazia fara fund la loc.
+
+Urmatorul: de ales cu owner-ul. Candidati: escorta convoiului (singura piesa care
+lipseste din obiectiv), recapturarea unei prazi pe drum spre rada, sau o pasa
+adversariala peste tot arcul de mecanica - noua commit-uri fara nicio recenzie
+independenta. **Abordajul ramane AMANAT.**
 
 ## Ce aşteaptă ochiul owner-ului
 

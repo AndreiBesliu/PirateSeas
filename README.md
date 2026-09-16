@@ -470,9 +470,20 @@ rulări (`PRIZELOG PURSE`), inclusiv într-o rulare fără convoi — un zero nu
 
 ### Magazia: ghiulelele se termina
 
-`-Shot=N` iti da o magazie de N ghiulele, `-EnemyShot=N` ii da inamicului una.
-**Fara flag, magazia e fara fund** - adica exact cum a mers jocul pana acum, si
-de aceea niciun numar masurat inainte de commit-ul asta nu se misca.
+**Magazia e FINITA - patruzeci de ghiulele, zece salve, cinci pe bord.** Asta e
+decizia owner-ului din 16.09, si schimba ce fel de joc e: o lupta pe care o poti
+pierde fiindca ai ramas fara e alta lupta.
+
+Numarul vine din suita, nu din gust. In douazeci si patru de scenarii masurate
+inamicul trage intre 0 si 20 de ghiulele in aproape toate, 24 intr-o urmarire
+lunga, si **44 in `crew_fight`** - un duel de 360 de secunde. Patruzeci acopera
+orice actiune scurta si se goleste exact in singurul loc unde o magazie ar
+trebui sa conteze. Un numar mai mare n-ar lega nicaieri in suita, si un implicit
+care nu leaga nicaieri nu se poate deosebi de lipsa lui.
+
+`-Shot=N` si `-EnemyShot=N` schimba numarul; oricare pus pe **0** face magazia
+navei aleia fara fund - asa se poate masura comportamentul de dinainte fata de
+cel de acum.
 
 O salva cheltuie cate o ghiulea de tun. Daca n-ai cate una pentru fiecare tun
 care mai trage pe bordul ala, **salva nu pleaca deloc** - si nu-ti arde nici

@@ -490,23 +490,30 @@ void AShipPawn::BeginPlay()
 			*GetName(), HullIntegrity, MaxHullIntegrity);
 	}
 
+	// FILL HER. This line is why the default is not simply a number in the
+	// header: Shot starts at zero, so a ship with a default magazine and no
+	// flag would have sailed dry from her first tick - a mistake that would
+	// have looked exactly like the feature working.
+	Shot = ShotMax;
+
 	// -Shot=N gives the PLAYER a magazine of N rounds, -EnemyShot=N a Crown
-	// ship one. Without either, ShotMax stays zero and the magazine is
-	// bottomless, which is what every scenario measured before this commit
-	// assumed without saying so.
+	// ship one; either at 0 makes that ship's magazine bottomless, which is how
+	// the behaviour from before the default can still be measured against it.
 	{
-		int32 Rounds = 0;
+		int32 Rounds = -1;
 		// ShotFlag, not Flag: there is already a local of that name in this
 		// function and the project compiles shadowing as an error.
 		const TCHAR* ShotFlag = (Allegiance == EShipAllegiance::Crown)
 			? TEXT("EnemyShot=") : TEXT("Shot=");
 		if (Allegiance != EShipAllegiance::Merchant
-			&& FParse::Value(FCommandLine::Get(), ShotFlag, Rounds) && Rounds > 0)
+			&& FParse::Value(FCommandLine::Get(), ShotFlag, Rounds) && Rounds >= 0)
 		{
 			ShotMax = Rounds;
 			Shot = Rounds;
-			UE_LOG(LogTemp, Display, TEXT("SHOTLOG %s magazine: %d rounds"),
-				*GetName(), Shot);
+			UE_LOG(LogTemp, Display, TEXT("SHOTLOG %s magazine: %s"),
+				*GetName(), Rounds > 0
+					? *FString::Printf(TEXT("%d rounds"), Rounds)
+					: TEXT("bottomless (flag set to 0)"));
 		}
 	}
 

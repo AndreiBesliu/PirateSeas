@@ -201,14 +201,21 @@ public:
 
 	/** --- the magazine ----------------------------------------------------
 	 *
-	 *  Round shot, and there is only so much of it. UNLIMITED BY DEFAULT:
-	 *  ShotMax of zero means the magazine is bottomless and nothing in any
-	 *  measured fight changes. -Shot=N and -EnemyShot=N fill a real one.
+	 *  Round shot, and there is only so much of it. FINITE BY DEFAULT, by the
+	 *  owner's decision of 16.09: a fight you can lose by running out is a
+	 *  different fight, and it is the one this game wants. -Shot=N and
+	 *  -EnemyShot=N override the number; either set to 0 makes that ship's
+	 *  magazine bottomless again, which is how the old behaviour can still be
+	 *  measured against the new one.
 	 *
-	 *  Whether a finite magazine should be the DEFAULT is an owner's decision,
-	 *  not mine: it would change every gunnery number in the suite at once, and
-	 *  it changes what the game is - a fight you can lose by running out is a
-	 *  different fight. Asked in OWNER_VERIFY. */
+	 *  FORTY, and the number came from the suite rather than from taste. Across
+	 *  twenty-four measured scenarios the enemy fires 0 to 20 rounds in almost
+	 *  all of them, 24 in a long chase, and 44 in crew_fight - a 360-second
+	 *  stand-up duel. Forty is ten broadsides, five to a side: it covers every
+	 *  short action outright and empties in exactly the one place a magazine
+	 *  ought to start mattering. A larger number would bind nowhere in the
+	 *  suite, and a default that binds nowhere cannot be told from no default
+	 *  at all. */
 	bool HasMagazine() const { return ShotMax > 0; }
 	int32 GetShot() const { return Shot; }
 	int32 GetShotMax() const { return ShotMax; }
@@ -772,7 +779,7 @@ protected:
 
 	/** Rounds in the magazine. ZERO MEANS UNLIMITED - see HasMagazine. */
 	UPROPERTY(EditDefaultsOnly, Category = "Magazine")
-	int32 ShotMax = 0;
+	int32 ShotMax = 40;
 
 	// ---- damage by zone ------------------------------------------------
 	/** Fraction of a mast's rig carried away by one ball. Three hits and a

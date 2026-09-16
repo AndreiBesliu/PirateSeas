@@ -757,22 +757,19 @@ alese ca sa aiba sens fata de o prada de 1200, nu masurate din ceva real. Punga
 nu supravietuieste rularii. Nu se cumpara tunuri, munitie sau nave. Si rada e
 tot un cerc pe apa, nu un oras.
 
-## 31. Magazia: ar trebui sa fie finita IMPLICIT? (intrebare, nu verificare)
+## 31. RASPUNS PRIMIT 16.09: magazia E finita implicit
 
-**Ce te uiti:** Joaca de doua ori acelasi lucru: o data normal, o data cu
-`-Shot=24`. Douazeci si patru inseamna sase salve.
+Owner-ul a spus da. Patruzeci de ghiulele, zece salve, cinci pe bord. Numarul
+l-am ales din suita, nu din gust: in douazeci si patru de scenarii masurate
+inamicul trage 0-20 in aproape toate, 24 intr-o urmarire lunga, si 44 in duelul
+de 360 de secunde - singurul loc unde patruzeci se goleste.
 
-**Ce vreau sa-mi spui:** daca lupta e mai buna cu ghiulele numarate. Cu magazie
-finita fiecare salva e o decizie - tragi acum la 400 m sau astepti sa fii la
-250? - si o goana lunga te poate lasa fara nimic exact cand ai nevoie. Fara ea,
-singurul cost al unei salve e reincarcarea.
+**Ce a ramas de verificat cu ochiul:** joaca o lupta lunga si spune-mi daca bara
+SHOT si avertismentul MAGAZINE DRY iti ajung la timp - adica daca vezi ca ramai
+fara inainte sa se intample, cat inca mai poti face ceva. Daca afli abia cand
+apesi Q si nu pleaca nimic, bara e in locul gresit sau prea discreta.
 
-**De ce te intreb pe tine:** pot masura tot ce face - cate ghiulele pleaca, cand
-ramane uscata, cum se schimba deznodamantul. Nu pot sti daca face jocul mai bun
-sau doar mai enervant. Si e o schimbare care NU se poate face pe jumatate: daca
-magazia devine finita implicit, fiecare numar de tir din linia de baza se muta
-odata, si toate scenariile masurate pana acum descriu alt joc.
-
-**Ce stiu deja:** portul vinde ghiulele cu 2 bucata, deci finita implicit ar lega
-lupta de economie - ceea ce poate fi exact lucrul bun, sau o corvoada in plus.
-Deocamdata e STINSA implicit si nimic din ce era masurat nu s-a miscat.
+**Ce stiu deja si n-am ascuns:** portul vinde ghiulele cu 2 bucata si le cumpara
+PRIMELE la refit, deci lupta e acum legata de economie - o nava fara ghiulele si
+fara bani e o nava care trebuie sa fuga. `-Shot=0` face magazia fara fund la loc,
+daca vrei sa compari.
