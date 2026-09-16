@@ -172,17 +172,12 @@ SCENARIOS = {
     # other way round - and prize_rig_at_take is the decoy that must move
     # opposite. GUARD: prizes_taken must read 1 in BOTH halves; if either is 0
     # the comparison is void, the way fire_velfwd_max guards carried/loose.
-    "prize_rig": ["-WindBearing=0", "-WindSpeed=12", "-Convoy=2",
-                  "-ConvoyX=120000", "-ConvoyY=150000", "-ConvoyWindAngle=90",
-                  "-ConvoyRangeM=1200", "-EnemyCount=1", "-RaiderSide=weather",
-                  "-RaiderOffingM=600", "-ConvoyCargo=1200", "-AIAimHigh=1",
-                  "-ShipQuitAfter=400"],
     "prize_hull": ["-WindBearing=0", "-WindSpeed=12", "-Convoy=2",
                    "-ConvoyX=120000", "-ConvoyY=150000", "-ConvoyWindAngle=90",
                    "-ConvoyRangeM=1200", "-EnemyCount=1", "-RaiderSide=weather",
                    "-RaiderOffingM=600", "-ConvoyCargo=1200", "-AIAimHigh=0",
                    "-ShipQuitAfter=400"],
-    # POSSESSION. The pair for this one is prize_rig ABOVE, which is this
+    # POSSESSION. The pair for this one is prize_left ABOVE, which is this
     # command line without -AIPrize=1 - so no redundant scenario is added and
     # the two really are one flag apart. With the doctrine off she leaves a
     # ship that has struck where she lies and goes hunting the next one; with
@@ -195,11 +190,11 @@ SCENARIOS = {
     # takes both here, twenty-four men go away, and her reload drops to 36/48.
     # That is the mechanic biting at its own default, which is the difference
     # between measuring a mechanic and measuring a clamp.
-    "prize_manned": ["-WindBearing=0", "-WindSpeed=12", "-Convoy=2",
+    "prize_left": ["-WindBearing=0", "-WindSpeed=12", "-Convoy=2",
                      "-ConvoyX=120000", "-ConvoyY=150000", "-ConvoyWindAngle=90",
                      "-ConvoyRangeM=1200", "-EnemyCount=1", "-RaiderSide=weather",
-                     "-RaiderOffingM=600", "-ConvoyCargo=1200", "-AIAimHigh=1",
-                     "-AIPrize=1", "-ShipQuitAfter=400"],
+                   "-RaiderOffingM=600", "-ConvoyCargo=1200", "-AIAimHigh=1",
+                   "-AIPrize=0", "-ShipQuitAfter=500"],
     # And the floor, because prizes_refused is otherwise a counter that reads
     # zero in every scenario, which is indistinguishable from a broken one -
     # the ships_sunk defect, which this project has already paid for once.
@@ -284,27 +279,60 @@ SCENARIOS = {
                   "-RaiderOffingM=600", "-ConvoyCargo=1200", "-AIAimHigh=1",
                   "-AIPrize=1", "-Port=1", "-EnemyHull=600", "-EnemyHands=40",
                   "-AIRefit=0", "-ShipQuitAfter=800"],
-    # THE MAGAZINE. Round shot is finite when a flag says so, and these two are
-    # one flag apart: four rounds against forty. Four is a single broadside -
-    # not enough to bring even the first merchant to strike, which takes about
-    # two - so the magazine changes the OUTCOME here and not merely the
-    # bookkeeping. Keys that must differ: shot_fired, shot_left, dry_refusals,
-    # and mission_result itself.
+    # THE MAGAZINE, one flag apart: four rounds against eight. Four is a single
+    # broadside and cannot bring even the first merchant to strike, which takes
+    # about two; eight can. BOTH halves end dry with one refusal - that is the
+    # point of the names. What differs is whether she got the work done before
+    # the magazine did, so the key that carries the pair is mission_result:
+    # the convoy gets THROUGH on four rounds and is TAKEN on eight.
+    #
+    # It used to be four against FORTY, and forty is the default magazine since
+    # d93daed - so magazine_enough was a third bit-identical copy of
+    # convoy_weather, three engine runs measuring one thing. A review caught it
+    # by diffing the baseline rows.
     #
     # Unlimited is still the default everywhere else, which is why the twenty
     # existing scenarios do not move. Whether a real magazine should be the
     # default is an owner's question - it would change every gunnery number at
     # once and it changes what the game is - and it is asked in OWNER_VERIFY.
-    "magazine_dry": ["-WindBearing=0", "-WindSpeed=12", "-Convoy=2",
+    "magazine_short": ["-WindBearing=0", "-WindSpeed=12", "-Convoy=2",
                      "-ConvoyX=120000", "-ConvoyY=150000", "-ConvoyWindAngle=90",
                      "-ConvoyRangeM=1200", "-EnemyCount=1", "-RaiderSide=weather",
                      "-RaiderOffingM=600", "-ConvoyCargo=1200", "-AIAimHigh=1",
                      "-EnemyShot=4", "-ShipQuitAfter=400"],
-    "magazine_full": ["-WindBearing=0", "-WindSpeed=12", "-Convoy=2",
+    "magazine_enough": ["-WindBearing=0", "-WindSpeed=12", "-Convoy=2",
                       "-ConvoyX=120000", "-ConvoyY=150000", "-ConvoyWindAngle=90",
                       "-ConvoyRangeM=1200", "-EnemyCount=1", "-RaiderSide=weather",
                       "-RaiderOffingM=600", "-ConvoyCargo=1200", "-AIAimHigh=1",
-                      "-EnemyShot=40", "-ShipQuitAfter=400"],
+                      "-EnemyShot=8", "-ShipQuitAfter=400"],
+    # CARGO ON THE BOTTOM. convoy_sunk was a key no code path could move: a
+    # merchant strikes at 600 of 1000 hull and one ball does 60, so nothing can
+    # carry her from above the strike line to the bottom in a single blow, and
+    # every merchant in the game strikes first. -ConvoySinkTest= founders one
+    # through the real damage path, the way -EnemySinkTest= already does for
+    # the squadron. Sixty seconds and no raider: this scenario exists to hold
+    # one counter honest and nothing else. The purse stays at ZERO beside
+    # convoy_sunk=1, which is the mechanic's whole point - a ship you sink pays
+    # nothing.
+    "convoy_sunk": ["-WindBearing=0", "-WindSpeed=12", "-Convoy=2",
+                    "-ConvoyX=120000", "-ConvoyY=150000", "-ConvoyWindAngle=90",
+                    "-ConvoyRangeM=1200", "-EnemyCount=0", "-ConvoyCargo=1200",
+                    "-ConvoySinkTest=30", "-ShipQuitAfter=70"],
+    # AN EMPTY MAGAZINE AS THE REASON TO SEEK A PORT. The bDry clause in the
+    # refit doctrine was true at no tick of any scenario: refit_on's raider had
+    # twenty rounds left when she bore away, twice the threshold, and went for
+    # hands and hull. Here she sails with a FULL crew and a WHOLE hull and eight
+    # rounds, so neither of the other two reasons can fire - and -PrizeCrew=8
+    # keeps her under RefitWhenShort after she mans a prize, which the default
+    # twelve would not. Measured: "0 hands short, hull 100%" in the line that
+    # sends her home, and a refit that buys shot and nothing else.
+    "refit_shot": ["-WindBearing=0", "-WindSpeed=12", "-Convoy=2",
+                   "-ConvoyX=120000", "-ConvoyY=150000", "-ConvoyWindAngle=90",
+                   "-ConvoyRangeM=1200", "-EnemyCount=1", "-RaiderSide=weather",
+                   "-RaiderOffingM=600", "-ConvoyCargo=1200", "-AIAimHigh=1",
+                   "-AIPrize=1", "-Port=1", "-EnemyShot=8", "-EnemyHands=60",
+                   "-EnemyHull=1000", "-PrizeCrew=8", "-AIRefit=1",
+                   "-ShipQuitAfter=800"],
 }
 
 

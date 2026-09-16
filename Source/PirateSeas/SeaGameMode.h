@@ -414,6 +414,19 @@ private:
 	UFUNCTION()
 	void StrikeMerchantForTest();
 
+	/** -ConvoySinkTest=N: the first merchant still running is SUNK at N
+	 *  seconds, without striking first.
+	 *
+	 *  It exists because a review found convoy_sunk to be a counter no code
+	 *  path can move. A merchant strikes at 600 of 1000 hull and one ball does
+	 *  60, so no single blow can carry her from above the strike line to the
+	 *  bottom; every merchant in the game strikes first, and the sunk-unstruck
+	 *  branch was unreachable by arithmetic rather than merely absent from the
+	 *  suite. Cargo going down with a ship nobody stopped is a real outcome and
+	 *  it needs a way to happen. */
+	UFUNCTION()
+	void SinkMerchantForTest();
+
 	void HandleShipStruck(AShipPawn* Ship, AActor* Causer);
 
 	/** Idempotent. Called from every exit - taken, got through, and the
@@ -514,6 +527,8 @@ private:
 	bool bRaiderLogged = false;
 	FString MissionResult;
 	float ConvoyStrikeTestAt = 0.f;
+	float ConvoySinkTestAt = 0.f;
+	FTimerHandle ConvoySinkTestTimer;
 	FTimerHandle ConvoySpawnTimer;
 	FTimerHandle GaugeTimer;
 	FTimerHandle ConvoyStrikeTestTimer;

@@ -148,6 +148,12 @@ void ASeaGameMode::BeginPlay()
 		GetWorldTimerManager().SetTimer(ConvoySpawnTimer, this,
 			&ASeaGameMode::SpawnConvoy, FMath::Max(0.05f, EnemySpawnDelay - 0.25f), false);
 		FParse::Value(FCommandLine::Get(), TEXT("ConvoyStrikeTest="), ConvoyStrikeTestAt);
+		FParse::Value(FCommandLine::Get(), TEXT("ConvoySinkTest="), ConvoySinkTestAt);
+		if (ConvoySinkTestAt > 0.f)
+		{
+			GetWorldTimerManager().SetTimer(ConvoySinkTestTimer, this,
+				&ASeaGameMode::SinkMerchantForTest, ConvoySinkTestAt, false);
+		}
 		if (ConvoyStrikeTestAt > 0.f)
 		{
 			GetWorldTimerManager().SetTimer(ConvoyStrikeTestTimer, this,
@@ -1514,6 +1520,25 @@ void ASeaGameMode::FinishMission(const TCHAR* Result)
 		RaiderSide.IsEmpty() ? TEXT("player") : *RaiderSide);
 }
 
+void ASeaGameMode::SinkMerchantForTest()
+{
+	for (const TWeakObjectPtr<AShipPawn>& Ptr : Convoy)
+	{
+		AShipPawn* Ship = Ptr.Get();
+		if (!IsValid(Ship) || Ship->IsOutOfTheFight())
+		{
+			continue;
+		}
+		UE_LOG(LogTemp, Display, TEXT("CONVOYLOG sink test: %s founders t=%.1f"),
+			*Ship->GetName(), GetWorld()->GetTimeSeconds());
+		// Through the real damage path, like every other scuttle in this file,
+		// so she goes down the way shot would take her down.
+		Ship->ScuttleHull(true, this);
+		return;
+	}
+	UE_LOG(LogTemp, Warning, TEXT("CONVOYLOG sink test: no merchant left afloat"));
+}
+
 void ASeaGameMode::StrikeMerchantForTest()
 {
 	for (const TWeakObjectPtr<AShipPawn>& Ptr : Convoy)
@@ -1559,7 +1584,27 @@ void ASeaGameMode::QuitNow()
 				AI->GetPrizeTicks(), AI->GetPortTicks());
 		}
 	}
-	for (TActorIterator<AShipPawn> It(GetWorld()); It; ++It)
+	// ORDERED, and not by the actor iterator. tools/ci_measure.py reads several
+	// keys by name off "the EnemyShipPawn_N line", meaning the FIRST match; the
+	// iterator's order is the world's, so with five enemies those keys read
+	// whichever hull the level happened to hold first. Station order is both
+	// stable and meaningful: the flagship prints first.
+	TArray<AShipPawn*> InOrder;
+	for (const TWeakObjectPtr<AShipPawn>& Ptr : Squadron)
+	{
+		if (AShipPawn* Ship = Ptr.Get())
+		{
+			InOrder.Add(Ship);
+		}
+	}
+	for (TActorIterator<AShipPawn> Any(GetWorld()); Any; ++Any)
+	{
+		if (!InOrder.Contains(*Any))
+		{
+			InOrder.Add(*Any);
+		}
+	}
+	for (AShipPawn* It : InOrder)
 	{
 		// The hands, at the end: who was lost, who was sent to repair, and
 		// what they gave back. One line per hull so the gate can read the
