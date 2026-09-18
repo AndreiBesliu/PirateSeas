@@ -1,4 +1,4 @@
-﻿#include "SeaGameMode.h"
+#include "SeaGameMode.h"
 
 #include "EnemyShipPawn.h"
 #include "MerchantShipPawn.h"
@@ -19,6 +19,8 @@
 #include "Engine/PostProcessVolume.h"
 #include "ShipAIController.h"
 #include "ShipPawn.h"
+#include "AimIndicator.h"
+#include "ShotTrail.h"
 #include "TimerManager.h"
 #include "WaterBodyActor.h"
 #include "GerstnerWaterWaves.h"
@@ -1649,6 +1651,56 @@ void ASeaGameMode::QuitNow()
 			It->GetRepairShare(), It->GetRepairedTotal(), It->GetGunCrewFactor(),
 			It->GetRigEfficiency(), It->GetRudderIntegrity());
 	}
+	// The trail, at quit, whether it was on or off: a counted zero rather than
+	// an absent line. stranded is the one that must never move.
+	{
+		const AShotTrail* Trail = nullptr;
+		for (TActorIterator<AShotTrail> It(GetWorld()); It; ++It)
+		{
+			Trail = *It;
+			break;
+		}
+		UE_LOG(LogTemp, Display,
+			TEXT("TRAILLOG TOTAL laid=%d live=%d chains=%d discarded=%d stranded=%d"),
+			Trail ? Trail->GetLaid() : 0, Trail ? Trail->GetLive() : 0, Trail ? Trail->GetChains() : 0,
+			Trail ? Trail->GetDiscarded() : 0, Trail ? Trail->GetStranded() : 0);
+	}
+
+	// THE GUNS AS LAID, printed from the SHIP and not from the picture. The
+	// indicator does not exist at all under -AimMarks=0, so a line printed by it
+	// would take the train, the elevation and the stop flag down with it - and a
+	// pair meant to prove the picture moves nothing would report five missing
+	// numbers instead of one moved one. The ship is always there; only `segs`
+	// belongs to the marks, and it is the one key that pair is allowed to move.
+	{
+		const AShipPawn* Laid = nullptr;
+		for (TActorIterator<AShipPawn> It(GetWorld()); It; ++It)
+		{
+			if (It->IsPlayerControlled())
+			{
+				Laid = *It;
+				break;
+			}
+		}
+		const AAimIndicator* Picture = nullptr;
+		for (TActorIterator<AAimIndicator> It(GetWorld()); It; ++It)
+		{
+			Picture = *It;
+			break;
+		}
+		UE_LOG(LogTemp, Display,
+			TEXT("AIMLOG TOTAL hand=%d side=%s train=%+.1f elev=%.1f fall=%dm ")
+			TEXT("stop=%d locked=%d segs=%d"),
+			Laid && Laid->IsLayingByHand() ? 1 : 0,
+			Laid && Laid->IsLayingStarboard() ? TEXT("starboard") : TEXT("port"),
+			Laid ? Laid->GetLayTrainDeg() : 0.f,
+			Laid ? Laid->GetLayElevationDeg() : 0.f,
+			Laid ? (int32)(Laid->RangeForElevationCm(Laid->GetLayElevationDeg()) * 0.01f) : 0,
+			Laid && Laid->IsAgainstTheStop() ? 1 : 0,
+			Laid && Laid->IsLayLocked() ? 1 : 0,
+			Picture ? Picture->GetSegments() : 0);
+	}
+
 	// ALWAYS, even in a run with no convoy in it: a counted zero. A money
 	// counter that is simply absent from thirteen scenarios cannot be told
 	// from one that stopped being written.

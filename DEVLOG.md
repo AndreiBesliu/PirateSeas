@@ -3879,3 +3879,113 @@ salvă pleca pe la 348 s dintr-o rulare care se termină la 360, deci ghiulelele
 ei n-apucau oricum să cadă.
 
 **Task Completed.**
+
+---
+
+## 18.09.2026 — dara ca panglica, nava pe linia ei de plutire, tunurile in mana ta
+
+**Task Started.** Owner, pe rand: „o sa vreau sa punem trails in spatele
+ghiulelelor, acum nu se vede foarte bine unde se duc"; apoi „vreau ca darele sa
+fie niste linii fumurii care urmeaza ghiulelele si care sunt conice si curbate
+dupa traiectorie"; apoi „tunurile sunt putin cam jos, ca inaltime, sau nava
+trebuie sa fie mai mare si inalta"; apoi „vreau sa avem un sistem de aiming, cu
+unghiuri limitate, ideea este sa fie nevoie sa manevrezi nava ca sa obtii
+alinierea, dar tot ar trebui ceva care sa arate directia in care vor merge
+ghiulelele" — si, la intrebarea despre cat de strans sa fie arcul, „1, dar vreau
+ca pozitia mouse-ului sa dea unghiul, si vreau un buton care fixeaza tunurile la
+0 grade [...] ma gandesc sa folosim si mouse wheel pentru elevarea verticala".
+Model: Claude Opus 5.
+
+### Emisia nu era moarta. Era de o mie de ori prea slaba.
+
+Dara a fost intai cartele instantiate, si a iesit NEAGRA. Am cheltuit o sesiune
+intreaga eliminand cauze: blend mode, model de umbrire, tipul parametrului,
+`PerInstanceRandom`, ceata, Lumen, pasa de translucenta, incalzirea shaderelor,
+chiar si API-ul de autorare — un material scris prin `MakeMaterialAttributes` era
+la fel de negru. Un sweep pe cinci valori de tint, pe ACELASI binar si ACELASI
+material, dadea pixeli identici la unitate intre tint 0 si tint 40.
+
+Asta se citeste exact ca o intrare deconectata. Nu era. `DefaultEngine.ini`
+porneste `ExtendDefaultLuminanceRange` si blocheaza expunerea la EV100 12,5–16,
+deci punctul alb al scenei e cel putin 2^12,5 = **5793 cd/m2**. O emisie de 2,35
+ajunge la patru zecimi de miime din alb, si la fel 40. Materialele iluminate se
+vad fiindca soarele le da 110.000 lux de reflectat.
+
+**Greseala de rationament, scrisa ca atare:** am tratat „toate valorile dau
+acelasi rezultat" ca „intrarea e deconectata", cand insemna „toate valorile sunt
+zero DUPA expunere". Testul care ar fi separat cele doua in cinci minute: pune
+ceva ILUMINAT pe aceeasi geometrie si vezi daca se vede.
+
+Si fumul de tun e „parcat" de luni de zile din exact acelasi motiv, nediagnosticat
+pana acum: `CoreColor` 0,055 si `LitColor` 0,78.
+
+### Dara, a doua oara: o panglica
+
+`AShotTrail` e acum un `UProceduralMeshComponent`. Esantioane la trei metri de
+drum, unite intr-o fasie de triunghiuri, deci **curbura e mostenita, nu
+calculata**. Conica: ~70 cm la ghiulea, ~520 cm in coada. Un lant pe ghiulea, si
+se inchide exact unde cade ghiulea. `trail_stranded` e zavorat pe toata rularea.
+
+### Nava plutea cu un metru mai adanc decat e desenata
+
+`muzzleZ=19` — salva pleca de la 19 CENTIMETRI deasupra apei. Nava e desenata cu
+bord liber 2,1 m, dar originea statea la −78,4 cm medie: o sfera de flotabilitate
+de raza 320 are nevoie de 375 cm de imersiune, deci centrata pe linia de plutire
+nu poate echilibra decat scufundand originea. Coborate cu 80 cm, calibrat pe
+patru rulari (legea iese liniara). Si `GGunPortZ` de la 120 — un metru SUB puntea
+pe care stau tunurile — la 280.
+
+Originea: −78,4 → **+1,9 cm**. Gura de tun: 19 → **297 cm**. Misca toata
+balistica, si in `prize_hull` corsarul devine de doua ori mai eficient.
+
+### Ochirea, si defectul care mi-a aratat ca verificarea mea era goala
+
+Mouse-ul roteste bateria, rotita da inaltarea, `X` fixeaza perpendicular. Arcul
+de ±12 grade REFUZA in loc sa taie, iar linia de ochire se face chihlimbarie la
+opritor. Trei semne pe apa, pe valuri — nu la zero, fiindca marea e deplasata pe
+GPU.
+
+Am declarat ca functia e inerta in suita pe baza unei verificari care compara
+**intr-o singura directie**: fiecare diferenta veche apare in rularea noua, 43
+din 43. Nu am verificat si invers. Rularea noua avea diferente pe care cea veche
+nu le avea — `gunnery.struck: 9 → 8`.
+
+Cauza: deduceam „jucatorul ocheste" din GEOMETRIE (privirea la mai mult de un
+grad de travers), ceea ce e adevarat din primul cadru al oricarei rulari fara
+mouse. Ochirea manuala se aprindea in toate cele 26 de scenarii.
+
+Semnalul corect e chiar manerul de intrare: un handler de axa ruleaza doar cand
+axa s-a miscat. Si cheia `aim_by_hand`, adaugata cu zece minute inainte ca
+detector, a prins-o la prima folosire — se vedea in baseline, `gunnery` cu
+`aim_by_hand: 1` intr-un rand fara niciun flag de ochire. Instrumentul a
+functionat; eu nu m-am uitat la el inainte sa declar victorie.
+
+### Un regex care a incetat tacut sa potriveasca
+
+Cand dara a devenit panglica, linia ei de la iesire a capatat `chains=` intre
+`live=` si `discarded=`. Regexul din `ci_measure.py` a ramas pe forma veche si
+toate cele patru cifre ale darei au incetat sa fie citite. `trail_off` rula si nu
+proba nimic. Nimic nu s-a facut rosu, fiindca `compare()` poate raporta o cifra
+ca disparuta doar daca a fost vreodata inregistrata intr-un baseline.
+
+`ci_checks.py` citeste acum `TRAILLOG TOTAL` si `AIMLOG TOTAL` din fixturi
+copiate din log-uri reale, plus una deliberat rosie care verifica ca forma VECHE
+nu mai e acceptata. Probat prin mutatie: poarta iese rosie, fisierul se
+restaureaza octet cu octet.
+
+### Cele trei perechi
+
+- `aim_laid` / `aim_nomarks`: **o singura cheie difera**, `aim_segments` 4 → 0.
+  Desenul nu misca fizica.
+- `aim_laid` / `aim_stop`: `aim_train` 6,0 → 12,0 si `aim_stop` 0 → 1.
+- `gunnery` / `trail_off`: doar cele trei contoare ale darei.
+
+Si niciun scenariu care nu e al ochirii nu are `aim_by_hand` diferit de zero.
+
+**Ramase, stiute si nereparate:** capitanul AI n-a fost atins si trage pe poarta
+lui veche de 9 grade; o salva cu un tun costa tot 12 secunde de reincarcare,
+fiindca `Reload` e neconditionat, iar proiectul n-are niciun sunet prin care
+jucatorul sa afle; `sinking.casualties_max` a cazut la 0 si verificarea aia e
+acum vida.
+
+**Task Completed.**

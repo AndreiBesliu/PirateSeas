@@ -1,5 +1,7 @@
 #include "CannonBall.h"
 
+#include "ShotTrail.h"
+
 #include "Island.h"
 #include "ShipPawn.h"
 #include "Components/SphereComponent.h"
@@ -97,6 +99,11 @@ void ACannonBall::Tick(float DeltaSeconds)
 		return;
 	}
 	FlightTime += DeltaSeconds;
+
+	// The wisp she leaves. One line, and it knows nothing about the trail: the
+	// actor finds or makes itself. Laid BEFORE the sweep and the water query
+	// below, so a ball that dies this frame has already marked where it got to.
+	AShotTrail::Lay(GetWorld(), GetActorLocation(), TrailChain);
 
 	// Look for rigging along the path just covered. The rig volumes are
 	// query-only, so they raise no contact and the ball must sweep for them.
@@ -286,6 +293,11 @@ void ACannonBall::OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor,
 void ACannonBall::ReportAndDie(const TCHAR* Reason, const FVector& Where)
 {
 	bSpent = true;
+
+	// Close the ribbon WHERE SHE DIED. The last sample was taken up to three
+	// metres back, and a trail that stops short of the splash fails at the one
+	// question it exists to answer: where did the shot actually land.
+	AShotTrail::Close(GetWorld(), TrailChain, Where);
 
 	// Tell the sea, but only when the sea is what was hit. A ball that went
 	// through a hull or into a hillside has no business throwing up water, and

@@ -1,5 +1,7 @@
 #include "ShipPawn.h"
 
+#include "AimIndicator.h"
+
 #include "Materials/MaterialInstanceDynamic.h"
 
 #include "BuoyancyComponent.h"
@@ -49,7 +51,18 @@ namespace
 	// Clear of the hull collision box, whose half width is 520, so a fresh
 	// shot never starts life already touching the ship that fired it.
 	const float GGunPortY = 640.f;
-	const float GGunPortZ = 120.f;
+	/** Gun-port height above the hull ORIGIN, and the hull origin is the
+	 *  waterline the Blender ship was drawn around (Scripts/ship.py: DRAFT 2.6 m
+	 *  below, FREEBOARD 2.1 m above, BULWARK 1.15 m of rail on top of that).
+	 *
+	 *  It was 120, and that was wrong twice over. The guns stand ON the deck and
+	 *  fire through ports cut in the bulwark, so their muzzles belong at deck
+	 *  plus about seventy centimetres - 280, not 120, which put them a metre
+	 *  BELOW the deck they are supposedly standing on. And because the hull was
+	 *  also floating a metre too deep, the measured muzzle height above the sea
+	 *  was 19 CENTIMETRES: the broadside was fired from the waterline, which is
+	 *  what made the ship read as a barge with masts. */
+	const float GGunPortZ = 280.f;
 }
 
 AShipPawn::AShipPawn()
@@ -156,7 +169,15 @@ AShipPawn::AShipPawn()
 	for (const FPontoonSpec& Spec : GPontoons)
 	{
 		FSphericalPontoon Pontoon;
-		Pontoon.RelativeLocation = FVector(Spec.X, Spec.Y, 0.f);
+		// BELOW the origin, not at it. A sphere of radius 320 needs 375 cm of
+		// immersion to carry its share of the weight, so a sphere CENTRED on the
+		// hull origin can only balance with the origin 55 cm under water - and
+		// measured, with damping and waves, the ship sat at z = -72 to -115.
+		// The origin is the waterline the hull was drawn around, so a ship
+		// resting a metre below it is a ship drawn 30 m long and rendered as a
+		// barge: deck at 1.1 m instead of 2.1, rail at 2.25 instead of 3.25.
+		// Dropping the spheres puts the hull back on her own designed line.
+		Pontoon.RelativeLocation = FVector(Spec.X, Spec.Y, -PontoonDropCm);
 		Pontoon.Radius = Spec.Radius;
 		Data.Pontoons.Add(Pontoon);
 	}
@@ -590,6 +611,21 @@ void AShipPawn::DeferredWaterRegistration()
 	// itself in its own BeginPlay; this is a belt-and-braces second attempt in
 	// case that ran before the manager existed. Measured: it made no difference
 	// either way, the manager is found for spawned and placed ships alike.
+	// -PontoonDrop= re-seats the spheres before the manager takes them, so the
+	// flotation can be calibrated against a measured resting z without a rebuild
+	// per attempt. The constructor already applied the default; this overrides.
+	float DropOverride = -1.f;
+	if (Buoyancy && FParse::Value(FCommandLine::Get(), TEXT("PontoonDrop="), DropOverride)
+		&& DropOverride >= 0.f)
+	{
+		for (FSphericalPontoon& P : Buoyancy->BuoyancyData.Pontoons)
+		{
+			P.RelativeLocation.Z = -DropOverride;
+		}
+		UE_LOG(LogTemp, Display, TEXT("SHIPLOG %s pontoons re-seated to z=-%.0f"),
+			*GetName(), DropOverride);
+	}
+
 	ABuoyancyManager* Manager = nullptr;
 	const bool bFound =
 		ABuoyancyManager::GetBuoyancyComponentManager(this, Manager) && Manager;
@@ -812,7 +848,19 @@ bool AShipPawn::FireBroadside(bool bStarboard, AActor* AimAt, bool bHigh)
 		// horizon on both sides, and every ball splashed six metres out.
 		FVector Beam = (GetActorRightVector() * Side).GetSafeNormal2D();
 		float Elevation = GunElevationDeg;
-		if (AimAt)
+		if (bLayingByHand && IsPlayerControlled())
+		{
+			// LAID BY HAND. The two locals the solver would have written are
+			// written from the player's train and elevation instead, and every
+			// line below - the scatter, the two random draws, the spawn, the
+			// inherited way - is untouched. One function, one truth: a second
+			// copy of FireBroadside for the player would have drifted from this
+			// one the first time either was edited, and this project has paid
+			// for exactly that before.
+			Beam = Beam.RotateAngleAxis(LayTrainDeg, FVector::UpVector);
+			Elevation = LayElevationDeg;
+		}
+		else if (AimAt)
 		{
 			// Ordered high, the guns are laid on her main top; ordered low, on
 			// her hull. Same formula, different mark.
@@ -1931,18 +1979,165 @@ void AShipPawn::OnHullHit(UPrimitiveComponent* HitComponent, AActor* OtherActor,
 		Hit.ImpactNormal.Z, NormalImpulse.Size(), Hit.ImpactPoint.Z);
 }
 
+void AShipPawn::OnElevate(float Value)
+{
+	if (FMath::IsNearlyZero(Value))
+	{
+		return;
+	}
+	bLayingByHand = true;
+	LayElevationDeg = FMath::Clamp(LayElevationDeg + Value * ElevationPerNotchDeg,
+		MinLayElevationDeg, MaxLayElevationDeg);
+}
+
+void AShipPawn::OnLayLockPressed()
+{
+	// Pegged dead abeam, and it is a TOGGLE rather than a hold: the whole point
+	// is that the player can stop steering the guns and go back to steering the
+	// ship, and a key he has to keep a finger on gives him neither hand back.
+	bLayingByHand = true;
+	bLayLocked = !bLayLocked;
+	if (bLayLocked)
+	{
+		LayTrainDeg = 0.f;
+		bAgainstStop = false;
+	}
+}
+
+void AShipPawn::UpdateGunLaying()
+{
+	if (!IsPlayerControlled())
+	{
+		return;
+	}
+
+	// Pinned from the command line: no mouse in a headless run, and a visual
+	// feature that cannot be captured is one that cannot be reviewed.
+	if (!bLayPinned)
+	{
+		float PinTrain = 0.f, PinElev = 0.f;
+		const bool bHaveTrain =
+			FParse::Value(FCommandLine::Get(), TEXT("LayTrain="), PinTrain);
+		const bool bHaveElev =
+			FParse::Value(FCommandLine::Get(), TEXT("LayElev="), PinElev);
+		int32 PinSide = 1;
+		FParse::Value(FCommandLine::Get(), TEXT("LayStarboard="), PinSide);
+		if (bHaveTrain || bHaveElev)
+		{
+			bLayPinned = true;
+			bLayingByHand = true;
+			bLayStarboard = PinSide != 0;
+			if (bHaveElev)
+			{
+				LayElevationDeg = FMath::Clamp(PinElev, MinLayElevationDeg, MaxLayElevationDeg);
+			}
+			// Clamped exactly as the mouse would be, and the stop flag set the
+			// same way, so a pinned run exercises the real path and not a
+			// parallel one that could drift from it.
+			bAgainstStop = FMath::Abs(PinTrain) > MaxTraverseDeg + 0.01f;
+			LayTrainDeg = FMath::Clamp(PinTrain, -MaxTraverseDeg, MaxTraverseDeg);
+			UE_LOG(LogTemp, Display,
+				TEXT("AIMLOG pinned: side=%s train=%+.1f (asked %+.1f) elev=%.1f stop=%d"),
+				bLayStarboard ? TEXT("starboard") : TEXT("port"),
+				LayTrainDeg, PinTrain, LayElevationDeg, bAgainstStop ? 1 : 0);
+		}
+	}
+	if (bLayPinned)
+	{
+		AAimIndicator::For(this);
+		return;
+	}
+
+	// Where the player is looking, relative to the bow. The camera boom runs on
+	// the controller's yaw (bUsePawnControlRotation), and the hull does not, so
+	// this difference is exactly the mouse's contribution and nothing else.
+	const AController* C = GetController();
+	if (!C)
+	{
+		return;
+	}
+	const float LookRel = FMath::UnwindDegrees(
+		C->GetControlRotation().Yaw - GetActorRotation().Yaw);
+
+	// Which battery the player is looking at. Taken from the sign alone, so the
+	// guns change sides the instant the eye crosses the bow or the stern rather
+	// than at some hysteresis band the player cannot see.
+	const bool bWantStarboard = LookRel >= 0.f;
+	const float Beam = bWantStarboard ? 90.f : -90.f;
+	// Off the beam, positive FORWARD on both sides, so one number reads the same
+	// whichever battery is laid and the picture does not have to know the side.
+	const float Wanted = FMath::UnwindDegrees(LookRel - Beam) * (bWantStarboard ? -1.f : 1.f);
+
+	if (bLayLocked)
+	{
+		bLayStarboard = bWantStarboard;
+		LayTrainDeg = 0.f;
+		bAgainstStop = false;
+		AAimIndicator::For(this);
+		return;
+	}
+
+	// bLayingByHand is set by the INPUT HANDLERS - the mouse axis, the wheel, the
+	// lock key - and never inferred from where the camera happens to point. See
+	// OnTurnCamera for what inferring it cost.
+	if (!bLayingByHand)
+	{
+		return;
+	}
+
+	bLayStarboard = bWantStarboard;
+	LayTrainDeg = FMath::Clamp(Wanted, -MaxTraverseDeg, MaxTraverseDeg);
+	// The picture follows the guns, and it makes itself the first time they are
+	// laid: nothing has to be placed in the level, because this project builds
+	// its levels from script and a hand-placed actor is one that will be missing
+	// from somebody's map.
+	AAimIndicator::For(this);
+	// HARD AGAINST THE STOP. This is the one piece of state the whole feature
+	// turns on: the guns stop following the mouse, visibly, and the only way to
+	// get them further round is the helm. Nothing says so in words anywhere -
+	// the player sees the barrels refuse and works it out, which is the way a
+	// rule is actually learned.
+	bAgainstStop = FMath::Abs(Wanted) > MaxTraverseDeg + 0.01f;
+}
+
+float AShipPawn::RangeForElevationCm(float ElevationDeg) const
+{
+	// The inverse of ElevationForRangeDeg. Flat-water ballistic range with the
+	// same drag correction the solver uses, so the mark the player reads and the
+	// place the ball lands are computed from ONE relationship rather than two
+	// that can drift apart.
+	const float Theta = FMath::DegreesToRadians(FMath::Max(0.05f, ElevationDeg));
+	const float V = MuzzleVelocityMS * 100.f;
+	const float G = FMath::Abs(GetWorld() ? GetWorld()->GetGravityZ() : -980.f);
+	if (G < 1.f)
+	{
+		return 0.f;
+	}
+	const float Flat = V * V * FMath::Sin(2.f * Theta) / G;
+	return Flat / FMath::Max(0.01f, RangeBias);
+}
+
 void AShipPawn::OnFirePort()
 {
-	FireBroadside(false, FindTargetOnSide(false), bAimHigh);
+	// Laid by hand, the guns go where they are pointed and nowhere else. Passing
+	// a target here would let the solver quietly re-aim them, which is precisely
+	// the magic this feature exists to take away: the player who lines up his
+	// own shot and misses has to be allowed to miss.
+	FireBroadside(false, bLayingByHand ? nullptr : FindTargetOnSide(false), bAimHigh);
 }
 
 void AShipPawn::OnFireStarboard()
 {
-	FireBroadside(true, FindTargetOnSide(true), bAimHigh);
+	FireBroadside(true, bLayingByHand ? nullptr : FindTargetOnSide(true), bAimHigh);
 }
 
 void AShipPawn::Tick(float DeltaSeconds)
 {
+	// The guns follow the eye before anything else this frame: a broadside fired
+	// on this tick must go where the barrels are NOW, not where they were when
+	// the mouse was last read.
+	UpdateGunLaying();
+
 	// The wind, into the rig. Masts bend a little, sails breathe, cordage moves
 	// most - each by its own SwayAmount, all from the one wind the sea and the
 	// sails already use, so nothing can disagree about which way it blows.
@@ -2446,6 +2641,9 @@ void AShipPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 		this, &AShipPawn::OnAimHighReleased);
 	PlayerInputComponent->BindAction(TEXT("Repair"), IE_Pressed,
 		this, &AShipPawn::OnRepairPressed);
+	PlayerInputComponent->BindAxis(TEXT("Elevate"), this, &AShipPawn::OnElevate);
+	PlayerInputComponent->BindAction(TEXT("LayAbeam"), IE_Pressed,
+		this, &AShipPawn::OnLayLockPressed);
 }
 
 void AShipPawn::OnSailTrimInput(float Value)
@@ -2479,6 +2677,18 @@ void AShipPawn::OnAimHighReleased()
 void AShipPawn::OnTurnCamera(float Value)
 {
 	AddControllerYawInput(Value);
+	// THE MOUSE ITSELF is the signal that the player has taken the guns, and the
+	// first version inferred it from GEOMETRY instead - "the eye is more than a
+	// degree off the beam, so he must be laying". That is true from the first
+	// frame of any run with nobody at the keyboard, because the camera starts
+	// wherever it starts: hand laying switched itself on in all twenty-six
+	// measured scenarios, the -ShipFireTest broadside was fired at the carriage
+	// stop instead of at the solver's answer, and `gunnery` moved struck 9 -> 8.
+	// An axis handler only runs when an axis moved, so this cannot happen here.
+	if (FMath::Abs(Value) > KINDA_SMALL_NUMBER)
+	{
+		bLayingByHand = true;
+	}
 }
 
 void AShipPawn::OnLookUp(float Value)

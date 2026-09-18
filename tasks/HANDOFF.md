@@ -220,14 +220,47 @@ Livrat:
    unde autorul se uita si neobisnuit de orb acolo unde nu se uita; ce nu are e
    vreo verificare pe granita DINTRE felii."
 
-Urmatorul: DARELE IN SPATELE GHIULELELOR, cerute de owner pe 16.09 - nu se vede
-unde se duc. E lizibilitate, nu grafica parcata. De intrebat inainte: dara
-apare si pe ghiulelele INAMICULUI? Asta schimba jocul, nu doar imaginea.
+11. **DARELE GHIULELELOR** (cerute 16.09, cizelate 18.09): o PANGLICA pe
+   `UProceduralMeshComponent`, construita din chiar drumul ghiulelei, deci
+   curbura e mostenita nu calculata. Conica: ~70 cm la ghiulea, ~520 cm in
+   coada. Un lant pe ghiulea. Se inchide unde cade ghiulea, nu cu trei metri
+   inainte. Pe TOATE ghiulelele.
+
+12. **NAVA RIDICATA PE LINIA EI DE PLUTIRE**: sferele de flotabilitate coborate
+   cu 80 cm (originea de la -78,4 la +1,9 cm) si `GGunPortZ` de la 120 la 280.
+   Gura de tun de la **19 cm la 297**. Misca TOATA balistica - 86 de cifre in
+   baseline, si `prize_hull` da acum doua prize in loc de una.
+
+13. **OCHIREA DE MANA** (ceruta 18.09): mouse-ul roteste bateria, rotita da
+   inaltarea, `X` fixeaza perpendicular. Arc de +/-12 grade care REFUZA, nu
+   taie. Trei semne pe apa, pe valuri nu la zero. Cale SEPARATA de a AI-ului si
+   de harnasament, deci suita nu se misca din cauza ei - probat prin 43/43
+   diferente identice inainte si dupa.
+
+Urmatorul: de ales cu owner-ul. **Deschise si stiute:**
+- **Capitanul AI n-a fost atins.** Trage pe poarta veche de 9 grade din centrul
+  cocii, nu pe arcul nou pe tun. Verificarea adversariala a aratat ca daca i se
+  da regula noua fara un prag minim de tunuri, DESCHIDE fiecare lupta cu un
+  singur tun, determinist - fiindca "macar unul poarta" ajunge la 13,9 grade la
+  100 m, adica mai LARG decat poarta lui de acum.
+- **Capcana salvei partiale.** `Reload = ReloadSeconds` e neconditionat: o salva
+  cu un tun costa tot 12 secunde. Nu exista NICIUN sunet in proiect si fumul e
+  stins implicit, deci jucatorul nu are cum sa afle. Reincarcarea pe tun e
+  reparatia corecta si e o felie separata.
+- **`sinking.casualties_max` a cazut la 0** dupa ridicarea tunurilor. Probabil
+  divergenta de samanta si nu un defect - in `prize_hull` loviturile au CRESCUT -
+  dar verificarea e acum vida in scenariul ala si trebuie facuta determinista.
+- **Fumul de tun e parcat, si acum se stie de ce**: culoarea lui e autorata in
+  jurul lui 0,78 intr-o scena cu punct alb 5793 cd/m2. Nu era intunecat, era
+  subexpus de trei ordine de marime.
+- Linia de bataie lasa urmaritorii pe un lider care a incetat sa navigheze, si
+  commitul de impachetare n-a fost citit de nicio lentila.
+
 **Abordajul ramane AMANAT.**
 
 ## Ce aşteaptă ochiul owner-ului
 
-`OWNER_VERIFY.md` are 24 de puncte; **16–24 n-au fost confirmate niciodată** —
+`OWNER_VERIFY.md` are 34 de puncte; **16–34 n-au fost confirmate niciodată** —
 sunt judecăţi vizuale pe care nu le pot face eu. Punctul 20 (fumul de tun) e o
 întrebare deschisă: merită pornit implicit?
 

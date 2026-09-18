@@ -325,6 +325,46 @@ def check_comparison():
     # And the counters the game really prints. This is a WAKELOG line copied from
     # a log, with the numbers changed: every one of these was being printed and
     # read by nothing at all until this commit.
+    # THE TRAIL AND THE GUN LAY, and this pair of fixtures exists because the
+    # gap they close has already bitten. When the shot trail became a ribbon its
+    # quit line gained a `chains=` field between `live=` and `discarded=`; the
+    # regex in ci_measure kept the old shape, stopped matching, and all four
+    # trail numbers silently stopped being read - so the `trail_off` scenario
+    # went on running and proving nothing about trails at all. Nothing went red,
+    # because compare() can only report a number as GONE if it was ever recorded
+    # in a baseline, and these never had been.
+    #
+    # The lines below are copied from a real log with the numbers changed. A
+    # format drift that breaks the reader now fails HERE, on a machine with no
+    # Unreal on it, in under a second.
+    tr = ci_measure.measure("fixture", "LogTemp: Display: TRAILLOG TOTAL laid=346 "
+                            "live=252 chains=12 discarded=1 stranded=0\n")
+    for key, want in (("trail_laid", 346), ("trail_live_end", 252),
+                      ("trail_chains", 12), ("trail_discarded", 1),
+                      ("trail_stranded", 0)):
+        if tr.get(key) != want:
+            fail("the trail's quit line is no longer read: %s is %r, expected %r"
+                 % (key, tr.get(key), want))
+
+    aim = ci_measure.measure("fixture", "LogTemp: Display: AIMLOG TOTAL hand=1 "
+                             "side=starboard train=+12.0 elev=5.0 fall=383m "
+                             "stop=1 locked=0 segs=4\n")
+    for key, want in (("aim_by_hand", 1), ("aim_train", 12.0), ("aim_elev", 5.0),
+                      ("aim_fall_m", 383), ("aim_stop", 1), ("aim_segments", 4)):
+        if aim.get(key) != want:
+            fail("the gun-lay quit line is no longer read: %s is %r, expected %r"
+                 % (key, aim.get(key), want))
+
+    # AND THE DELIBERATELY RED ONE: the old trail format, which must NOT parse.
+    # A reader that accepted both shapes would be a reader that could not tell
+    # which one it was looking at, and the whole point of the fixture above is
+    # that the shape is load-bearing.
+    stale = ci_measure.measure("fixture", "LogTemp: Display: TRAILLOG TOTAL "
+                               "laid=346 live=252 discarded=1 stranded=0\n")
+    if "trail_laid" in stale:
+        fail("the trail reader still accepts the OLD line shape, so a format "
+             "drift would go unnoticed in exactly the way it already did once")
+
     w = ci_measure.measure("fixture", "LogTemp: Display: WAKELOG live=6 slots=2 "
                            "shortest=3 tracked=ShipPawn_0:3  ignored=3 stranded=2 "
                            "doubled=1 stolen=5 discarded=7 alive=0 seen=0 lost=4\n")

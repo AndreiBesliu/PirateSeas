@@ -93,6 +93,101 @@ laterale.
 Nava primește recul: fiecare tun împinge coca în sens opus, aplicat chiar în
 dreptul gurii de foc, deci o salvă o și înclină puțin.
 
+## Dara ghiulelei
+
+Fiecare ghiulea trage dupa ea o linie fumurie, ca sa vezi unde se duce. Ceruta de
+owner in exact cuvintele astea - nu se vedea unde se duc - si cizelata a doua zi
+la ce e acum: "linii fumurii care urmeaza ghiulelele si care sunt conice si
+curbate dupa traiectorie". E **lizibilitate**, nu podoaba: nu-ti poti corecta
+tirul daca nu vezi unde a cazut cel dinainte.
+
+O PANGLICA, nu un sir de puncte. Eantioanele se iau la trei metri de drum si se
+unesc intr-o fasie de triunghiuri, deci **curbura nu e calculata, e mostenita** -
+panglica urmeaza traiectoria fiindca e facuta din ea. Conica: ~70 cm la ghiulea,
+unde fumul abia a plecat, si ~520 cm in coada, unde patru secunde de aer l-au
+tras in parti. Varful conului iti spune unde e lovitura ACUM.
+
+Un lant pe fiecare ghiulea, nu unul pe lume: patru ghiulele dintr-o salva deseneaza
+patru arce, iar un singur cursor impartit intre ele ar desena o linie punctata cu
+trei sferturi lipsa. Si se inchide EXACT unde cade ghiulea, nu cu trei metri
+inainte - altfel ar rata singura intrebare pentru care exista.
+
+**Pe TOATE ghiulelele, si pe ale inamicului**, prin decizia owner-ului. Asta
+schimba jocul, nu doar imaginea: vezi salva care vine si poti pune carma.
+
+`-ShotTrails=0` le stinge. Perechea `gunnery` / `trail_off` difera intr-un singur
+flag, si **jumatatea care conteaza e cea care NU trebuie sa difere**. Contoarele:
+`trail_laid`, `trail_chains`, `trail_discarded` si `trail_stranded` - ultimul nu
+are voie sa se miste niciodata, si e zavorat pe toata rularea, nu esantionat pe
+cadru.
+
+**Prima incercare a fost pe cartele instantiate si a iesit NEAGRA.** Nu materialul
+era de vina: scena ruleaza in unitati fizice si punctul ei alb e 5793 cd/m2, deci
+o emisie de 2,35 - sau de 40 - ajunge la patru zecimi de miime din alb. Un sweep
+pe cinci valori dadea pixeli identici, ceea ce se citeste exact ca o intrare
+moarta si nu era. Vezi `Source/PirateSeas/ShotTrail.h` pentru toata socoteala.
+
+## Cum ochesti
+## Cum ochesti
+
+Tunurile urmeaza MOUSE-UL, nu doar camera. Directia in care te uiti devine
+directia bateriei, iar bordul se schimba singur cand privirea trece prova sau
+pupa. Rotita urca si coboara teava. `X` fixeaza tunurile perpendicular pe nava
+si ignora mouse-ul pana il apesi din nou - e comutator, nu apasare tinuta,
+fiindca ideea e sa-ti iei mana de pe tunuri si sa te intorci la carma, iar o
+tasta pe care trebuie s-o tii apasata nu-ti da inapoi nicio mana.
+
+**Arcul e de 12 grade in fiecare parte, si NU e o sugestie.** Cand mouse-ul cere
+mai mult, tunurile raman la limita si linia de ochire se face chihlimbarie. Nu
+scrie nicaieri "intoarce nava": se vede ca tevile nu mai merg, si asta e singurul
+fel in care o regula chiar se invata.
+
+Cat de strans e asta, in cifre. Cele patru guri de tun stau la 10,8 m una de
+alta, deci vad tinta sub unghiuri diferite - dar cat de diferite depinde tare de
+distanta:
+
+| distanta | unghiurile celor patru tunuri | dispersie |
+|---|---|---|
+| 50 m | +7,8 +3,2 -1,6 -6,3 | **14,1 grade** |
+| 100 m | +3,7 +1,5 -0,7 -2,9 | 6,6 |
+| 400 m | +0,9 +0,3 -0,2 -0,7 | 1,6 |
+
+La 50 m dispersia e mai mare decat tot arcul, deci la distanta de abordaj e
+fizic imposibil ca toate patru sa poarte daca nu esti aproape paralel. La 400 m
+ori poarta toate, ori niciunul. Alinierea e chinuitoare de aproape si curata de
+departe, ceea ce e si istoric drept si exact tensiunea care face manevra sa
+conteze.
+
+**Ce vezi pe apa**, trei semne, fiecare raspunzand la altceva: doua linii palide
+la opritoarele afeturilor (cat loc mai au tunurile), o linie clara acolo unde
+arata tevile (pe care o conduci cu mouse-ul si care se OPRESTE cand mouse-ul nu
+se opreste), si o bara transversala la distanta pe care o da inaltarea curenta -
+aia e cadranul rotitei. Fara ea ai invarti un buton fara nicio citire pe el.
+
+Semnele stau pe VALURI, nu la zero: marea e deplasata pe GPU in `M_Sea`, si un
+semn plat la zero ar sta jumatate din timp ingropat.
+
+**Ochirea manuala e o cale separata, si asta e deliberat.** Calea prin care
+tinteste capitanul AI si harnasamentul `-ShipFireTest` raman neatinse, deci
+niciunul din cele 26 de scenarii care existau inainte nu se misca din cauza ei -
+probat, nu presupus: toate cele 43 de diferente vazute inainte de a o adauga apar
+identic si dupa. (Celelalte trei randuri din cele 29 sunt ale ochirii insesi, si
+evident ca ele nu existau.) Un sistem de ochire care ar fi re-inregistrat baseline-ul in ziua in
+care a fost adaugat si-ar fi ascuns propriul efect intre o suta de alte cifre
+schimbate.
+
+Si inca una, fiindca e o decizie si nu o omisiune: cand ochesti de mana, tunurile
+NU mai primesc tinta. `OnFirePort` nu mai cheama `FindTargetOnSide`, altfel
+rezolvitorul ti-ar re-ochi tevile pe furis. Cine isi aliniaza singur lovitura are
+dreptul sa rateze.
+
+`-LayTrain=` si `-LayElev=` fixeaza ochirea fara mouse, ca sa se poata masura si
+fotografia deloc. Perechea `aim_laid` / `aim_stop` arata ca opritorul musca -
+`+6,0` intr-un rand si `+12,0` in celalalt, cu `aim_stop` 0 si 1 - iar
+`aim_nomarks` stinge DOAR desenul, si toate celelalte cifre din rand trebuie sa
+ramana identice pana la cifra.
+
+## Balistica
 ## Balistica
 
 **Gravitaţia, da.** Ghiuleaua e un corp rigid care simulează, cu
@@ -846,6 +941,39 @@ distrus, plus bara de reîncărcare. Scrie „POINTED HIGH" cât ții Shift.
 Peste tot, când e cazul: **IN IRONS**, **DISMASTED**, **RUDDER GONE**,
 **SHE IS GOING DOWN**.
 
+## Cat de sus stau tunurile
+
+Masurat pe 18.09: gura de tun iesea la **19 centimetri** deasupra apei. Salva
+pleca practic de la linia de plutire, si de aceea nava citea ca o barja cu
+catarge. Cauza nu erau tunurile.
+
+Nava e desenata in `Scripts/ship.py` cu bord liber 2,1 m si copastie 1,15 m
+peste el, dar plutea cu originea la **-78 cm** medie: tot vasul statea un metru
+sub linia lui de plutire, deci puntea la 1,1 m in loc de 2,1.
+
+Doua cauze, amandoua reparate:
+
+1. **Sferele de flotabilitate erau centrate pe originea cocii.** O sfera de raza
+   320 are nevoie de 375 cm de imersiune ca sa-si duca partea din greutate, deci
+   centrata pe linia de plutire nu poate echilibra decat scufundand originea.
+   Coborate cu 80 cm, calibrat pe patru rulari - legea iese liniara,
+   `restingZ ~= -78 + cadere`, si `-PontoonDrop=` o lasa masurabila din nou.
+2. **`GGunPortZ` era 120**, adica un metru SUB puntea pe care stau tunurile.
+   Acum 280: gura iese prin sabord, la 87 cm deasupra puntii.
+
+| | inainte | dupa |
+|---|---|---|
+| originea cocii, medie | -78,4 cm | **+1,9 cm** |
+| gura de tun deasupra apei | **19 cm** | **297 cm** |
+
+N-a fost nevoie de marirea navei; proportiile erau bune, doar nu se vedeau.
+
+Si consecinta, fiindca nu e cosmetica: ridicarea gurii cu 2,8 m **misca toata
+balistica**, iar in `prize_hull` corsarul devine de doua ori mai eficient -
+`prizes_taken` 1 -> 2, `purse_end` 696 -> 1392. Asta e o schimbare de echilibru,
+nu o zecimala, si e inregistrata in baseline in acelasi commit care o provoaca.
+
+## Chila
 ## Chila
 
 Nava are un plan lateral: rezistă mult mai tare la mișcarea în lateral decât la

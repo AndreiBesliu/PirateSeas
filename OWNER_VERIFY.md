@@ -773,3 +773,68 @@ apesi Q si nu pleaca nimic, bara e in locul gresit sau prea discreta.
 PRIMELE la refit, deci lupta e acum legata de economie - o nava fara ghiulele si
 fara bani e o nava care trebuie sa fuga. `-Shot=0` face magazia fara fund la loc,
 daca vrei sa compari.
+
+## 32. Dara ghiulelei: se vede acum unde se duc?
+
+**Ce te uiti:** Trage cateva salve la distante diferite - 100 m, 300 m, cat tine
+tunul - si uita-te la arcul pe care il lasa ghiulelele si la clipa in care cad.
+
+**Cum arata bine:** O linie fumurie care pleaca subtire de la ghiulea si se
+evazeaza in urma ei, curbata dupa traiectorie, si care e **inca in aer cand sare
+stropul** - asa afli daca ai tras lung sau scurt, si cu cat. La o salva de patru
+tunuri vezi patru linii distincte, nu una groasa.
+
+**Cum arata prost:** Dispare in clipa in care ghiulea cade (atunci nu-ti spune
+nimic). Sau seamana cu o sarma intinsa in loc de fum - a fost asa la prima
+incercare, la 30.000 cd/m2, si arde la alb pur. Sau ascunde nava tintita.
+
+**De ce nu pot eu:** pot masura cate segmente se lasa, ca se sting toate, ca
+niciunul nu ramane desenat dupa ce i-a trecut viata (`trail_stranded` e zavorat
+la zero) si ca nimic din balistica nu se misca. Daca o linie fumurie SE CITESTE
+ca fum si te ajuta sa corectezi, e judecata de ochi.
+
+**Si intrebarea pe care vreau sa mi-o raspunzi tu:** darile sunt pe TOATE
+ghiulelele, inclusiv ale inamicului, cum ai cerut. Acum vezi salva care vine si
+poti carmi. Spune-mi daca asta face lupta mai inteligenta sau ii ia coltii.
+
+## 33. Ochirea: te obliga sa manevrezi, sau doar te enerveaza?
+
+**Ce te uiti:** Intra intr-o lupta si incearca sa aduci o nava sub tunuri. Misca
+mouse-ul pana tunurile se opresc si linia se face chihlimbarie, apoi foloseste
+carma ca s-o aduci in arc. Apasa `X` si vezi cum se fixeaza perpendicular.
+Invarte rotita si uita-te la bara de cadere.
+
+**Cum arata bine:** Alinierea e o treaba de facut, nu un chin. Simti cand
+tunurile se opresc, intelegi fara sa-ti spuna nimeni ca trebuie carma, si bara de
+cadere iti spune unde ajunge lovitura inainte s-o tragi. `X` e util, nu doar
+prezent.
+
+**Cum arata prost:** Arcul de **12 grade** e prea strans si ratezi tot timpul din
+motive pe care nu le poti corecta. Sau linia de ochire e greu de urmarit pe
+valuri. Sau rotita e prea fina si iti ia zece secunde sa schimbi distanta. Toate
+trei sunt reglabile dintr-o cifra - spune-mi care si cu cat.
+
+**Ce stiu deja si n-am ascuns:** am ales 12 grade fiindca asa ai cerut ("1"), si
+e mai strans decat limita istorica reala a unui sabord (~15). Daca se joaca prost,
+`MaxTraverseDeg` e o singura constanta. **Capitanul AI n-a fost atins** - el inca
+trage pe poarta lui veche de 9 grade din centrul cocii, deci deocamdata regula
+noua te leaga doar pe tine. Si mai e o capcana pe care o stiu si n-am reparat-o
+inca: o salva cu UN tun costa aceleasi 12 secunde de reincarcare ca una cu patru,
+fiindca `Reload` e neconditionat. Reincarcarea pe tun e reparatia corecta si e o
+felie separata.
+
+## 34. Nava, dupa ce a fost ridicata pe linia ei de plutire
+
+**Ce te uiti:** Priveste nava din lateral, in valuri, si apoi de aproape la
+bordaj cand trage. Compara cu cum tii minte ca arata.
+
+**Cum arata bine:** Un vas cu bord, nu o barja cu catarge. Se vad gurile de tun
+pe bordaj, puntea sta deasupra apei, si cand se inclina la salva bordul de sub
+vant coboara fara sa intre puntea in mare.
+
+**Cum arata prost:** Acum pluteste prea SUS si arata usoara, ca o jucarie. Sau se
+leagana prea mult, fiindca sferele coborate schimba si momentul de redresare.
+
+**De ce nu pot eu:** am masurat ca originea sta la +1,9 cm fata de -78,4 si ca
+gura de tun a urcat de la 19 la 297 cm. Daca proportia CITESTE bine pentru ochi -
+daca arata ca o nava de 30 m si nu ca o barca marita - nu pot spune eu.

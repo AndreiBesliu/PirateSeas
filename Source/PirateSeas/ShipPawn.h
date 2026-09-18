@@ -136,6 +136,47 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Guns")
 	bool FireBroadside(bool bStarboard, AActor* AimAt = nullptr, bool bHigh = false);
 
+	// ---- laying the guns by hand -----------------------------------------
+	/** True once the player has laid the guns himself. Until then nothing about
+	 *  this feature is reachable, which is deliberate: the AI captain and the
+	 *  -ShipFireTest harness go down the old path untouched, so not one of the
+	 *  twenty-six measured scenarios moves because of it. An aiming system that
+	 *  re-baselined the suite on the day it was added would have hidden its own
+	 *  effect inside a hundred other changed numbers. */
+	bool IsLayingByHand() const { return bLayingByHand; }
+
+	/** Where the guns are pointed, in degrees off the beam, positive forward.
+	 *  Always inside +/-MaxTraverseDeg: the carriage stop is not advisory, and
+	 *  seeing the guns REFUSE to follow the mouse any further is the whole way
+	 *  the player learns that the ship has to be turned. */
+	float GetLayTrainDeg() const { return LayTrainDeg; }
+
+	/** Barrel elevation the player has wound on, degrees. */
+	float GetLayElevationDeg() const { return LayElevationDeg; }
+
+	/** Which side the guns are laid on: the side the player is looking at. */
+	bool IsLayingStarboard() const { return bLayStarboard; }
+
+	/** True while the guns are pegged dead abeam and ignoring the mouse. */
+	bool IsLayLocked() const { return bLayLocked; }
+
+	/** True when the mouse is asking for more train than the carriages have,
+	 *  i.e. the guns are hard against the stop. This is the signal the picture
+	 *  is drawn from, and it is the one the player has to feel. */
+	bool IsAgainstTheStop() const { return bAgainstStop; }
+
+	/** Ground range the current elevation drops a ball at, centimetres. The
+	 *  inverse of ElevationForRangeDeg, and the number the fall-of-shot mark is
+	 *  drawn at - without it the player would be winding a knob with no reading
+	 *  on it, which is not aiming, it is guessing. */
+	float RangeForElevationCm(float ElevationDeg) const;
+
+	/** The water body this ship floats on, so the aim marks can be laid on the
+	 *  same Gerstner surface she rides rather than on a flat plane at zero. The
+	 *  splash code learned that lesson the hard way: tested against the plane,
+	 *  twenty-five splashes in the logs and not one above Z=0. */
+	UWaterBodyComponent* GetWaterBody() const { return PrimaryWaterBody; }
+
 	/** Barrel elevation that drops a shot at the given ground range, from the
 	 *  flat-water ballistic arc, corrected by the measured drag shortfall. */
 	UFUNCTION(BlueprintPure, Category = "Guns")
@@ -853,6 +894,14 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Sinking")
 	float AwashDraughtCm = -250.f;
 
+	/** How far below the hull origin the buoyancy spheres sit. The origin is the
+	 *  waterline the hull was drawn around; spheres centred on it can only
+	 *  balance the weight with the origin submerged, which floated the ship a
+	 *  metre low and put her gun ports at the sea's surface. Calibrated by
+	 *  measurement against the resting z, not assumed. */
+	UPROPERTY(EditAnywhere, Category = "Sea")
+	float PontoonDropCm = 80.f;
+
 	/** If the draught profile is not reached by FloodSeconds plus this, she
 	 *  founders anyway: a stall is a log line, never a hang. */
 	UPROPERTY(EditAnywhere, Category = "Sinking")
@@ -1152,6 +1201,44 @@ private:
 	bool bGroundingBlow = false;
 	/** Held by the player to point at the enemy's rig instead of her hull. */
 	bool bAimHigh = false;
+
+	// ---- laying the guns by hand, state ----------------------------------
+	bool bLayingByHand = false;
+	bool bLayStarboard = true;
+	bool bLayLocked = false;
+	bool bAgainstStop = false;
+	float LayTrainDeg = 0.f;
+	/** Three degrees at rest: point blank for these guns is about 190 m, which
+	 *  is inside the range every action in this game is fought at, so the ship
+	 *  starts laid at something usable rather than at zero. */
+	float LayElevationDeg = 3.f;
+
+	/** How far the wheel moves the barrels per notch. A whole degree a notch
+	 *  makes the wheel unusable at long range, where a degree is forty metres
+	 *  of fall of shot; a fifth of that is a metre of elevation quoin, which is
+	 *  about what a crew could actually set. */
+	UPROPERTY(EditAnywhere, Category = "Guns")
+	float ElevationPerNotchDeg = 0.2f;
+
+	/** The carriage's elevation stops. Ten degrees up is what a truck carriage
+	 *  on a quoin allows; three down is the roll she can be fired on. These
+	 *  bound the PLAYER's wheel only - the AI's solver is untouched, so no
+	 *  measured number can move through them. */
+	UPROPERTY(EditAnywhere, Category = "Guns")
+	float MaxLayElevationDeg = 10.f;
+
+	UPROPERTY(EditAnywhere, Category = "Guns")
+	float MinLayElevationDeg = -3.f;
+
+	/** -LayTrain= and -LayElev= pin the guns without a mouse, so the feature can
+	 *  be measured and photographed headlessly at all. Without them the only way
+	 *  to see the marks would be to play the game by hand, and a visual feature
+	 *  nobody can capture is one nobody can review. */
+	bool bLayPinned = false;
+
+	void UpdateGunLaying();
+	void OnElevate(float Value);
+	void OnLayLockPressed();
 	/** Where a shot ordered high should be laid on another ship: at her main
 	 *  top, not at the air between her masts. */
 	FVector HighAimPoint() const;

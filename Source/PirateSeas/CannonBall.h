@@ -48,6 +48,11 @@ protected:
 	TObjectPtr<UStaticMeshComponent> Mesh;
 
 private:
+	/** Which ribbon this ball is drawing. Held on the BALL rather than on the
+	 *  trail actor, so each shot gets its own chain: four balls of one broadside
+	 *  draw four arcs, where one shared cursor would draw a single dotted line
+	 *  with three quarters of it missing. INDEX_NONE until the trail opens one. */
+	int32 TrailChain = INDEX_NONE;
 	UFUNCTION()
 	void OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor,
 		UPrimitiveComponent* OtherComp, FVector NormalImpulse,

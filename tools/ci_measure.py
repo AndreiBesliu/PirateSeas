@@ -333,6 +333,46 @@ SCENARIOS = {
                    "-AIPrize=1", "-Port=1", "-EnemyShot=8", "-EnemyHands=60",
                    "-EnemyHull=1000", "-PrizeCrew=8", "-AIRefit=1",
                    "-ShipQuitAfter=800"],
+    # THE TRAIL, and the half of this pair that matters is the half that must
+    # NOT differ. Shot trails are drawn on every ball including the enemy's,
+    # they are ON by default, and they are purely visual - so gunnery with them
+    # and gunnery without them must agree on every ballistic number in the row
+    # and disagree on exactly one: trail_laid. A visual feature that moved a
+    # splash or a hit would be touching physics, and this is how that shows up.
+    "trail_off": ["-WindBearing=120", "-WindSpeed=11", "-EnemyX=9000",
+                  "-EnemyY=1500", "-ShipFireTest=8", "-ShipQuitAfter=45",
+                  "-ShotTrails=0"],
+
+    # THE GUNS LAID BY HAND. Three rows around one idea, and each pair says a
+    # different thing.
+    #
+    # aim_laid against gunnery: the same action with the guns pointed by the
+    # player instead of solved for him. These MUST differ in where the shot
+    # falls - laying at six degrees off the beam with five of elevation is a
+    # different shot from the one the solver computes, and if the two rows ever
+    # agreed it would mean the hand-laid path was quietly being re-aimed, which
+    # is exactly the magic the feature exists to remove.
+    "aim_laid": ["-WindBearing=120", "-WindSpeed=11", "-EnemyX=9000",
+                 "-EnemyY=1500", "-ShipFireTest=8", "-ShipQuitAfter=45",
+                 "-LayTrain=6", "-LayElev=5"],
+
+    # aim_stop against aim_laid: the mouse asks for thirty degrees and the
+    # carriages give twelve. aim_train must read +12.0 in one row and +6.0 in
+    # the other, and aim_stop must be 1 here and 0 there. That is the whole
+    # carriage-stop rule, stated as two numbers that cannot both be right by
+    # accident.
+    "aim_stop": ["-WindBearing=120", "-WindSpeed=11", "-EnemyX=9000",
+                 "-EnemyY=1500", "-ShipFireTest=8", "-ShipQuitAfter=45",
+                 "-LayTrain=30", "-LayElev=5"],
+
+    # aim_nomarks against aim_laid, and this is the half that matters: the
+    # PICTURE is switched off and every other number in the row must be
+    # identical to the digit. aim_segments is the only key allowed to move. A
+    # mark drawn on the water that shifted a splash would be touching physics
+    # through the renderer, and this is how that shows up.
+    "aim_nomarks": ["-WindBearing=120", "-WindSpeed=11", "-EnemyX=9000",
+                    "-EnemyY=1500", "-ShipFireTest=8", "-ShipQuitAfter=45",
+                    "-LayTrain=6", "-LayElev=5", "-AimMarks=0"],
 }
 
 
@@ -659,6 +699,46 @@ def measure(name, text):
         m["shot_max"] = int(mag.group(2))
         m["shot_fired"] = int(mag.group(3))
         m["dry_refusals"] = int(mag.group(4))
+
+    # The shot trails. laid is the proof they exist; stranded is the one that
+    # must never move - a wisp still drawn after its life ran out is the defect
+    # the wake shipped once, and it was invisible then because the counter that
+    # would have caught it was sampled per frame instead of latched.
+    # The regex the log OUTGREW, and it cost the whole pair. When the trail
+    # became a ribbon the line gained a `chains=` field between live and
+    # discarded, this pattern stopped matching, and all four trail numbers
+    # silently stopped being read - so `trail_off` went on running and proving
+    # nothing about trails at all. compare() walks the union and would have
+    # called them GONE, except they had never been recorded in a baseline to go
+    # missing from. A log line and the regex that reads it are one fact in two
+    # places, and this is the third time this project has paid for that.
+    tr = re.search(r"TRAILLOG TOTAL laid=(\d+) live=(\d+) chains=(\d+) "
+                   r"discarded=(\d+) stranded=(\d+)", text)
+    if tr:
+        m["trail_laid"] = int(tr.group(1))
+        m["trail_live_end"] = int(tr.group(2))
+        m["trail_chains"] = int(tr.group(3))
+        m["trail_discarded"] = int(tr.group(4))
+        m["trail_stranded"] = int(tr.group(5))
+
+    # THE GUNS AS LAID BY HAND, from the quit line the SHIP prints. Not from the
+    # indicator's own running line: the indicator does not exist under
+    # -AimMarks=0, so that reading would take the train, the elevation and the
+    # stop flag with it, and the pair meant to prove the picture moves nothing
+    # would report five missing numbers instead of one moved one.
+    am = re.search(r"AIMLOG TOTAL hand=(\d+) side=(\w+) train=([-+0-9.]+) "
+                   r"elev=([0-9.]+) fall=(\d+)m stop=(\d+) locked=(\d+) "
+                   r"segs=(\d+)", text)
+    if am:
+        m["aim_by_hand"] = int(am.group(1))
+        m["aim_train"] = float(am.group(3))
+        m["aim_elev"] = float(am.group(4))
+        m["aim_fall_m"] = int(am.group(5))
+        m["aim_stop"] = int(am.group(6))
+        # The picture's own count. It is NOT the proof the marks are right - a
+        # wrong line is still a line - but it is the proof they are DRAWN, and
+        # it is the number the -AimMarks=0 pair moves.
+        m["aim_segments"] = int(am.group(8))
 
     # What the money BOUGHT. Printed at every quit whether there is a port or
     # not, so these are counted zeros rather than absences - and spent beside

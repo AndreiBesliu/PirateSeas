@@ -15,7 +15,8 @@ public class PirateSeas : ModuleRules
 			"AIModule",
 			"NavigationSystem",
 			"PhysicsCore",
-			"Water"
+			"Water",
+			"ProceduralMeshComponent"
 		});
 	}
 }
