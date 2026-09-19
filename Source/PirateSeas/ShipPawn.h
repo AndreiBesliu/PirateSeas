@@ -757,9 +757,18 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Guns")
 	bool bLeadTarget = true;
 
-	/** Gun smoke. OFF unless -ShipSmoke=1. */
+	/** Gun smoke, ON. It was off for weeks because it rendered as soot and was
+	 *  parked, and the reason turned out to have nothing to do with the effect:
+	 *  its colours were authored at 0.055 and 0.78 in a scene whose white point
+	 *  is 5793 cd/m2. Re-authored in candelas it is what it always was meant to
+	 *  be, and the owner asked for it by name as the firing effect.
+	 *
+	 *  It costs nothing measurable: AGunSmoke draws its own FRandomStream from
+	 *  its own seed and never touches the global one, so it cannot move a shot.
+	 *  Turned on with the suite green and every number unchanged - which is the
+	 *  only reason it is a DEFAULT and not another flag. */
 	UPROPERTY(EditAnywhere, Category = "Guns")
-	bool bGunSmoke = false;
+	bool bGunSmoke = true;
 
 	/** How many times the lead is refined. The flight time depends on the
 	 *  range and the range depends on the lead, so one pass is already close

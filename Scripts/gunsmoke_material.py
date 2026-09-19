@@ -388,8 +388,20 @@ def build():
     facing = sat(add(mul(d, const(0.5, -1650, 1780), -1500, 1700),
                      const(0.5, -1500, 1780), -1350, 1700), -1200, 1700)
 
-    core = vector("CoreColor", unreal.LinearColor(0.055, 0.057, 0.062, 1), -1500, 1900)
-    lit = vector("LitColor", unreal.LinearColor(0.78, 0.76, 0.70, 1), -1500, 1990)
+    # IN CANDELAS PER SQUARE METRE, and that single fact is why this material
+    # spent weeks parked looking like soot. Config/DefaultEngine.ini turns on
+    # ExtendDefaultLuminanceRange and fences auto-exposure to EV100 12.5-16, so
+    # the scene's white point is at least 2^12.5 = 5793 cd/m2. A lit rim authored
+    # at 0.78 arrives at one ten-thousandth of white and the filmic toe finishes
+    # it; so does 7.8, and so does 78. Nothing about the graph was ever wrong.
+    #
+    # Sunlit powder smoke is 110000 lux times an albedo near 0.85 over pi, about
+    # 30000. The rim sits a little under that because a broadside's smoke is in
+    # its own shadow as often as not, and the CORE stays an order below the rim:
+    # the ratio between them is what reads as smoke rather than as a grey ball,
+    # and that ratio is unchanged from the version that was tuned by eye.
+    core = vector("CoreColor", unreal.LinearColor(1400.0, 1450.0, 1580.0, 1), -1500, 1900)
+    lit = vector("LitColor", unreal.LinearColor(19800.0, 19300.0, 17800.0, 1), -1500, 1990)
     # Per-card brightness, so thirty cards are not thirty copies of one grey.
     # Without it the mass is uniform and reads as a single surface no matter how
     # well the individual cards are shaped.

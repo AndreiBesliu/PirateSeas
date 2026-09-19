@@ -33,15 +33,21 @@ class UMaterialInstanceDynamic;
  * the wake do, and every colour it was ever given came out BLACK. That was run
  * to ground rather than guessed at: the emissive was proved dead by a five-value
  * tint sweep on ONE binary and ONE material - tint 0 and tint 40 gave pixels
- * identical to the unit - and then the fault was shown NOT to be the blend mode,
- * the shading model, the parameter type, per-instance random, the fog, Lumen,
- * the translucency pass, or shader warm-up. A material written through
- * MakeMaterialAttributes instead of the per-property path was just as black. What
- * settled it: swapping in M_ShipMaster, which demonstrably renders brown wood on
- * the hull, drew NOTHING through that component at all. That component renders
- * one material, black, and no other. The ribbon leaves it behind entirely - and
- * a ribbon is the right primitive for a line in any case, which is the part
- * worth remembering.
+ * identical to the unit.
+ *
+ * THE CAUSE WAS THE UNIT, and nothing else. This scene's white point is at least
+ * 5793 cd/m2 and the cards were authored around 1, so every value tried was zero
+ * after exposure. See the Tint comment below for the arithmetic.
+ *
+ * AND A CLAIM THAT USED TO STAND HERE IS WITHDRAWN. This comment said that the
+ * project's InstancedStaticMeshComponent "renders one material, black, and no
+ * other", on the strength of putting M_ShipMaster on it and seeing nothing. That
+ * test was a mean over a sample box and it could not carry that much weight: the
+ * GUN SMOKE now renders correctly through the very same component, once its
+ * colours were re-authored in candelas. The component was innocent.
+ *
+ * The ribbon is still right, for the reason that has nothing to do with any of
+ * that: the owner asked for LINES, and a ribbon is what draws a line.
  *
  * ONE ACTOR FOR THE WHOLE WORLD, not one per ball. A trail owned by its ball
  * would die with her, which is precisely the moment you most want to see it: the

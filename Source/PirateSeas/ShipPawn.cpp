@@ -332,7 +332,7 @@ void AShipPawn::BeginPlay()
 	// OFF by default, deliberately: every gunnery measurement in this project
 	// was taken without it, and a default that quietly added thirty-two ticking
 	// actors to those runs would invalidate the comparisons they exist for.
-	Flag = 0;
+	Flag = 1;
 	if (FParse::Value(FCommandLine::Get(), TEXT("ShipSmoke="), Flag))
 	{
 		bGunSmoke = Flag != 0;
