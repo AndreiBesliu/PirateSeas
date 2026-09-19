@@ -45,6 +45,26 @@ public:
 	static AGunSmoke* Spawn(UWorld* World, const FVector& Muzzle,
 		const FVector& JetDir, int32 Seed);
 
+	/** THE SMOKE, COUNTED. Static because a puff is an actor and there are many
+	 *  of them; read once at quit for the SMOKELOG TOTAL line.
+	 *
+	 *  GetStranded is the one that must never move: it counts ticks in which a
+	 *  puff built its cards with Age already past LifeSeconds, and it sits
+	 *  directly after the guard that destroys such a puff. Zero is not evidence
+	 *  on its own - the proof is that weakening that guard makes it non-zero. */
+	static int32 GetSpawned() { return Spawned; }
+	static int32 GetCulled() { return Culled; }
+	static int32 GetStranded() { return Stranded; }
+
+	/** Live puffs right now, after dropping the ones the engine has destroyed.
+	 *  Not const: it compacts the list, which is the only honest way to answer. */
+	static int32 CountLive();
+
+	/** Level start. STRUCTURAL, not field by field: the list and all three
+	 *  counters are static, so anything left behind by a previous level survives
+	 *  into this one and reads as a measurement rather than as a fault. */
+	static void ResetForNewLevel();
+
 protected:
 	UPROPERTY(VisibleAnywhere, Category = "Smoke")
 	TObjectPtr<UInstancedStaticMeshComponent> Cards;
@@ -119,6 +139,7 @@ protected:
 	 *  that trims silently reads as "there was never more than this". */
 	static constexpr int32 MaxLivePuffs = 48;
 
+
 private:
 	struct FCard
 	{
@@ -140,4 +161,7 @@ private:
 	TObjectPtr<UMaterialInstanceDynamic> SmokeMaterial;
 
 	static TArray<TWeakObjectPtr<AGunSmoke>> Live;
+	static int32 Spawned;
+	static int32 Culled;
+	static int32 Stranded;
 };

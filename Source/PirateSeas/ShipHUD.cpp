@@ -326,7 +326,74 @@ void AShipHUD::DrawGuns(AShipPawn* Ship)
 	const float Width = Canvas->SizeX * 0.170f;
 	float Y = Canvas->SizeY * 0.775f;
 
-	DrawRect(Panel, X - 12.f * Scale, Y - Line * 0.9f, Width + 24.f * Scale, Line * 3.4f);
+	// THE ROWS UNDER THE PIPS, DECIDED BEFORE THE PANEL IS DRAWN. They used to be
+	// worked out and drawn in the same pass, several screens below this line, so
+	// the rect above them could not possibly know how tall to be - and it was cut
+	// for the two pip rows alone. Everything after them was drawn on bare sea.
+	//
+	// One place decides which rows exist. A separate count kept beside them would
+	// have been a second statement of the same fact, and this file has already
+	// paid for that once today.
+	TArray<TPair<FString, FLinearColor>> Extra;
+	if (const ASeaGameMode* Sea = GetWorld() ? GetWorld()->GetAuthGameMode<ASeaGameMode>() : nullptr)
+	{
+		// How much of the squadron is still up. Without it a player has no way to
+		// tell whether they are winning: hulls out at 300 m all look alike.
+		const int32 Afloat = Sea->CountEnemiesAfloat();
+		const int32 Total = FMath::Max(Afloat, Sea->GetSquadronSize());
+		if (Total > 1)
+		{
+			Extra.Add(TPair<FString, FLinearColor>(
+				FString::Printf(TEXT("SQUADRON  %d of %d afloat"), Afloat, Total),
+				Afloat > 1 ? Warn : Faint));
+		}
+		// The mission, when there is one. A raider who cannot see the tally
+		// cannot decide whether the next merchant is worth the beat.
+		if (Sea->GetConvoySize() > 0)
+		{
+			Extra.Add(TPair<FString, FLinearColor>(
+				Sea->IsMissionOver()
+					? FString::Printf(TEXT("CONVOY %s"), *Sea->GetMissionResult())
+					: FString::Printf(TEXT("CONVOY  %d of %d stopped, %d through, need %d"),
+						Sea->GetConvoyStopped(), Sea->GetConvoySize(),
+						Sea->GetConvoyThrough(), Sea->GetConvoyNeed()),
+				Sea->IsMissionOver() ? Good : Warn));
+			// Men actually away NOW: sent, less those who came home with a
+			// prize. The panel must not tell a captain he is short of twelve
+			// men who are standing on his own deck again.
+			const int32 Away = Sea->GetHandsAwayNow();
+			if (Sea->HasPort())
+			{
+				Extra.Add(TPair<FString, FLinearColor>(
+					FString::Printf(TEXT("LANDED %d  of %d claimed, %d prize%s home"),
+						Sea->GetLanded(), Sea->GetPurse(), Sea->GetPrizesLanded(),
+						Sea->GetPrizesLanded() == 1 ? TEXT("") : TEXT("s")),
+					Sea->GetLanded() > 0 ? Good : Faint));
+				// What is left to spend, and what it has bought. Coffers is the
+				// number a captain steers by.
+				Extra.Add(TPair<FString, FLinearColor>(
+					Sea->GetSpent() > 0
+						? FString::Printf(TEXT("COFFERS %d  spent %d: %d hands, %d hull"),
+							Sea->GetCoffers(), Sea->GetSpent(), Sea->GetHandsBought(),
+							Sea->GetHullBought())
+						: FString::Printf(TEXT("COFFERS %d"), Sea->GetCoffers()),
+					Sea->GetCoffers() > 0 ? Good : Faint));
+			}
+			Extra.Add(TPair<FString, FLinearColor>(
+				Away > 0
+					? FString::Printf(TEXT("PURSE  %d  from %d prize%s, %d manned, %d hands away"),
+						Sea->GetPurse(), Sea->GetPrizesTaken(),
+						Sea->GetPrizesTaken() == 1 ? TEXT("") : TEXT("s"),
+						Sea->GetPrizesManned(), Away)
+					: FString::Printf(TEXT("PURSE  %d  from %d prize%s"),
+						Sea->GetPurse(), Sea->GetPrizesTaken(),
+						Sea->GetPrizesTaken() == 1 ? TEXT("") : TEXT("s")),
+				Sea->GetPurse() > 0 ? Good : Faint));
+		}
+	}
+
+	DrawRect(Panel, X - 12.f * Scale, Y - Line * 0.9f, Width + 24.f * Scale,
+		Line * (3.4f + 0.95f * Extra.Num()));
 	DrawText(Ship->IsAimingHigh() ? TEXT("GUNS - POINTED HIGH") : TEXT("GUNS"),
 		Ship->IsAimingHigh() ? Warn : Faint, X, Y - Line * 0.75f, Small, Scale);
 
@@ -394,63 +461,12 @@ void AShipHUD::DrawGuns(AShipPawn* Ship)
 		Y += Line * 0.95f;
 	}
 
-	// How much of the squadron is still up. Without it a player has no way to
-	// tell whether they are winning: hulls out at 300 m all look alike.
-	if (const ASeaGameMode* Sea = GetWorld() ? GetWorld()->GetAuthGameMode<ASeaGameMode>() : nullptr)
+	// And now the rows, in the order they were decided, onto the panel that was
+	// sized for exactly this many.
+	for (const TPair<FString, FLinearColor>& Row : Extra)
 	{
-		const int32 Afloat = Sea->CountEnemiesAfloat();
-		const int32 Total = FMath::Max(Afloat, Sea->GetSquadronSize());
-		if (Total > 1)
-		{
-			const FString Text = FString::Printf(TEXT("SQUADRON  %d of %d afloat"), Afloat, Total);
-			DrawText(Text, Afloat > 1 ? Warn : Faint, X, Y, Small, Scale);
-			Y += Line * 0.95f;
-		}
-		// The mission, when there is one. A raider who cannot see the tally
-		// cannot decide whether the next merchant is worth the beat.
-		if (Sea->GetConvoySize() > 0)
-		{
-			const FString Text = Sea->IsMissionOver()
-				? FString::Printf(TEXT("CONVOY %s"), *Sea->GetMissionResult())
-				: FString::Printf(TEXT("CONVOY  %d of %d stopped, %d through, need %d"),
-					Sea->GetConvoyStopped(), Sea->GetConvoySize(),
-					Sea->GetConvoyThrough(), Sea->GetConvoyNeed());
-			DrawText(Text, Sea->IsMissionOver() ? Good : Warn, X, Y, Small, Scale);
-			Y += Line * 0.95f;
-			// What the prizes are worth. It buys nothing yet and the README
-			// says so; a number on the panel that implied a shop would be
-			// the panel telling a lie the game cannot keep.
-			// Men actually away NOW: sent, less those who came home with a
-			// prize. The panel must not tell a captain he is short of twelve
-			// men who are standing on his own deck again.
-			const int32 Away = Sea->GetHandsAwayNow();
-			if (Sea->HasPort())
-			{
-				DrawText(FString::Printf(TEXT("LANDED %d  of %d claimed, %d prize%s home"),
-					Sea->GetLanded(), Sea->GetPurse(), Sea->GetPrizesLanded(),
-					Sea->GetPrizesLanded() == 1 ? TEXT("") : TEXT("s")),
-					Sea->GetLanded() > 0 ? Good : Faint, X, Y, Small, Scale);
-				Y += Line * 0.95f;
-				// What is left to spend, and what it has bought. Coffers is the
-				// number a captain steers by.
-				DrawText(Sea->GetSpent() > 0
-					? FString::Printf(TEXT("COFFERS %d  spent %d: %d hands, %d hull"),
-						Sea->GetCoffers(), Sea->GetSpent(), Sea->GetHandsBought(),
-						Sea->GetHullBought())
-					: FString::Printf(TEXT("COFFERS %d"), Sea->GetCoffers()),
-					Sea->GetCoffers() > 0 ? Good : Faint, X, Y, Small, Scale);
-				Y += Line * 0.95f;
-			}
-			DrawText(Away > 0
-				? FString::Printf(TEXT("PURSE  %d  from %d prize%s, %d manned, %d hands away"),
-					Sea->GetPurse(), Sea->GetPrizesTaken(),
-					Sea->GetPrizesTaken() == 1 ? TEXT("") : TEXT("s"),
-					Sea->GetPrizesManned(), Away)
-				: FString::Printf(TEXT("PURSE  %d  from %d prize%s"),
-					Sea->GetPurse(), Sea->GetPrizesTaken(),
-					Sea->GetPrizesTaken() == 1 ? TEXT("") : TEXT("s")),
-				Sea->GetPurse() > 0 ? Good : Faint, X, Y, Small, Scale);
-		}
+		DrawText(Row.Key, Row.Value, X, Y, Small, Scale);
+		Y += Line * 0.95f;
 	}
 }
 
@@ -509,7 +525,20 @@ void AShipHUD::DrawWarnings(AShipPawn* Ship, UWindSubsystem* Wind)
 		const int32 Stbd = Ship->GetGunsRemaining(true);
 		const int32 Fewest = (Port > 0 && Stbd > 0) ? FMath::Min(Port, Stbd)
 			: FMath::Max(Port, Stbd);
-		if (Ship->HasMagazine() && Fewest > 0 && Ship->GetShot() < Fewest)
+		// EMPTY, not merely short - and the difference is the whole of the
+		// per-gun magazine. This read `GetShot() < Fewest` until 19.09, which was
+		// exactly right while the pawn refused a broadside it could not pay for
+		// in full: the two conditions were written to be the same sentence. The
+		// pawn's moved to `min(Shot, GunsReady) <= 0` and this one did not, so
+		// for a whole day the panel shouted MAGAZINE DRY in red, in the same
+		// stack as SHE IS GOING DOWN, at a captain whose next order sent three
+		// balls away. A warning that fires while the thing works is worse than
+		// no warning: it teaches the player to ignore the line.
+		//
+		// Fewest is kept only for the `> 0` part - a ship whose carriages are
+		// all wreckage is not dry, she is disarmed, and the panel says that with
+		// the pips instead.
+		if (Ship->HasMagazine() && Fewest > 0 && Ship->GetShot() <= 0)
 		{
 			Lines.Add(TPair<FString, FLinearColor>(TEXT("MAGAZINE DRY"), Bad));
 		}

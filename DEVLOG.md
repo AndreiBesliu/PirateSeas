@@ -4076,3 +4076,117 @@ probata; fereastra in care se simte e ingusta. Capitanul AI trage in continuare
 pe poarta lui veche de 9 grade.
 
 **Task Completed.**
+
+## 19.09.2026 - Fumul, numarat; si o recenzie adversariala peste felia de tir
+
+**Task Started.** Prompt: "Continua". Model: Opus 5.
+
+### Fumul n-avea NICIUN numar
+
+107 chei in linia de baza si niciuna despre fum. Dara are cinci, siajul are
+sapte, iar fumul - livrat cu doua commit-uri inainte - n-avea nimic. `SMOKELOG`
+exista, dar tipareste un diagnostic o singura data la t=1,0 si `ci_measure.py` nu
+citea nimic din el. Daca puf-urile ar fi incetat sa apara, toate scenariile ar fi
+ramas verzi.
+
+Patru numere, dupa modelul darei: `smoke_spawned`, `smoke_live_end`,
+`smoke_culled`, `smoke_stranded`. Perechea `gunnery` / `smoke_off` difera intr-un
+singur flag si intr-o singura familie de cifre: 16 puf-uri contra 0.
+
+**`stranded` e cel care nu trebuie sa se miste niciodata**, si nu e un zero pe
+care nimeni nu-l poate clinti: sta imediat dupa garda care omoara un puf trecut
+de varsta lui. Probat prin mutatie - cu garda slabita la `LifeSeconds * 10`,
+`stranded=22140` si `live` 0 -> 16; restaurat octet cu octet, recompilat
+(`[1/4] Compile GunSmoke.cpp`), amandoua inapoi la zero.
+
+Si o capcana ocolita pe drum: PowerShell n-are supraincarcare cu trei argumente
+pentru `String.Replace`, deci scriptul care aplica mutatia a aruncat si a tiparit
+"mutated" oricum. `cmp` cu copia neatinsa a spus adevarul: fisierul era
+NESCHIMBAT. Un control negativ isi verifica propria stricaciune.
+
+### Recenzia: 25 de constatari, 5 verificate adversarial
+
+Cinci recenzori pe cinci dimensiuni, fiecare constatare grava pusa in fata a doi
+scepticti cu lentile diferite. **Trei confirmate, una disputata, una respinsa**,
+si douazeci lasate neverificate si raportate ca atare.
+
+**Cea grava era a mea, din felia de ieri.** Panoul a ramas pe regula veche a
+magaziei - `shot < cate tunuri ai` - cand regula navei s-a mutat pe
+`min(Shot, GunsReady) <= 0`. Cateva ore, panoul a strigat MAGAZINE DRY cu rosu,
+in aceeasi stiva cu SHE IS GOING DOWN, la un capitan a carui urmatoare comanda
+trimitea trei ghiulele. Exact starea pe care felia fusese construita s-o faca
+jucabila. **O avertizare care se aprinde cand lucrul MERGE e mai rea decat
+niciuna.** Cele doua conditii fusesera scrise ca sa fie aceeasi propozitie; am
+mutat una.
+
+**Si controlul perechii era un duplicat.** `shot_plenty` insemna `-Shot=40`, iar
+40 E magazia implicita: rand identic bit cu bit cu `gunnery`, 107 chei, nicio
+diferenta. O rulare de motor care masura ceva deja in linia de baza. Proiectul
+platise deja fix greseala asta o data, cu `magazine_enough` contra
+`convoy_weather`, si comentariul care o consemneaza e la treizeci de randuri mai
+sus in acelasi fisier. Perechea e acum `shot_short` contra `gunnery`.
+
+Restul, reparate in acelasi commit:
+
+- **O ghiulea care nu s-a nascut cheltuia o permisiune.** `--Allowed` si
+  publicarea raportului stateau INAINTE de verificarea `SpawnActor`, deci un tun
+  al carui ghiulea a esuat lua ratia unui tun incarcat de mai tarziu. Aceeasi
+  reparatie ca cea de ieri, aplicata cu un pas mai jos.
+- **`guns_ready_port` era potrivit de regex si aruncat.** Grupul 3, niciodata
+  scris in dictionar: o regresie care atingea doar tunurile de la babord n-ar fi
+  miscat nimic.
+- **Fixtura magaziei nu deosebea doua campuri.** Scria `shot=0/3 fired=3`, deci
+  `own_shot_max` si `own_shot_fired` erau amandoua 3 si grupurile se puteau
+  inversa nevazut; `own_shot_left` nu era verificat de nimic. Acum 2/7 fired=5.
+- **`own_guns_first` nu era prins de PRIMA salva.** Jucatoarea trage exact o
+  data in fiecare scenariu, deci nimic nu deosebea `[0]` de `[-1]` sau de un
+  maxim. Fixtura cu doua salve, 3 apoi 1.
+- **O nava care nu putea trage tinea toti oamenii la tunuri.** `bGunsIdle`
+  intreba doar unde e si ce vrea sa faca, deci un raider cu magazia goala si
+  greementul ciuruit, aflat in raza, tinea saizeci de oameni servind tunuri care
+  n-aveau ce servi - pana la capatul actiunii, fiindca nimic din conditia aia nu
+  mai putea deveni adevarat. Greementul nu i se mai repara niciodata.
+- **Noua propozitii din documente** care incetasera sa fie adevarate, printre
+  care doua liste de "ce ramane de construit" cu bullet-uri rupte si amestecate
+  intre ele, si un `-Shot=N` descris ca "fara flag: fara fund" la trei zile dupa
+  ce owner-ul decisese contrariul.
+- **OWNER_VERIFY 35 cerea ceva imposibil.** Scrisesem ca cele trei pipuri "se
+  reaprind pe rand". Nu pot: au tras in aceeasi salva, deci au acelasi ceas.
+  Un criteriu de acceptare pe care codul nu-l poate indeplini l-ar fi pus pe
+  owner sa caute un defect inexistent.
+- **Comentariul care spunea ca fumul e STINS implicit** era fals de doua
+  commit-uri; header-ul are `bGunSmoke = true`.
+
+### Zero miscari nu proba nimic despre reparatia AI-ului
+
+Suita n-a miscat NICIO cifra la regula mainilor, si asta nu insemna ca reparatia
+e inofensiva - insemna ca n-o atingea nimeni. `crew_repair` termina cu 16
+ghiulele la bord, deci nu ramane niciodata uscata; `crew_fight` ramane uscata dar
+are reparatiile stinse; iar perechea magaziei lasa greementul raider-ului intact
+la 1,00. **Niciun scenariu nu punea o nava AVARIATA si USCATA in raza cu
+reparatiile pornite**, adica exact intrebarea pe care regula o decide.
+
+`dry_repairs` o pune: `crew_repair` plus `-EnemyShot=8`. Probat prin mutatie,
+scotand `|| bCannotFire`:
+
+| | cu reparatia | fara |
+|---|---|---|
+| `repaired_max` | **0,90** | 0,748 |
+| `enemy_rig_quit` | **0,85** | 0,77 |
+| `gun_crew_min` | **0,62** | 1,00 |
+
+`gun_crew_min` e cel limpede: cu reparatia ia oameni de la tunuri, fara ea ii
+tine pe toti acolo. Restaurat octet cu octet, recompilat, cifrele revin.
+
+**Respinsa, si merita spus:** constatarea ca un bord cu toate afeturile scoase ar
+raporta "gata" si ar tine AI-ul angajat pe o baterie moarta. Amandoi scepticii au
+demontat-o.
+
+**Neverificate, raportate ca atare** (20): printre ele, pipurile care nu tin cont
+de magazie si deci promit mai multe tunuri decat vor pleca, cele doua stari
+palide la 0,30 si 0,12 alpha care s-ar putea confunda, si dreptunghiul de fundal
+al panoului GUNS, croit pentru doua randuri cand panoul deseneaza pana la sapte.
+Primele doua sunt judecati vizuale si au plecat la OWNER_VERIFY.
+
+**Task Completed.**
+

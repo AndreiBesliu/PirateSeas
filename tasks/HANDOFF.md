@@ -55,7 +55,7 @@ vânt în plante şi greement, `-Hour=` pentru ora din zi.
   `.gitignore`.
 - **Porţile:**
   - `python tools/ci_checks.py` — fără motor, rulează şi în CI hosted
-  - `python tools/ci_measure.py` — 10 scenarii headless vs `tools/measurement_baseline.json`
+  - `python tools/ci_measure.py` — 36 scenarii headless vs `tools/measurement_baseline.json`
   - `python tools/ci_measure.py --record` — rescrie linia de bază, DELIBERAT, în
     acelaşi commit care o mişcă
   - `python tools/png_diff.py a.png b.png x0 y0 x1 y1` — compară o casetă
@@ -184,10 +184,12 @@ Livrat:
    (prada acasa la 359, rada la 764, gata la 776 - de aia ruleaza 800 s):
    600 cheltuiti contra 0, 20 de oameni si 400 de coca contra nimic.
 
-8. **Magazia**: `-Shot=N` / `-EnemyShot=N`; fara flag e FARA FUND, deci suita
-   nu se misca. Garda e INAINTE de bucla tunurilor si e totul-sau-nimic,
-   fiindca bucla trage doua numere aleatoare per tun din sirul lui `-ShipSeed`
-   si un tun sarit ar muta fiecare ghiulea de dupa. Refuzurile se numara pe
+8. **Magazia**: `-Shot=N` / `-EnemyShot=N`; fara flag sunt **40** de ghiulele
+   (decizia owner-ului din 16.09), si `=0` o face fara fund. Permisiunea e PE
+   TUN din 19.09: cu trei ghiulele si patru tunuri pleaca o salva de trei.
+   Bucla trage doua numere aleatoare per tun din sirul lui `-ShipSeed`, deci un
+   tun sarit ar muta fiecare ghiulea de dupa - de aceea refuzul per tun sta DUPA
+   extrageri, nu inainte de bucla. Refuzurile se numara pe
    REPRIZE, nu pe cadre (AI-ul cere sa traga la fiecare tick). Portul vinde
    ghiulele cu 2 si le cumpara PRIMELE. Perechea `magazine_dry`/`magazine_full`
    schimba si deznodamantul: 4 ghiulele -> convoiul TRECE, 40 -> convoiul e LUAT.
@@ -251,10 +253,9 @@ Urmatorul: de ales cu owner-ul. **Deschise si stiute:**
   da regula noua fara un prag minim de tunuri, DESCHIDE fiecare lupta cu un
   singur tun, determinist - fiindca "macar unul poarta" ajunge la 13,9 grade la
   100 m, adica mai LARG decat poarta lui de acum.
-- **Capcana salvei partiale.** `Reload = ReloadSeconds` e neconditionat: o salva
-  cu un tun costa tot 12 secunde. Nu exista NICIUN sunet in proiect si fumul e
-  stins implicit, deci jucatorul nu are cum sa afle. Reincarcarea pe tun e
-  reparatia corecta si e o felie separata.
+- ~~**Capcana salvei partiale.**~~ **INCHISA pe 19.09.** Reincarcarea e pe tun
+  (`GunReload[2][4]`), fumul e aprins implicit de pe 17364af, iar panoul arata
+  trei stari. Ramane adevarat ca proiectul n-are NICIUN sunet.
 - ~~`sinking.casualties_max` a cazut la 0~~ **FALSA ALARMA, verificata si
   inchisa.** Acelasi rand arata acum si `broadsides: 0` si `struck: 0`: NIMENI nu
   trage in scenariul ala, care e un test de scufundare deliberata si nu o lupta.

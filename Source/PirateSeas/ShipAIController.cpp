@@ -834,7 +834,20 @@ void AShipAIController::Tick(float DeltaSeconds)
 	{
 		const bool bHurt = Me->GetRigEfficiency() < RepairBelow
 			|| Me->GetRudderIntegrity() < RepairBelow;
-		const bool bGunsIdle = RangeM > EngageRangeM || Tactic == EShipTactic::Disengage;
+		// AND GUNS WITH NOTHING TO DO ARE IDLE TOO. This used to ask only where
+		// she was and what she meant to do, so a raider lying inside engage
+		// range with an empty magazine and a shot-through rig kept all sixty
+		// hands serving guns that had nothing to serve - for the rest of the
+		// action, because nothing in that condition can ever become true again
+		// while she stays in range. Her rig never came back.
+		//
+		// Both lasting states, deliberately: a battery that is merely reloading
+		// is busy, and sending the hands off to repair for twelve seconds and
+		// back would be worse than leaving them.
+		const bool bCannotFire = (Me->HasMagazine() && Me->GetShot() <= 0)
+			|| (Me->GetGunsRemaining(false) == 0 && Me->GetGunsRemaining(true) == 0);
+		const bool bGunsIdle = RangeM > EngageRangeM
+			|| Tactic == EShipTactic::Disengage || bCannotFire;
 		Me->SetRepairShare((bRepairsAtSea && bHurt && bGunsIdle) ? RepairShareWhenHurt : 0.f);
 	}
 

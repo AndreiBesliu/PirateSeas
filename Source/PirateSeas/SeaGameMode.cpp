@@ -1,6 +1,7 @@
 #include "SeaGameMode.h"
 
 #include "EnemyShipPawn.h"
+#include "GunSmoke.h"
 #include "MerchantShipPawn.h"
 #include "Engine/Engine.h"
 #include "Engine/World.h"
@@ -43,6 +44,11 @@ ASeaGameMode::ASeaGameMode()
 void ASeaGameMode::BeginPlay()
 {
 	Super::BeginPlay();
+
+	// The smoke's statics, before anything can spawn a puff. A list and three
+	// counters that outlive a level do not fail, they answer - with last
+	// level's numbers.
+	AGunSmoke::ResetForNewLevel();
 
 	// Seed the world's randomness before anything draws from it.
 	//
@@ -1681,6 +1687,16 @@ void ASeaGameMode::QuitNow()
 			It->GetRepairShare(), It->GetRepairedTotal(), It->GetGunCrewFactor(),
 			It->GetRigEfficiency(), It->GetRudderIntegrity());
 	}
+	// The gun smoke, at quit, whether it was on or off - a counted zero rather
+	// than an absent line, same as the trail below. Until 19.09 nothing measured
+	// the smoke at all: 107 keys in the baseline, none of them about it, so it
+	// could have stopped spawning entirely and every scenario would have stayed
+	// green. stranded is the one that must never move.
+	UE_LOG(LogTemp, Display,
+		TEXT("SMOKELOG TOTAL spawned=%d live=%d culled=%d stranded=%d"),
+		AGunSmoke::GetSpawned(), AGunSmoke::CountLive(),
+		AGunSmoke::GetCulled(), AGunSmoke::GetStranded());
+
 	// The trail, at quit, whether it was on or off: a counted zero rather than
 	// an absent line. stranded is the one that must never move.
 	{

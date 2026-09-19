@@ -754,7 +754,8 @@ decizie sau ca o corvoada, nu pot sti.
 
 **Ce stiu deja si n-am ascuns:** preturile (20 pe om, 0,5 pe punct de coca) sunt
 alese ca sa aiba sens fata de o prada de 1200, nu masurate din ceva real. Punga
-nu supravietuieste rularii. Nu se cumpara tunuri, munitie sau nave. Si rada e
+nu supravietuieste rularii. Ghiulelele SE cumpara (2 bucata, si sunt primul
+lucru cumparat la refit); nu se cumpara tunuri sau nave. Si rada e
 tot un cerc pe apa, nu un oras.
 
 ## 31. RASPUNS PRIMIT 16.09: magazia E finita implicit
@@ -847,13 +848,19 @@ daca arata ca o nava de 30 m si nu ca o barca marita - nu pot spune eu.
 comanda, sau pur si simplu trage pana ramai cu cateva ghiulele - si urmareste
 cele patru pipuri de pe bordul cu care tragi, in secundele de dupa salva.
 
-**Cum arata bine:** Dupa o salva partiala se vede o diferenta intre tunurile care
-au tras si cel care n-a tras: trei se sting si se reaprind pe rand, al patrulea
-ramane aprins tot timpul. Trei stari care se deosebesc dintr-o privire, fara sa
+**Cum arata bine:** Dupa o salva partiala, TREI pipuri se sting pe jumatate si
+al patrulea ramane aprins - si raman asa vreo douasprezece secunde, dupa care
+cele trei se aprind ODATA. Trei stari care se deosebesc dintr-o privire, fara sa
 te uiti de doua ori: aprins, pe jumatate, si aproape sters pentru un afet scos.
+
+(Scria aici ca cele trei "se reaprind pe rand". Nu pot: au tras in aceeasi salva,
+deci au acelasi ceas. Era un criteriu de acceptare pe care codul nu-l poate
+indeplini, si te-ar fi pus sa cauti un defect inexistent.)
 
 **Cum arata prost:** Cele trei stari se confunda intre ele - mai ales "se
 serveste" cu "afet scos", care inseamna lucruri opuse (unul revine, altul nu).
+Sunt la 0,30 si 0,12 alpha, adica DOUA patratele palide, si ma astept sa fie
+prea apropiate. Daca sunt, spune-mi si le despart pe forma, nu pe transparenta.
 Sau nu se vede nimic, si panoul pare inghetat.
 
 **De ce nu pot eu:** HUD-ul nu se randeaza deloc sub `-NullRHI`, deci pot masura

@@ -73,9 +73,11 @@ Apoi apeși **Play**.
 | Rotiţa | înălţarea ţevilor, 0,2° pe cârtiţă, între −3° şi +10° |
 | X | fixezi tunurile perpendicular pe navă şi ignori mouse-ul (comutator) |
 
-**Panoul GUNS arata CARE tunuri iti mai sunt**, nu cate. Patru pipuri pe bord,
-fiecare despre afetul lui: daca ti-au fost scoase tunul din pupa si cel din prova,
-se aprind cele doua din mijloc. Pana pe 19.09 pipurile se desenau dintr-o
+**Panoul GUNS arata CARE tunuri iti mai sunt**, nu cate, si in TREI stari.
+Patru pipuri pe bord, fiecare despre afetul lui: daca ti-au fost scoase tunul din
+pupa si cel din prova, se aprind cele doua din mijloc. Aprins = incarcat, va
+trage la urmatoarea comanda; sters pe jumatate = se serveste; aproape invizibil =
+afet scos, si ala nu mai revine. Pana pe 19.09 pipurile se desenau dintr-o
 NUMARATOARE si se aprindeau de la stanga, deci in exemplul de mai sus ti-ar fi
 aratat aprinse exact tunurile pe care nu le aveai.
 
@@ -97,7 +99,12 @@ fiindcă are nevoie de apă care curge pe lângă ea.
 ## Tunurile
 
 Patru tunuri pe fiecare bord. Tragi cu Q la babord și cu E la tribord, iar
-fiecare bord se reîncarcă separat, în 12 secunde.
+**fiecare TUN** se reîncarcă separat, în 12 secunde - nu fiecare bord. Un tun care
+n-a tras nu așteaptă după cei care au tras, iar bara de reîncărcare arată cât mai
+are cel mai apropiat tun care încă stă în picioare, nu bordul.
+
+Asta contează numai când magazia e prea scurtă ca să plătească toată bateria:
+altfel tunurile pleacă toate odată și cele patru ceasuri merg în pas.
 
 Ghiulelele sunt corpuri fizice reale, cu masă de 15 kg și gravitație. Traiectoria
 nu e scriptată, iese din simulare.
@@ -665,7 +672,11 @@ ghiulele si patru tunuri pleaca o salva de trei, iar al patrulea tun ramane
 incarcat. Pana pe 19.09 aici era o garda agregata - "una pentru fiecare tun care
 mai trage, altfel nimic" - si o nava cu trei ghiulele din patru refuza tacut sa
 traga, fara ca nimic din ecran sa spuna de ce. Panoul are o bara SHOT cand exista
-o magazie, si scrie MAGAZINE DRY cand nu mai poti trage pe niciun bord.
+o magazie, si scrie MAGAZINE DRY cand nu mai ai NICIO ghiulea. Tot pe 19.09,
+cateva ore: panoul a ramas pe regula veche, `shot < cate tunuri ai`, si strigase
+MAGAZINE DRY cu rosu - in aceeasi stiva cu SHE IS GOING DOWN - la un capitan a
+carui urmatoare comanda trimitea trei ghiulele. O avertizare care se aprinde cand
+lucrul MERGE e mai rea decat niciuna: invata jucatorul sa ignore randul.
 
 Masurat cu perechea `shot_short` / `shot_plenty`, un singur flag diferenta:
 `own_guns_first` e **3** contra **4**. Aia e salva partiala, numarata.
@@ -683,10 +694,14 @@ cumparat la refit: un echipaj intreg pe o coca sanatoasa cu magazia goala e un
 transport, nu o nava de lupta. Capitanul inamic pleaca spre port si cand magazia
 scade sub un sfert.
 
-Masurat, cu perechea `magazine_dry` / `magazine_full`, un singur flag diferenta:
-cu **patru** ghiulele trage o salva, ramane uscata la 68 s si convoiul TRECE; cu
-**patruzeci** trage douazeci, nu ramane niciodata uscata, si convoiul e LUAT la
-70,9 s. Magazia schimba deznodamantul, nu doar contabilitatea.
+Masurat, cu perechea `magazine_short` / `magazine_enough`, un singur flag
+diferenta: cu **patru** ghiulele raider-ul trage O salva, ramane uscat, si
+convoiul TRECE - `mission_result` 1, la 316,3 s; cu **opt** trage doua, opreste
+un negustor, si actiunea se incheie la 71,0 s cu `mission_result` 2. Magazia
+schimba deznodamantul, nu doar contabilitatea.
+
+(Perechea s-a numit `magazine_dry` / `magazine_full` si a fost citata aici cu
+cifrele alea inca doua saptamani dupa ce fusese redenumita si renumerotata.)
 
 **Cum s-a putut face asta fara sa se mute toata suita.** Comentariul vechi de
 aici sustinea ca garda TREBUIE sa fie inainte de bucla si totul-sau-nimic: bucla
@@ -953,7 +968,7 @@ pereche de rulări citea împrăștiere și credea că citește semnal.
 | `-EnemyHull=N` | inamicul porneste cu N din 1000 coca (doar navele Coroanei) |
 | `-AIRefit=1` | capitanul inamic pleaca spre port sa se refaca, daca are bani (implicit NU) |
 | `-HandCost=N -HullPointCost=x` | preturile din port (implicit 20 si 0,5) |
-| `-Shot=N` | magazia TA, N ghiulele (fara flag: fara fund) |
+| `-Shot=N` | magazia TA, N ghiulele (fara flag: 40; `-Shot=0` o face fara fund) |
 | `-EnemyShot=N` | magazia inamicului (doar navele Coroanei) |
 | `-ShotCost=N` | cat costa o ghiulea in port (implicit 2) |
 | `-Port=1` | pune o radă prietenă unde prăzile se duc acasă (implicit NU există) |
@@ -1255,25 +1270,20 @@ toată nava, fiindcă `ObjectBounds` întorcea zero pentru mesh-ul ăla.
 - echipajul e o singură rezervă împărțită între tunuri și reparații: manevra
   velelor nu e încă o stație, coca nu se repară pe mare, nimeni nu se
   recrutează și nimeni nu se plătește
-- punga cumpara oameni si coca, dar NU tunuri (n-au munitie de cumparat
-  inca), nu nave mai bune, si nimic nu trece dintr-o rulare in alta - nu
-  exista salvare
+- punga cumpara oameni, coca SI ghiulele, dar NU tunuri, nu nave mai bune, si
+  nimic nu trece dintr-o rulare in alta - nu exista salvare
 - preturile sunt alese ca sa se raporteze la valoarea unei prazi, nu masurate
-- magazia e fara fund IMPLICIT; daca ar fi finita din start, ar schimba
-- negustorul nu mai are guri de tun (n-are tunuri), deci o ghiulea in banda
-  puntii de tun ii intra in COCA - pana la recenzia din 16.09 primele patru
-  lovituri pe fiecare bord nu-l costau nimic
-- portul NU mai cere un convoi ca sa existe: `-Port=1` singur e de ajuns
-  fiecare numar de tir din suita si ar schimba ce fel de joc e - decizia e
-  a owner-ului, intrebata in OWNER_VERIFY
   din ceva real
 - nimeni nu recapturează o pradă care merge singură spre radă
 - abordajul e AMÂNAT explicit de owner; echipajul + reparaţiile şi economia +
   progresia sunt următoarele ateliere, în ordinea asta
 
 Reparate de când secțiunea asta a fost scrisă, și scoase din ea ca să nu fie
-refăcute: mai multe insule odată (până la opt, cu `-Islands=N`), și garda de
-apariție care acum ȘTIE de uscat — fiecare punct în care se poate naște o cocă e
+refăcute: magazia, care e FINITA implicit din 16.09 (decizia owner-ului, 40 de
+ghiulele) si nu mai e o intrebare deschisa; negustorul, care primeste avarie in
+coca de la o ghiulea in banda puntii lui de tun; portul, care nu mai cere un
+convoi ca sa existe (`-Port=1` singur e de ajuns); mai multe insule odată (până
+la opt, cu `-Islands=N`), și garda de apariție care acum ȘTIE de uscat — fiecare punct în care se poate naște o cocă e
 verificat înainte să se pună uscat peste el.
 
 ## Stare verificată

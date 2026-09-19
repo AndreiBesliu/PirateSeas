@@ -161,6 +161,23 @@ SCENARIOS = {
     "crew_fight": ["-WindBearing=120", "-WindSpeed=12", "-EnemyCount=1",
                    "-EnemyX=150000", "-EnemyY=0", "-EnemyRigDamage=0.4",
                    "-AIRepair=0", "-ShipQuitAfter=360"],
+
+    # A HURT SHIP THAT HAS RUN OUT OF SHOT. crew_repair with a short magazine,
+    # and it exists because the suite could not otherwise reach the state it
+    # measures: crew_repair ends with 16 rounds still aboard, crew_fight goes dry
+    # but has repairs switched off, and the magazine pair leaves the raider's rig
+    # untouched at 1.00. No scenario put a DAMAGED ship DRY inside engage range
+    # with repairs on - so the rule that decides whether her hands go to the guns
+    # or to the rigging was never asked the interesting question.
+    #
+    # Until 19.09 she kept every hand at guns that had nothing to serve, for the
+    # rest of the action, because "my guns are idle" asked only about range and
+    # tactic - and neither can become true again while she stays in range. Her
+    # rig never came back. `repaired_max` is the key: with the rule as it was,
+    # this row records only what she repaired while closing.
+    "dry_repairs": ["-WindBearing=120", "-WindSpeed=12", "-EnemyCount=1",
+                    "-EnemyX=150000", "-EnemyY=0", "-EnemyRigDamage=0.4",
+                    "-EnemyShot=8", "-AIRepair=1", "-ShipQuitAfter=360"],
     # The money, and the third pair that must come out DIFFERENT in one flag -
     # this time a flag that flips a switch the game already flips for itself,
     # and that a player holds under left Shift. Two laden merchants, a raider
@@ -343,6 +360,17 @@ SCENARIOS = {
                   "-EnemyY=1500", "-ShipFireTest=8", "-ShipQuitAfter=45",
                   "-ShotTrails=0"],
 
+    # THE GUN SMOKE, and the same shape of pair as the trail above, for the same
+    # reason: it is purely visual, so it must move exactly one family of numbers
+    # and leave every ballistic number alone. Until 19.09 NOTHING measured the
+    # smoke - 107 keys in the baseline, not one of them about it - so the puffs
+    # could have stopped spawning entirely and all 35 scenarios would have
+    # stayed green. The trail was measured from the day it shipped; the smoke
+    # shipped two commits earlier and was not.
+    "smoke_off": ["-WindBearing=120", "-WindSpeed=11", "-EnemyX=9000",
+                  "-EnemyY=1500", "-ShipFireTest=8", "-ShipQuitAfter=45",
+                  "-ShipSmoke=0"],
+
     # THE GUNS LAID BY HAND. Three rows around one idea, and each pair says a
     # different thing.
     #
@@ -433,15 +461,23 @@ SCENARIOS = {
     # counter. She now fires three, those three reload on their own clocks, and
     # the fourth stays loaded.
     #
-    # `broadsides` must differ from shot_plenty, and `guns=` on the first
-    # broadside is the partial broadside itself: three against four.
+    # ITS CONTROL IS `gunnery`, and this row used to have a `shot_plenty` of its
+    # own: the same six flags plus -Shot=40. Forty IS the default magazine, so
+    # that row was a bit-identical re-run of gunnery - 107 keys, not one of them
+    # different - and the pair's "control" was an engine run that measured
+    # something already in the baseline. This project had already paid for that
+    # exact mistake once, with magazine_enough against convoy_weather, and the
+    # comment recording it is thirty lines above this one.
+    #
+    # The keys that must differ from gunnery are `own_guns_first` (3 against 4)
+    # and the own_shot_* family. NOT `broadsides`: the comment here claimed it
+    # would, and the baseline recorded by the very same commit says 4 in both,
+    # because `broadsides` counts every hull's broadsides and the enemy's are
+    # unchanged. A discriminator nobody checked, contradicted by the file beside
+    # it.
     "shot_short": ["-WindBearing=120", "-WindSpeed=11", "-EnemyX=9000",
                    "-EnemyY=1500", "-Shot=3", "-ShipFireTest=8",
                    "-ShipQuitAfter=45"],
-
-    "shot_plenty": ["-WindBearing=120", "-WindSpeed=11", "-EnemyX=9000",
-                    "-EnemyY=1500", "-Shot=40", "-ShipFireTest=8",
-                    "-ShipQuitAfter=45"],
 }
 
 
@@ -796,6 +832,24 @@ def measure(name, text):
     if own_bs:
         m["own_guns_first"] = int(own_bs[0])
 
+    # THE GUN SMOKE. spawned is the proof the puffs exist at all and the number
+    # -ShipSmoke=0 must take to zero; culled is how often the 48 cap bit, which
+    # a silent trim would otherwise hide; live is what is still standing at quit.
+    #
+    # stranded is the one that MUST NEVER MOVE: ticks in which a puff built its
+    # cards with its age already past its life. It sits directly after the guard
+    # that destroys such a puff, so it can only count if that guard is weakened -
+    # and it was proven that way, not assumed: with the guard loosened to
+    # LifeSeconds * 10 it read 22140 and live went 0 -> 16; restored byte for
+    # byte and recompiled, both back to zero.
+    sm = re.search(r"SMOKELOG TOTAL spawned=(\d+) live=(\d+) culled=(\d+) "
+                   r"stranded=(\d+)", text)
+    if sm:
+        m["smoke_spawned"] = int(sm.group(1))
+        m["smoke_live_end"] = int(sm.group(2))
+        m["smoke_culled"] = int(sm.group(3))
+        m["smoke_stranded"] = int(sm.group(4))
+
     # The shot trails. laid is the proof they exist; stranded is the one that
     # must never move - a wisp still drawn after its life ran out is the defect
     # the wake shipped once, and it was invisible then because the counter that
@@ -855,6 +909,11 @@ def measure(name, text):
     if gm:
         m["guns_down_port"] = int(gm.group(1))
         m["guns_down_stbd"] = int(gm.group(2))
+        # BOTH sides. group(3) was matched and then thrown away, so the port
+        # battery's loaded state was in no baseline row at all - the regex knew
+        # about it, the dict never heard of it, and a regression that only
+        # touched the port guns would have moved nothing.
+        m["guns_ready_port"] = int(gm.group(3))
         m["guns_ready_stbd"] = int(gm.group(4))
 
     # THE LINE OF BATTLE. How deep the walk up the line had to reach past

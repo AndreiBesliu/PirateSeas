@@ -16,6 +16,23 @@
 #include "WindSubsystem.h"
 
 TArray<TWeakObjectPtr<AGunSmoke>> AGunSmoke::Live;
+int32 AGunSmoke::Spawned = 0;
+int32 AGunSmoke::Culled = 0;
+int32 AGunSmoke::Stranded = 0;
+
+int32 AGunSmoke::CountLive()
+{
+	Live.RemoveAll([](const TWeakObjectPtr<AGunSmoke>& P) { return !P.IsValid(); });
+	return Live.Num();
+}
+
+void AGunSmoke::ResetForNewLevel()
+{
+	Live.Reset();
+	Spawned = 0;
+	Culled = 0;
+	Stranded = 0;
+}
 
 AGunSmoke::AGunSmoke()
 {
@@ -60,7 +77,10 @@ AGunSmoke* AGunSmoke::Spawn(UWorld* World, const FVector& Muzzle,
 	Live.RemoveAll([](const TWeakObjectPtr<AGunSmoke>& P) { return !P.IsValid(); });
 	if (Live.Num() >= MaxLivePuffs)
 	{
-		int32 Culled = 0;
+		// CulledHere, not Culled: the member of that name now accumulates over
+		// the whole run, and a local shadowing it would have left the quit line
+		// reporting only the last cull - a number that looks like a total.
+		int32 CulledHere = 0;
 		while (Live.Num() >= MaxLivePuffs && Live.Num() > 0)
 		{
 			if (AGunSmoke* Old = Live[0].Get())
@@ -68,10 +88,11 @@ AGunSmoke* AGunSmoke::Spawn(UWorld* World, const FVector& Muzzle,
 				Old->Destroy();
 			}
 			Live.RemoveAt(0);
-			++Culled;
+			++CulledHere;
+			++Culled;   // and over the whole run, for the quit line
 		}
 		UE_LOG(LogTemp, Display,
-			TEXT("SMOKELOG culled %d oldest puffs at the %d cap"), Culled, MaxLivePuffs);
+			TEXT("SMOKELOG culled %d oldest puffs at the %d cap"), CulledHere, MaxLivePuffs);
 	}
 
 	FActorSpawnParameters Params;
@@ -128,6 +149,7 @@ AGunSmoke* AGunSmoke::Spawn(UWorld* World, const FVector& Muzzle,
 
 	Puff->FinishSpawning(FTransform(Muzzle));
 	Live.Add(Puff);
+	++Spawned;
 	return Puff;
 }
 
@@ -203,6 +225,16 @@ void AGunSmoke::Tick(float DeltaSeconds)
 	{
 		Destroy();
 		return;
+	}
+
+	// MUST NEVER FIRE. Directly after the guard above, so the only way to reach
+	// it is to weaken that guard - which is exactly how this counter is proven
+	// to work, rather than being a zero nobody can move. Counted per tick, not
+	// latched per puff: for a "never" counter the more sensitive form is the
+	// right one.
+	if (Age >= LifeSeconds)
+	{
+		++Stranded;
 	}
 
 	const float Age01 = Age / LifeSeconds;

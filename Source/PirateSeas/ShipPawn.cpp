@@ -329,9 +329,12 @@ void AShipPawn::BeginPlay()
 	{
 		bLeadTarget = Flag != 0;
 	}
-	// OFF by default, deliberately: every gunnery measurement in this project
-	// was taken without it, and a default that quietly added thirty-two ticking
-	// actors to those runs would invalidate the comparisons they exist for.
+	// ON by default since the smoke was unparked (17364af). This comment used to
+	// say OFF, and said it for two commits after it had stopped being true - the
+	// header has bGunSmoke = true and the default below is 1. The reasoning it
+	// gave was sound while it held: every gunnery measurement predates the smoke,
+	// so turning it on had to be done by re-recording the baseline deliberately,
+	// which is what that commit did. -ShipSmoke=0 still buys the old world back.
 	Flag = 1;
 	if (FParse::Value(FCommandLine::Get(), TEXT("ShipSmoke="), Flag))
 	{
@@ -1020,11 +1023,6 @@ bool AShipPawn::FireBroadside(bool bStarboard, AActor* AimAt, bool bHigh)
 		{
 			continue;
 		}
-		--Allowed;
-		// THIS gun fired, so this gun's numbers are the report.
-		LaidElevationDeg = ElevationThisGun;
-		LastLeadCm = LeadThisGun;
-
 		FActorSpawnParameters Params;
 		Params.Owner = this;
 		Params.Instigator = this;
@@ -1037,6 +1035,16 @@ bool AShipPawn::FireBroadside(bool bStarboard, AActor* AimAt, bool bHigh)
 		{
 			continue;
 		}
+		// AFTER THE BALL EXISTS, all three of them. They sat above the spawn for
+		// half a day, which meant a gun whose ball failed to appear still spent
+		// one of the magazine's permissions - denying it to a later loaded gun -
+		// and still became the broadside's reported elevation and lead. The
+		// report moving here is the same repair as the one that moved it off a
+		// gun that declined; the permission moving here is the same repair
+		// applied to the magazine.
+		--Allowed;
+		LaidElevationDeg = ElevationThisGun;
+		LastLeadCm = LeadThisGun;
 		// The ball carries the ship's way with it. Sampled before the broadside
 		// so it is the ship's motion and not her own recoil.
 		const FVector Inherited = CarriedVel;

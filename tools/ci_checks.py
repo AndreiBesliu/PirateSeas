@@ -391,21 +391,49 @@ def check_comparison():
             fail("a gun laid BELOW level is not read: %s is %r, expected %r"
                  % (key, low.get(key), want))
 
+    # THE GUN SMOKE's quit line, so a format drift on it fails here rather than
+    # in a baseline nobody re-reads. The trail's own line outgrew its regex once
+    # and all four trail numbers stopped being read in silence; this is the same
+    # line in the same shape, and it gets the same fixture from the day it ships.
+    smoke = ci_measure.measure("fixture", "LogTemp: Display: SMOKELOG TOTAL "
+                               "spawned=16 live=0 culled=3 stranded=0\n")
+    if smoke.get("smoke_spawned") != 16 or smoke.get("smoke_culled") != 3:
+        fail("the gun-smoke quit line is no longer read: %r" % smoke)
+    if "smoke_stranded" not in smoke:
+        fail("a zero must still be RECORDED, or the one number that must never "
+             "move could vanish instead of moving: %r" % smoke)
+
+    # AND THE OLD ONE-OFF DIAGNOSTIC MUST NOT BE MISTAKEN FOR IT. SMOKELOG also
+    # prints a per-puff spread line at t=1.0; a reader loose enough to match that
+    # would report some puff's card sizes as the run's totals.
+    spread = ci_measure.measure("fixture", "LogTemp: Display: SMOKELOG at t=1.0 "
+                                "the cards span 539 x 604 x 541 cm, "
+                                "sizes 245..194\n")
+    if "smoke_spawned" in spread:
+        fail("the per-puff SMOKELOG diagnostic is being read as the totals: %r"
+             % spread)
+
     # THE PLAYER'S MAGAZINE, READ OFF THE PLAYER'S LINE. This fixture puts both
     # hulls in, with different numbers, because the defect it was written for was
     # not a wrong regex - it was a right regex aimed at the wrong ship. A reader
     # that drifts back onto EnemyShipPawn_ scores 40 here and fails.
+    # EVERY NUMBER IN IT DISTINCT. The first version of this fixture wrote
+    # shot=0/3 fired=3, so own_shot_max and own_shot_fired were both 3 and the
+    # two regex groups could have been swapped without the gate noticing; and
+    # own_shot_left was asserted by nothing at all. A fixture whose fields are
+    # interchangeable tests the regex's shape, not its meaning.
     two = ("LogTemp: Display: SHOTLOG EnemyShipPawn_0 magazine shot=36/40 "
            "fired=4 dry=0\n"
-           "LogTemp: Display: SHOTLOG ShipPawn_0 magazine shot=0/3 "
-           "fired=3 dry=1\n")
+           "LogTemp: Display: SHOTLOG ShipPawn_0 magazine shot=2/7 "
+           "fired=5 dry=1\n")
     mine = ci_measure.measure("fixture", two)
-    if mine.get("own_shot_max") != 3 or mine.get("own_shot_fired") != 3:
-        fail("the player's magazine is not read off the player's line: %r" % mine)
-    if mine.get("shot_max") != 40:
+    for key, want in (("own_shot_left", 2), ("own_shot_max", 7),
+                      ("own_shot_fired", 5), ("own_dry", 1)):
+        if mine.get(key) != want:
+            fail("%s should be %d off the player's line, got %r: %r"
+                 % (key, want, mine.get(key), mine))
+    if mine.get("shot_max") != 40 or mine.get("shot_left") != 36:
         fail("the enemy's magazine keys must keep reading the enemy: %r" % mine)
-    if mine.get("own_dry") != 1:
-        fail("the player's dry refusals are not read: %r" % mine)
 
     # THE PARTIAL BROADSIDE. Three guns on the player's first order against four
     # on the enemy's, from lines that differ only in the hull's name - which is
@@ -420,6 +448,23 @@ def check_comparison():
              "%r" % pb)
     if pb.get("broadsides") != 2:
         fail("the all-hulls broadside count must still see both: %r" % pb)
+
+    # AND THAT "FIRST" MEANS FIRST. Every scenario in the suite has the player
+    # firing exactly once, so own_broadsides is 1 everywhere and nothing there
+    # could ever tell findall()[0] from findall()[-1] or from a max. The day a
+    # scenario fires her twice, the key would have quietly changed meaning.
+    many = ("LogTemp: Display: SHOTLOG broadside ShipPawn_0 side=starboard "
+            "guns=3 target=x range=500m\n"
+            "LogTemp: Display: SHOTLOG broadside EnemyShipPawn_0 side=port "
+            "guns=4 target=x range=500m\n"
+            "LogTemp: Display: SHOTLOG broadside ShipPawn_0 side=starboard "
+            "guns=1 target=x range=500m\n")
+    mb = ci_measure.measure("fixture", many)
+    if mb.get("own_broadsides") != 2:
+        fail("the player's broadsides are not counted: %r" % mb)
+    if mb.get("own_guns_first") != 3:
+        fail("own_guns_first must be the FIRST of the player's broadsides, not "
+             "the last (1) and not the largest: %r" % mb)
 
     # THE GUN PANEL's state, and the arithmetic that says why a mask and not a
     # count. 9 is 1001: guns 0 and 3 down, 1 and 2 standing. A panel that drew
