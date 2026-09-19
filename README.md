@@ -70,6 +70,17 @@ Apoi apeși **Play**.
 | Rotiţa | înălţarea ţevilor, 0,2° pe cârtiţă, între −3° şi +10° |
 | X | fixezi tunurile perpendicular pe navă şi ignori mouse-ul (comutator) |
 
+**Panoul GUNS arata CARE tunuri iti mai sunt**, nu cate. Patru pipuri pe bord,
+fiecare despre afetul lui: daca ti-au fost scoase tunul din pupa si cel din prova,
+se aprind cele doua din mijloc. Pana pe 19.09 pipurile se desenau dintr-o
+NUMARATOARE si se aprindeau de la stanga, deci in exemplul de mai sus ti-ar fi
+aratat aprinse exact tunurile pe care nu le aveai.
+
+Capcana din spate merita stiuta: `-ShipGunsDown=N` scotea tunurile 0..N-1, adica
+un PREFIX - si contra unui prefix desenul pe numaratoare nimereste din intamplare.
+Harnasamentul putea produce doar cazul in care defectul e invizibil. De aceea
+exista acum `-ShipGunsDownMask=`, si scenariul `guns_split` cu masca 9 (1001).
+
 **Tunurile se opresc la 12 grade de travers.** Cand mouse-ul cere mai mult, ele
 raman la limita si linia de ochire se face chihlimbarie: de acolo incolo doar
 carma le mai duce. Vezi „Cum ochesti".
@@ -541,6 +552,35 @@ din drumuri).
 inofensiv cu o singură cocă duşmană în lume, ruinător cu doi negustori la 150 m
 unul de altul: patru ghiulele în greementul unuia, „cel mai apropiat" sare la
 celălalt, trei în al lui, şi niciunul destul de rănit ca să coboare pavilionul.
+
+## Linia de bataie
+
+Escadronul inamic navigheaza in sir, si fiecare nava tine pozitia dupa cea din
+fata ei - nu dupa lider. Un lant de brate scurte se corecteaza singur, pe cand un
+sir intreg tinut pe o singura nava ii pune toata eroarea acumulata in coada.
+
+**Si se STRANGE cand un consort cade din linie.** O nava care si-a coborat
+pavilionul nu e scufundata: e pe linia de plutire, in deriva, fara curs. Pana pe
+19.09 linia continua sa se alinieze dupa ea, si toata coada o urma oriunde o
+ducea marea. Comentariul din cod promitea de la inceput "cea din fata ei care
+inca guverneaza"; bucla nu verifica nimic.
+
+Perechea `line_closes` / `line_whole` difera intr-un singur flag,
+`-EnemyStrikeTest=10`, si intr-o singura cifra: `line_skips`, adancimea la care a
+trebuit sa se uite linia peste cei cazuti. 1 cand unul a coborat pavilionul, 0
+cand niciunul, si **tot 1 cu cinci nave in loc de trei** - fiindca e o adancime,
+nu un numar de urmaritori.
+
+Cifra a fost gresita de doua ori inainte sa fie buna, si amandoua greselile merita
+stiute: intai numara tick-uri (3600 intr-o rulare de treizeci de secunde, adica
+rata de cadre purtand un nume tactic), apoi aduna adancimile fiecarui urmaritor
+(2 acolo unde o singura nava cazuse). A doua a fost prinsa cu o intrebare simpla:
+de ce e 2 cand aritmetica spune 1?
+
+Si ceva despre limitele masuratorii: cele treizeci de scenarii de atunci n-au
+miscat NICIO cifra la reparatia asta, fiindca niciunul nu punea vreodata un
+consort sa inceteze sa guverneze in timp ce altii il urmau. Defectul a trebuit
+gasit CITIND codul.
 
 ## Nava inamică
 

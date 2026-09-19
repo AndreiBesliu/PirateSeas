@@ -475,6 +475,19 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Damage")
 	int32 GetGunsRemaining(bool bStarboard) const;
 
+	/** Whether ONE carriage is wreckage, by its place in the battery: 0 is the
+	 *  aftmost gun and 3 the foremost, matching the port table the broadside
+	 *  fires from. The panel needs this and not the count, because a count can
+	 *  only say HOW MANY are left and the pips claim to say WHICH. */
+	bool IsGunDown(bool bStarboard, int32 Gun) const;
+
+	/** The battery as a bitmask, aftmost gun in bit 0. Exists so a headless run
+	 *  can measure what the panel would draw: the HUD itself is never rendered
+	 *  under -NullRHI, so nothing about the picture is checkable directly. A
+	 *  mask that is not a prefix - 1001, say - is proof that drawing the pips
+	 *  from a COUNT was telling the player the wrong carriages. */
+	int32 GetGunsDownMask(bool bStarboard) const;
+
 	UFUNCTION(BlueprintPure, Category = "Ship")
 	float GetMaxHullIntegrity() const { return MaxHullIntegrity; }
 

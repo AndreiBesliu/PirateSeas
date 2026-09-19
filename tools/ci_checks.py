@@ -391,6 +391,26 @@ def check_comparison():
             fail("a gun laid BELOW level is not read: %s is %r, expected %r"
                  % (key, low.get(key), want))
 
+    # THE GUN PANEL's state, and the arithmetic that says why a mask and not a
+    # count. 9 is 1001: guns 0 and 3 down, 1 and 2 standing. A panel that drew
+    # `g < Mounted` with two standing would light pips 0 and 1 - the wrong two -
+    # and no count can ever distinguish 1001 from 0011.
+    pips = ci_measure.measure("fixture", "LogTemp: Display: HUDLOG TOTAL "
+                              "guns_down_port=9 guns_down_stbd=6\n")
+    if pips.get("guns_down_port") != 9 or pips.get("guns_down_stbd") != 6:
+        fail("the gun-panel quit line is no longer read: %r" % pips)
+    mask, standing = 9, 0
+    for g in range(4):
+        if not (mask & (1 << g)):
+            standing += 1
+    if standing != 2:
+        fail("the mask arithmetic is wrong: 1001 leaves two guns standing")
+    prefix = [g for g in range(4) if g < standing]
+    actually = [g for g in range(4) if not (mask & (1 << g))]
+    if prefix == actually:
+        fail("mask 9 must NOT agree with a count-drawn panel, or the fixture "
+             "proves nothing about the defect it was written for")
+
     # THE LINE OF BATTLE's quit line, so a format drift on it fails here rather
     # than by quietly reading nothing - which is what happened to the trail.
     line = ci_measure.measure("fixture",

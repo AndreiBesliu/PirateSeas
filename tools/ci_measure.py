@@ -411,6 +411,21 @@ SCENARIOS = {
 
     "line_whole": ["-WindBearing=120", "-WindSpeed=11", "-EnemyX=12000",
                    "-EnemyY=3000", "-EnemyCount=3", "-ShipQuitAfter=40"],
+
+    # THE GUN PANEL, in the only shape where its old defect could be seen. The
+    # pips claim to say WHICH carriages are still standing; they were drawn from
+    # a COUNT, `g < Mounted`, which lights that many from the left. Against a
+    # prefix of dismounted guns that is accidentally right - and `-ShipGunsDown=N`
+    # can only ever produce a prefix, so the harness could only ever produce the
+    # case that hid the bug.
+    #
+    # Mask 9 is 1001: the AFTMOST and FOREMOST guns down, the two in the middle
+    # standing. `guns_down_stbd` must read 9. Under the old drawing the player
+    # was shown pips 0 and 1 lit - the two AFTER guns - while the guns he
+    # actually had were 1 and 2. Not a vague answer: a confident wrong one.
+    "guns_split": ["-WindBearing=120", "-WindSpeed=11", "-EnemyX=9000",
+                   "-EnemyY=1500", "-ShipGunsDownMask=9", "-ShipFireTest=8",
+                   "-ShipQuitAfter=30"],
 }
 
 
@@ -787,6 +802,15 @@ def measure(name, text):
         # wrong line is still a line - but it is the proof they are DRAWN, and
         # it is the number the -AimMarks=0 pair moves.
         m["aim_segments"] = int(am.group(9))
+
+    # THE BATTERY as a bitmask, aftmost gun in bit 0. The HUD is never rendered
+    # under -NullRHI, so what the panel WOULD draw cannot be measured directly;
+    # this is the state it draws from, and a mask that is not a prefix is proof
+    # that drawing pips from a count showed the wrong carriages.
+    gm = re.search(r"HUDLOG TOTAL guns_down_port=(\d+) guns_down_stbd=(\d+)", text)
+    if gm:
+        m["guns_down_port"] = int(gm.group(1))
+        m["guns_down_stbd"] = int(gm.group(2))
 
     # THE LINE OF BATTLE. How deep the walk up the line had to reach past
     # consorts who had stopped steering: zero in any ordinary action, and the

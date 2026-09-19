@@ -1735,6 +1735,25 @@ void ASeaGameMode::QuitNow()
 			Picture ? Picture->GetSegments() : 0);
 	}
 
+	// THE BATTERY, as a mask rather than a count, so what the panel WOULD draw
+	// is checkable from a headless run - the HUD is never rendered under
+	// -NullRHI, so the picture itself cannot be measured. Aftmost gun in bit 0.
+	{
+		const AShipPawn* Gunner = nullptr;
+		for (TActorIterator<AShipPawn> It(GetWorld()); It; ++It)
+		{
+			if (It->IsPlayerControlled())
+			{
+				Gunner = *It;
+				break;
+			}
+		}
+		UE_LOG(LogTemp, Display,
+			TEXT("HUDLOG TOTAL guns_down_port=%d guns_down_stbd=%d"),
+			Gunner ? Gunner->GetGunsDownMask(false) : 0,
+			Gunner ? Gunner->GetGunsDownMask(true) : 0);
+	}
+
 	// THE LINE OF BATTLE. How many times a consort had to be stepped over
 	// because she had stopped steering - struck, made port, or landed as a
 	// prize. Zero in any ordinary action; non-zero exactly when the line closed

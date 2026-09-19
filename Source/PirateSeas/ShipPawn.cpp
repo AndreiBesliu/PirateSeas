@@ -449,6 +449,29 @@ void AShipPawn::BeginPlay()
 					}
 				}
 			}
+			// -ShipGunsDownMask=9 dismounts the AFTMOST and FOREMOST guns, and
+			// that is the whole reason it exists. The count flag above can only
+			// ever knock out a PREFIX of the battery, which is precisely the one
+			// shape in which the panel's old bug was invisible: drawing pips from
+			// a count lights them from the left, and against a prefix that
+			// happens to be right. The harness could only ever produce the case
+			// that hid the defect.
+			int32 DownMask = 0;
+			if (FParse::Value(FCommandLine::Get(), TEXT("ShipGunsDownMask="), DownMask)
+				&& DownMask > 0)
+			{
+				for (int32 Side = 0; Side < 2; ++Side)
+				{
+					for (int32 g = 0; g < 4; ++g)
+					{
+						if (DownMask & (1 << g))
+						{
+							bGunDown[Side][g] = true;
+						}
+					}
+				}
+				GunsDown = FMath::Max(GunsDown, 1);
+			}
 			if (RigDamage >= 0.f || RudderDamage >= 0.f || GunsDown > 0)
 			{
 				UE_LOG(LogTemp, Display,
@@ -1023,6 +1046,25 @@ float AShipPawn::GetHullTopZ() const
 float AShipPawn::GetRigEfficiency() const
 {
 	return ForeRigShare * ForeRigIntegrity + (1.f - ForeRigShare) * MainRigIntegrity;
+}
+
+bool AShipPawn::IsGunDown(bool bStarboard, int32 Gun) const
+{
+	const int32 Side = bStarboard ? 1 : 0;
+	return Gun >= 0 && Gun < 4 && bGunDown[Side][Gun];
+}
+
+int32 AShipPawn::GetGunsDownMask(bool bStarboard) const
+{
+	int32 Mask = 0;
+	for (int32 g = 0; g < 4; ++g)
+	{
+		if (IsGunDown(bStarboard, g))
+		{
+			Mask |= (1 << g);
+		}
+	}
+	return Mask;
 }
 
 int32 AShipPawn::GetGunsRemaining(bool bStarboard) const

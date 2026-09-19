@@ -238,7 +238,9 @@ Livrat:
    diferente identice inainte si dupa.
 
 Urmatorul: de ales cu owner-ul. **Deschise si stiute:**
-- **Capitanul AI n-a fost atins.** Trage pe poarta veche de 9 grade din centrul
+- **Capitanul AI a fost atins O SINGURA data**, la linia de bataie (19.09): nu
+  se mai alinieaza dupa consorti care au incetat sa guverneze. Poarta lui de
+  tragere e neatinsa. Trage pe poarta veche de 9 grade din centrul
   cocii, nu pe arcul nou pe tun. Verificarea adversariala a aratat ca daca i se
   da regula noua fara un prag minim de tunuri, DESCHIDE fiecare lupta cu un
   singur tun, determinist - fiindca "macar unul poarta" ajunge la 13,9 grade la
@@ -258,9 +260,9 @@ Urmatorul: de ales cu owner-ul. **Deschise si stiute:**
   Merita retinut CUM am gresit: am citit o cheie in loc de rand. Aceeasi clasa de
   eroare ca verificarea intr-o singura directie de mai devreme in sesiune - o
   bucata din instrument, luata drept instrumentul intreg.
-- **Fumul de tun e parcat, si acum se stie de ce**: culoarea lui e autorata in
-  jurul lui 0,78 intr-o scena cu punct alb 5793 cd/m2. Nu era intunecat, era
-  subexpus de trei ordine de marime.
+- ~~Fumul de tun e parcat~~ **DEPARCAT 19.09 si PORNIT implicit.** Era
+  subexpus, nu intunecat: culoare autorata la 0,78 intr-o scena cu punct alb
+  5793 cd/m2. Reautorat in candele. Suita: zero diferente.
 - Linia de bataie lasa urmaritorii pe un lider care a incetat sa navigheze, si
   commitul de impachetare n-a fost citit de nicio lentila.
 

@@ -339,15 +339,19 @@ void AShipHUD::DrawGuns(AShipPawn* Ship)
 
 		DrawText(bStarboard ? TEXT("E  STBD") : TEXT("Q  PORT"), Faint, X, Y, Small, Scale);
 
-		// One pip a gun: filled if the carriage is still there, hollow if it
+		// One pip a gun: filled if THAT carriage is still there, hollow if it
 		// has been dismounted. Four pips that do not all light is the clearest
-		// possible statement that the battery is hurt.
+		// possible statement that the battery is hurt - but only if each pip is
+		// about its own gun. This used to draw `g < Mounted`, which COUNTS the
+		// survivors and lights that many from the left: a ship with her fore and
+		// after guns shot away showed the two FORWARD pips lit, which is not a
+		// vague answer, it is a confident wrong one.
 		const float PipX = X + Width * 0.42f;
 		const float Pip = Line * 0.34f;
 		for (int32 g = 0; g < 4; ++g)
 		{
 			const float Px = PipX + g * Pip * 1.8f;
-			if (g < Mounted)
+			if (!Ship->IsGunDown(bStarboard, g))
 			{
 				DrawRect(Ink, Px, Y + Line * 0.10f, Pip, Pip);
 			}
