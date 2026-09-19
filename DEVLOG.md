@@ -3989,3 +3989,90 @@ jucatorul sa afle; `sinking.casualties_max` a cazut la 0 si verificarea aia e
 acum vida.
 
 **Task Completed.**
+
+## 19.09.2026 - Reincarcarea pe tun, si o pereche care nu masura nimic
+
+**Task Started.** Prompt: "fa reincarcarea pe tun". Model: Opus 5.
+
+`GunReload[2][4]` in locul celor doua float-uri pe bord. Ticaite neimpartite -
+`FullGunCrew` e 48, cu comentariul "sase la un tun, opt tunuri", deci constanta
+pretuieste deja bateria intreaga servita simultan; impartind echipajul inca o
+data intre tunuri as fi numarat aceiasi oameni de doua ori.
+
+`GetReloadRemaining` e minimul peste tunurile MONTATE, si calificativul ala e tot
+ce conteaza: `bGunDown` nu se curata nicaieri in proiect, deci un afet scos isi
+tine ceasul pe zero pana la sfarsitul rularii. Un minim peste toate patru ar citi
+zero pe veci dupa primul tun pierdut - o poarta deschisa permanent, foc liber,
+dintr-un singur tun pierdut.
+
+### Singur, ar fi fost un no-op care se putea proba
+
+O salva trage toate tunurile montate deodata si le stampileaza pe toate cu
+aceleasi douasprezece secunde. Patru ceasuri in pas sunt exact cat unul. Ce le
+desparte e MAGAZIA, a carei permisiune era un agregat - "o ghiulea pentru fiecare
+tun care poarta, altfel nicio salva" - deci o baterie de patru cu trei ghiulele
+trage NIMIC, si o spune doar intr-un contor.
+
+### Comentariul care avea dreptate despre pericol si gresea despre iesire
+
+Sustinea ca garda trebuie sa fie inainte de bucla si totul-sau-nimic, fiindca
+bucla trage `FMath::FRandRange` de doua ori per tun montat si un tun care refuza
+tacut ar sari peste extrageri si ar muta fiecare ghiulea de dupa el.
+
+De protejat sunt extragerile, nu nasterea ghiulelei. Refuzul per tun sta DUPA
+extrageri; numarul ramane 2 per tun montat prin constructie. Proba: cele 33 de
+scenarii vechi n-au miscat nicio cifra.
+
+### Perechea care nu masura nava pe care o schimbam
+
+`shot_short` / `shot_plenty` au fost scrise ca sa probeze salva partiala, si au
+probat nimic. Toate cheile `shot_*` din `ci_measure.py` se citesc dupa nume de pe
+`SHOTLOG EnemyShipPawn_N magazine`, iar perechea seteaza `-Shot=`, care e magazia
+JUCATORULUI. Amandoua randurile raportau 40/40 de la un inamic pe care niciunul
+nu-l atinsese. Doua rulari de motor ca sa masor o coca pe care n-o mutasem.
+
+Cititul dupa nume era instinctul bun - un maxim peste coci ar fi fost mai rau -
+dar numele trebuie sa fie coca pe care scenariul o misca. Chei noi: `own_shot_*`,
+`own_broadsides`, `own_guns_first`. Poarta are acum o fixtura cu AMBELE linii, cu
+cifre diferite, fiindca defectul n-a fost un regex gresit ci un regex corect
+indreptat spre nava gresita. Probat prin mutatie: mutat inapoi pe
+`EnemyShipPawn_`, poarta iese rosie; restaurat, `cmp` octet cu octet.
+
+Si fixtura panoului de tunuri era ramasa in urma liniei pe care jocul o scrie
+acum - linia a capatat `guns_ready_port=`/`guns_ready_stbd=` iar fixtura era pe
+forma de patru campuri. Corectata, cu o rosie deliberata langa ea: forma veche
+NU mai are voie sa se parseze.
+
+### Ce difera, masurat
+
+`own_guns_first` **3** contra **4**, `own_shot_fired` 3 contra 4,
+`own_shot_left` 0 contra 36. Aia e salva partiala.
+
+### Doua campuri de raport pe care le scria un tun care n-a tras
+
+`LaidElevationDeg` si `LastLeadCm` se scriu per tun, sus in bucla, si se citesc o
+singura data dupa ea, pentru linia salvei. Era exact cat timp fiecare tun montat
+tragea: ultimul tun din bucla era si ultimul care trage.
+
+Cu magazia scurta inceteaza sa fie adevarat. O baterie de patru care plateste
+pentru trei refuza tunul din prova DUPA ce si-a socotit propria inaltime si
+propriul avans - deci linia raporteaza tunul care a tacut. Si `lead=` hraneste
+`lead_max_m`, deci nu e doar cosmetica.
+
+Comentariul de doua randuri mai sus avertizeaza exact despre forma asta - "un
+fapt spus de doua ori se desparte, si greseste mereu raportul, tacut" - si campul
+a intrat in ea in clipa in care un tun a putut refuza. Amandoua se publica acum
+dupa `--Allowed`, adica dupa ce tunul ala si-a platit ghiuleaua.
+
+Un efect secundar, si e o corectie: pe calea ochirii cu mana `LastLeadCm` nu se
+scria deloc, deci `lead=` raporta valoarea ramasa de la ultima salva data de
+solver. Acum e 0, fiindca tunurile laite cu mana nu iau avans. Daca `lead_max_m`
+se misca in scenariile de ochire, asta e motivul.
+
+**Ramas, stiut si nereparat:** ceasurile nu se pot desincroniza azi decat printr-o
+magazie prea scurta, iar dupa salva partiala magazia e goala - deci castigul
+reincarcarii pe tun se vede abia dupa o reaprovizionare. Structura e acolo si e
+probata; fereastra in care se simte e ingusta. Capitanul AI trage in continuare
+pe poarta lui veche de 9 grade.
+
+**Task Completed.**

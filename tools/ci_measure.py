@@ -426,6 +426,22 @@ SCENARIOS = {
     "guns_split": ["-WindBearing=120", "-WindSpeed=11", "-EnemyX=9000",
                    "-EnemyY=1500", "-ShipGunsDownMask=9", "-ShipFireTest=8",
                    "-ShipQuitAfter=30"],
+
+    # THREE ROUNDS, FOUR GUNS. The magazine's permission used to be an aggregate
+    # - a round for every gun that bears, or no broadside at all - so a ship
+    # three rounds short of a full battery fired NOTHING and said so only in a
+    # counter. She now fires three, those three reload on their own clocks, and
+    # the fourth stays loaded.
+    #
+    # `broadsides` must differ from shot_plenty, and `guns=` on the first
+    # broadside is the partial broadside itself: three against four.
+    "shot_short": ["-WindBearing=120", "-WindSpeed=11", "-EnemyX=9000",
+                   "-EnemyY=1500", "-Shot=3", "-ShipFireTest=8",
+                   "-ShipQuitAfter=45"],
+
+    "shot_plenty": ["-WindBearing=120", "-WindSpeed=11", "-EnemyX=9000",
+                    "-EnemyY=1500", "-Shot=40", "-ShipFireTest=8",
+                    "-ShipQuitAfter=45"],
 }
 
 
@@ -753,6 +769,33 @@ def measure(name, text):
         m["shot_fired"] = int(mag.group(3))
         m["dry_refusals"] = int(mag.group(4))
 
+    # THE PLAYER'S OWN MAGAZINE, and this exists because the keys above do not
+    # answer for her. They are read off "EnemyShipPawn_N" by name, so a scenario
+    # that sets -Shot= (the PLAYER's rounds) moves nothing in them at all: the
+    # first shot_short/shot_plenty pair reported 40/40 on both rows, an enemy
+    # neither of them had touched, and looked like a feature that did nothing.
+    #
+    # ShipPawn_ and not EnemyShipPawn_/MerchantShipPawn_: the player's hull is
+    # the bare AShipPawn class, so the other two names cannot match this pattern
+    # after the literal "SHOTLOG ".
+    own = re.search(r"SHOTLOG ShipPawn_\d+ magazine shot=(\d+)/(\d+) "
+                    r"fired=(\d+) dry=(\d+)", text)
+    if own:
+        m["own_shot_left"] = int(own.group(1))
+        m["own_shot_max"] = int(own.group(2))
+        m["own_shot_fired"] = int(own.group(3))
+        m["own_dry"] = int(own.group(4))
+
+    # THE PARTIAL BROADSIDE ITSELF: how many guns actually went on the player's
+    # first order. `guns=` on that line is `Fired`, the balls that left the ship
+    # - not the carriages she still has - so three here against four in the
+    # control IS the mechanic, measured. With the old all-or-nothing magazine
+    # there would have been no line at all: she refused the whole broadside.
+    own_bs = re.findall(r"SHOTLOG broadside ShipPawn_\d+ \S+ guns=(\d+)", text)
+    m["own_broadsides"] = len(own_bs)
+    if own_bs:
+        m["own_guns_first"] = int(own_bs[0])
+
     # The shot trails. laid is the proof they exist; stranded is the one that
     # must never move - a wisp still drawn after its life ran out is the defect
     # the wake shipped once, and it was invisible then because the counter that
@@ -807,10 +850,12 @@ def measure(name, text):
     # under -NullRHI, so what the panel WOULD draw cannot be measured directly;
     # this is the state it draws from, and a mask that is not a prefix is proof
     # that drawing pips from a count showed the wrong carriages.
-    gm = re.search(r"HUDLOG TOTAL guns_down_port=(\d+) guns_down_stbd=(\d+)", text)
+    gm = re.search(r"HUDLOG TOTAL guns_down_port=(\d+) guns_down_stbd=(\d+) "
+                   r"guns_ready_port=(\d+) guns_ready_stbd=(\d+)", text)
     if gm:
         m["guns_down_port"] = int(gm.group(1))
         m["guns_down_stbd"] = int(gm.group(2))
+        m["guns_ready_stbd"] = int(gm.group(4))
 
     # THE LINE OF BATTLE. How deep the walk up the line had to reach past
     # consorts who had stopped steering: zero in any ordinary action, and the

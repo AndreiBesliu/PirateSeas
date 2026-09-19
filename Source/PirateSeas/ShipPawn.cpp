@@ -741,7 +741,47 @@ float AShipPawn::SailDriveCoefficient(float AbsWindAngleDeg) const
 
 float AShipPawn::GetReloadRemaining(bool bStarboard) const
 {
-	return bStarboard ? StarboardReload : PortReload;
+	// THE SOONEST ANY GUN THAT STILL EXISTS WILL BE READY - over the MOUNTED
+	// guns only, and that qualifier is the whole of it. bGunDown is never
+	// cleared anywhere in this project, so a dismounted carriage keeps its clock
+	// at zero for the rest of the run: a plain minimum over all four entries
+	// would read zero for ever after the first gun is lost, and the gate that
+	// reads it would never close again. Free fire, silently, from one lost gun.
+	float Soonest = -1.f;
+	const int32 SideIndex = bStarboard ? 1 : 0;
+	for (int32 g = 0; g < 4; ++g)
+	{
+		if (bGunDown[SideIndex][g])
+		{
+			continue;
+		}
+		Soonest = (Soonest < 0.f) ? GunReload[SideIndex][g]
+								  : FMath::Min(Soonest, GunReload[SideIndex][g]);
+	}
+	// No carriages left: nothing to wait for, and the panel suppresses the bar
+	// on that side anyway.
+	return Soonest < 0.f ? 0.f : Soonest;
+}
+
+int32 AShipPawn::GetGunsReady(bool bStarboard) const
+{
+	int32 Ready = 0;
+	const int32 SideIndex = bStarboard ? 1 : 0;
+	for (int32 g = 0; g < 4; ++g)
+	{
+		if (!bGunDown[SideIndex][g] && GunReload[SideIndex][g] <= 0.f)
+		{
+			++Ready;
+		}
+	}
+	return Ready;
+}
+
+bool AShipPawn::IsGunLoaded(bool bStarboard, int32 Gun) const
+{
+	const int32 SideIndex = bStarboard ? 1 : 0;
+	return Gun >= 0 && Gun < 4 && !bGunDown[SideIndex][Gun]
+		&& GunReload[SideIndex][Gun] <= 0.f;
 }
 
 float AShipPawn::ElevationForRangeDeg(float RangeCm) const
@@ -797,8 +837,10 @@ bool AShipPawn::FireBroadside(bool bStarboard, AActor* AimAt, bool bHigh)
 	{
 		return false;   // the crews are at the pumps, or in the water
 	}
-	float& Reload = bStarboard ? StarboardReload : PortReload;
-	if (Reload > 0.f || !CannonBallClass || !GetWorld())
+	// ANY gun ready, not the whole side. With the magazine full this is the same
+	// question as before - they all come ready together - and it only starts to
+	// differ when the shot runs short and splits the battery's clocks.
+	if (GetGunsReady(bStarboard) == 0 || !CannonBallClass || !GetWorld())
 	{
 		return false;
 	}
@@ -823,18 +865,21 @@ bool AShipPawn::FireBroadside(bool bStarboard, AActor* AimAt, bool bHigh)
 
 	const int32 SideIndex = bStarboard ? 1 : 0;
 
-	// THE MAGAZINE, CHECKED BEFORE THE LOOP AND ALL OR NOTHING. Not inside it,
-	// and this is not a stylistic choice: the loop draws FMath::FRandRange
-	// twice per gun for train and elevation, off the -ShipSeed stream, so a
-	// gun that quietly declined to fire would skip its draws and move every
-	// ball fired afterwards in that run. Every before/after comparison this
-	// project makes would be reading the seed instead of the change.
+	// THE MAGAZINE, PER GUN NOW, and the old comment here was right about the
+	// danger and wrong about the only way out of it. It said the check had to be
+	// all-or-nothing before the loop, because the loop draws FMath::FRandRange
+	// twice per gun off the -ShipSeed stream and a gun that quietly declined to
+	// fire would skip its draws and move every ball fired afterwards.
 	//
-	// So either the whole broadside goes or none of it does, and the loop below
-	// is byte for byte the loop that was there before. She needs a round for
-	// every gun that still bears; with fewer she cannot fire that side at all.
-	const int32 GunsThatBear = GetGunsRemaining(bStarboard);
-	if (HasMagazine() && Shot < GunsThatBear)
+	// The draws are the thing to protect, not the spawn. A gun that takes its
+	// two numbers and THEN declines costs exactly what it always cost - so the
+	// decline goes AFTER the draws, the count stays 2 per mounted gun, and the
+	// stream never notices. That is what lets her fire three guns on three
+	// rounds instead of refusing to fire at all, which is the whole point: a
+	// four-gun battery with three rounds used to be a silent, total refusal.
+	const int32 GunsReady = GetGunsReady(bStarboard);
+	int32 Allowed = HasMagazine() ? FMath::Min(Shot, GunsReady) : GunsReady;
+	if (Allowed <= 0)
 	{
 		// Counted once per dry spell. The AI asks to fire on every tick her
 		// guns bear, so counting attempts here would count frames - the defect
@@ -846,7 +891,7 @@ bool AShipPawn::FireBroadside(bool bStarboard, AActor* AimAt, bool bHigh)
 			UE_LOG(LogTemp, Display,
 				TEXT("SHOTLOG %s DRY side=%s shot=%d guns=%d refusals=%d t=%.1f"),
 				*GetName(), bStarboard ? TEXT("starboard") : TEXT("port"),
-				Shot, GunsThatBear, DryRefusals, GetWorld()->GetTimeSeconds());
+				Shot, GunsReady, DryRefusals, GetWorld()->GetTimeSeconds());
 		}
 		return false;   // and no reload is burned on a broadside that never was
 	}
@@ -858,6 +903,11 @@ bool AShipPawn::FireBroadside(bool bStarboard, AActor* AimAt, bool bHigh)
 		{
 			continue;   // that carriage is wreckage
 		}
+		// THIS gun's lead, kept local until this gun is known to have fired.
+		// The member it used to write directly is read once, for the log line,
+		// after the loop - so a gun that declined was reporting on behalf of the
+		// three that went.
+		float LeadThisGun = 0.f;
 		const float PortX = GGunPortsX[g];
 		const FVector LocalMuzzle(PortX, Side * GGunPortY, GGunPortZ);
 		const FVector WorldMuzzle = HullTransform.TransformPosition(LocalMuzzle);
@@ -916,11 +966,11 @@ bool AShipPawn::FireBroadside(bool bStarboard, AActor* AimAt, bool bHigh)
 					const float Flight = R / FMath::Max(1.f, MuzzleSpeed);
 					AimPoint = Mark + RelVel * Flight;
 				}
-				LastLeadCm = FVector::Dist2D(AimPoint, Mark);
+				LeadThisGun = FVector::Dist2D(AimPoint, Mark);
 			}
 			else
 			{
-				LastLeadCm = 0.f;
+				LeadThisGun = 0.f;
 			}
 
 			const FVector ToTarget = AimPoint - WorldMuzzle;
@@ -950,7 +1000,10 @@ bool AShipPawn::FireBroadside(bool bStarboard, AActor* AimAt, bool bHigh)
 		// had its say. The log line used to work the solver's answer out a second
 		// time and printed 14.47 while the guns fired at two - a fact stated
 		// twice drifts, and it is always the report that is wrong quietly.
-		LaidElevationDeg = Elevation;
+		// Held in a local until after the decline below: publishing it here
+		// meant the LAST gun round the loop wrote the report, and with a short
+		// magazine the last gun round the loop is one that did not fire.
+		const float ElevationThisGun = Elevation;
 		// Scatter traverse and elevation separately: a symmetric cone lets the
 		// elevation error dominate range far more than any gun crew would.
 		const float TrainJitter = FMath::FRandRange(-SpreadDeg, SpreadDeg);
@@ -958,6 +1011,19 @@ bool AShipPawn::FireBroadside(bool bStarboard, AActor* AimAt, bool bHigh)
 		Beam = Beam.RotateAngleAxis(TrainJitter, FVector::UpVector);
 		const float Rise = FMath::Tan(FMath::DegreesToRadians(Elevation + ElevJitter));
 		FVector Aim = (Beam + FVector::UpVector * Rise).GetSafeNormal();
+
+		// THIS GUN'S TURN, decided AFTER its two draws and before its ball. A gun
+		// that is still being served does not fire, and neither does one the
+		// magazine cannot pay for - but both have already taken their numbers
+		// off the stream, so the count is what it always was.
+		if (!IsGunLoaded(bStarboard, g) || Allowed <= 0)
+		{
+			continue;
+		}
+		--Allowed;
+		// THIS gun fired, so this gun's numbers are the report.
+		LaidElevationDeg = ElevationThisGun;
+		LastLeadCm = LeadThisGun;
 
 		FActorSpawnParameters Params;
 		Params.Owner = this;
@@ -987,6 +1053,9 @@ bool AShipPawn::FireBroadside(bool bStarboard, AActor* AimAt, bool bHigh)
 			AGunSmoke::Spawn(GetWorld(), WorldMuzzle, Aim, ThisShot);
 		}
 		++Fired;
+		// HER OWN clock, not the battery's. This is the whole of what the owner
+		// asked for: a gun that did not fire is still loaded and does not wait.
+		GunReload[SideIndex][g] = ReloadSeconds;
 
 		if (HullCollision)
 		{
@@ -1010,7 +1079,8 @@ bool AShipPawn::FireBroadside(bool bStarboard, AActor* AimAt, bool bHigh)
 	ShotFired += Fired;
 	bReportedDry = false;
 
-	Reload = ReloadSeconds;
+	// (The battery-wide reload used to be stamped here, unconditional on how
+	// many guns had gone. Each gun now takes its own as it fires.)
 	// Enough state to explain a range bias between two ships firing the same
 	// gun: heel, own motion, and how high the first muzzle actually sits.
 	const FVector FirstMuzzle = HullTransform.TransformPosition(
@@ -2288,8 +2358,19 @@ void AShipPawn::Tick(float DeltaSeconds)
 	// The guns reload as fast as the men left to serve them. With a full
 	// crew and nobody sent to the carpenter this is exactly the old line.
 	const float GunCrew = GetGunCrewFactor();
-	PortReload = FMath::Max(0.f, PortReload - DeltaSeconds * GunCrew);
-	StarboardReload = FMath::Max(0.f, StarboardReload - DeltaSeconds * GunCrew);
+	// Every gun's clock, at the SAME rate, undivided - and that is deliberate
+	// arithmetic rather than an oversight. FullGunCrew is 48 with the comment
+	// "six to a gun, eight guns": the constant already prices the whole battery
+	// being served at once, so dividing the crew again between the guns would
+	// count the same men twice and halve the ship's rate of fire for nothing.
+	for (int32 Side = 0; Side < 2; ++Side)
+	{
+		for (int32 g = 0; g < 4; ++g)
+		{
+			GunReload[Side][g] =
+				FMath::Max(0.f, GunReload[Side][g] - DeltaSeconds * GunCrew);
+		}
+	}
 	TickRepairs(DeltaSeconds);
 	ComputeLift();
 
@@ -2664,7 +2745,8 @@ void AShipPawn::Tick(float DeltaSeconds)
 				Wind ? Wind->GetWindSpeedMS() : 0.f,
 				SailTrim, Drive, ForwardSpeed * 0.01f, Rot.Roll,
 				GetActorLocation().Z, bInWater ? 1 : 0,
-				HullIntegrity, PortReload, StarboardReload, LiftFraction, Velocity.Z,
+				HullIntegrity, GetReloadRemaining(false), GetReloadRemaining(true),
+				LiftFraction, Velocity.Z,
 				HullCollision->RigidBodyIsAwake() ? 1 : 0, Rot.Pitch,
 				SinkPhaseName(SinkPhase), SinkTime, LeewayDeg, WindwardVMG,
 				YawRateDegPerSec, ForeRigIntegrity, MainRigIntegrity, RudderIntegrity,

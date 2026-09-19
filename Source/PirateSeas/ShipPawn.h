@@ -481,6 +481,14 @@ public:
 	 *  only say HOW MANY are left and the pips claim to say WHICH. */
 	bool IsGunDown(bool bStarboard, int32 Gun) const;
 
+	/** How many carriages on that side are standing AND loaded - which is how
+	 *  many will actually go if the order is given now, magazine permitting. */
+	int32 GetGunsReady(bool bStarboard) const;
+
+	/** One gun: standing and loaded. The panel needs this per gun, because the
+	 *  pips claim to say WHICH and a count can only say how many. */
+	bool IsGunLoaded(bool bStarboard, int32 Gun) const;
+
 	/** The battery as a bitmask, aftmost gun in bit 0. Exists so a headless run
 	 *  can measure what the panel would draw: the HUD itself is never rendered
 	 *  under -NullRHI, so nothing about the picture is checkable directly. A
@@ -1161,8 +1169,15 @@ private:
 	float FireTestAt = 0.f;
 	bool bFireTestDone = false;
 
-	float PortReload = 0.f;
-	float StarboardReload = 0.f;
+	/** ONE CLOCK PER GUN, aftmost in index 0, matching bGunDown and the port
+	 *  table the broadside fires from. It was one float per side, and a broadside
+	 *  that fired two guns paid the same twelve seconds as one that fired four.
+	 *
+	 *  Note what this does NOT do on its own: a broadside fires every mounted gun
+	 *  at once and stamps them all with the same twelve seconds, so four clocks
+	 *  in lockstep are worth exactly one. It is the magazine running short that
+	 *  splits them - see the permission in FireBroadside. */
+	float GunReload[2][4] = { { 0.f, 0.f, 0.f, 0.f }, { 0.f, 0.f, 0.f, 0.f } };
 	float HullIntegrity = 1000.f;
 	int32 ShotCounter = 0;
 

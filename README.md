@@ -657,10 +657,23 @@ care nu leaga nicaieri nu se poate deosebi de lipsa lui.
 navei aleia fara fund - asa se poate masura comportamentul de dinainte fata de
 cel de acum.
 
-O salva cheltuie cate o ghiulea de tun. Daca n-ai cate una pentru fiecare tun
-care mai trage pe bordul ala, **salva nu pleaca deloc** - si nu-ti arde nici
-reincarcarea. Panoul are o bara SHOT cand exista o magazie, si scrie MAGAZINE
-DRY cand nu mai poti trage pe niciun bord.
+O salva cheltuie cate o ghiulea de tun, **si plateste cat poate**. Cu trei
+ghiulele si patru tunuri pleaca o salva de trei, iar al patrulea tun ramane
+incarcat. Pana pe 19.09 aici era o garda agregata - "una pentru fiecare tun care
+mai trage, altfel nimic" - si o nava cu trei ghiulele din patru refuza tacut sa
+traga, fara ca nimic din ecran sa spuna de ce. Panoul are o bara SHOT cand exista
+o magazie, si scrie MAGAZINE DRY cand nu mai poti trage pe niciun bord.
+
+Masurat cu perechea `shot_short` / `shot_plenty`, un singur flag diferenta:
+`own_guns_first` e **3** contra **4**. Aia e salva partiala, numarata.
+
+**Si fiecare tun isi tine propriul ceas de reincarcare**, nu bordul. Un tun care
+n-a tras nu asteapta dupa cei care au tras. Ceea ce trebuie spus limpede, fiindca
+e usor de crezut mai mult: azi ceasurile nu se pot desincroniza decat printr-o
+magazie prea scurta, iar dupa salva partiala magazia e goala oricum - deci
+castigul se vede abia **dupa o reaprovizionare**, cand tunul tinut in rezerva
+trage imediat si ceilalti trei inca se servesc. Structura e acolo si e probata;
+momentul in care se simte in joc e ingust.
 
 Portul vinde ghiulele cu 2 bucata - cel mai ieftin lucru de pe lista, si primul
 cumparat la refit: un echipaj intreg pe o coca sanatoasa cu magazia goala e un
@@ -672,11 +685,18 @@ cu **patru** ghiulele trage o salva, ramane uscata la 68 s si convoiul TRECE; cu
 **patruzeci** trage douazeci, nu ramane niciodata uscata, si convoiul e LUAT la
 70,9 s. Magazia schimba deznodamantul, nu doar contabilitatea.
 
-**Garda e INAINTE de bucla tunurilor, si e totul-sau-nimic.** Nu din stil: bucla
-trage doua numere aleatoare per tun (deriva si inaltimea), din acelasi sir pe
-care `-ShipSeed` il fixeaza, deci un tun care ar refuza tacut sa traga ar sari
-peste trageri si ar muta FIECARE ghiulea de dupa el in rularea aia. Orice
-comparatie inainte/dupa ar citi samanta in loc de schimbare.
+**Cum s-a putut face asta fara sa se mute toata suita.** Comentariul vechi de
+aici sustinea ca garda TREBUIE sa fie inainte de bucla si totul-sau-nimic: bucla
+trage doua numere aleatoare per tun (deriva si inaltimea), din sirul pe care
+`-ShipSeed` il fixeaza, deci un tun care ar refuza tacut sa traga ar sari peste
+extrageri si ar muta FIECARE ghiulea de dupa el. Avea dreptate despre pericol si
+gresea despre singura iesire.
+
+Ce trebuie protejat sunt EXTRAGERILE, nu nasterea ghiulelei. Un tun care isi ia
+cele doua numere si **abia apoi** refuza costa exact cat a costat mereu. Refuzul
+per tun sta dupa extrageri, numarul ramane 2 per tun montat, si sirul nu observa
+nimic - prin constructie, nu prin noroc. Proba: cele 33 de scenarii vechi n-au
+miscat **nicio** cifra.
 
 
 ### Ce cumpara punga

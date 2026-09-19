@@ -391,14 +391,56 @@ def check_comparison():
             fail("a gun laid BELOW level is not read: %s is %r, expected %r"
                  % (key, low.get(key), want))
 
+    # THE PLAYER'S MAGAZINE, READ OFF THE PLAYER'S LINE. This fixture puts both
+    # hulls in, with different numbers, because the defect it was written for was
+    # not a wrong regex - it was a right regex aimed at the wrong ship. A reader
+    # that drifts back onto EnemyShipPawn_ scores 40 here and fails.
+    two = ("LogTemp: Display: SHOTLOG EnemyShipPawn_0 magazine shot=36/40 "
+           "fired=4 dry=0\n"
+           "LogTemp: Display: SHOTLOG ShipPawn_0 magazine shot=0/3 "
+           "fired=3 dry=1\n")
+    mine = ci_measure.measure("fixture", two)
+    if mine.get("own_shot_max") != 3 or mine.get("own_shot_fired") != 3:
+        fail("the player's magazine is not read off the player's line: %r" % mine)
+    if mine.get("shot_max") != 40:
+        fail("the enemy's magazine keys must keep reading the enemy: %r" % mine)
+    if mine.get("own_dry") != 1:
+        fail("the player's dry refusals are not read: %r" % mine)
+
+    # THE PARTIAL BROADSIDE. Three guns on the player's first order against four
+    # on the enemy's, from lines that differ only in the hull's name - which is
+    # the whole trap this pair exists to keep shut.
+    bs = ("LogTemp: Display: SHOTLOG broadside EnemyShipPawn_0 side=starboard "
+          "guns=4 target=x range=500m\n"
+          "LogTemp: Display: SHOTLOG broadside ShipPawn_0 side=starboard "
+          "guns=3 target=x range=500m\n")
+    pb = ci_measure.measure("fixture", bs)
+    if pb.get("own_guns_first") != 3 or pb.get("own_broadsides") != 1:
+        fail("the player's first broadside is not read apart from the enemy's: "
+             "%r" % pb)
+    if pb.get("broadsides") != 2:
+        fail("the all-hulls broadside count must still see both: %r" % pb)
+
     # THE GUN PANEL's state, and the arithmetic that says why a mask and not a
     # count. 9 is 1001: guns 0 and 3 down, 1 and 2 standing. A panel that drew
     # `g < Mounted` with two standing would light pips 0 and 1 - the wrong two -
     # and no count can ever distinguish 1001 from 0011.
     pips = ci_measure.measure("fixture", "LogTemp: Display: HUDLOG TOTAL "
-                              "guns_down_port=9 guns_down_stbd=6\n")
+                              "guns_down_port=9 guns_down_stbd=6 "
+                              "guns_ready_port=1 guns_ready_stbd=2\n")
     if pips.get("guns_down_port") != 9 or pips.get("guns_down_stbd") != 6:
         fail("the gun-panel quit line is no longer read: %r" % pips)
+    if pips.get("guns_ready_stbd") != 2:
+        fail("the loaded-gun count is not read off the panel line: %r" % pips)
+
+    # AND THE OLD SHAPE MUST NOT PARSE. Without this the reader could accept
+    # both, and the day guns_ready_ is dropped from the quit line the suite would
+    # go on printing the two fields it still recognises and call that a pass.
+    stale = ci_measure.measure("fixture", "LogTemp: Display: HUDLOG TOTAL "
+                               "guns_down_port=9 guns_down_stbd=6\n")
+    if "guns_down_port" in stale:
+        fail("the four-field gun-panel line still parses; a dropped "
+             "guns_ready_ field would pass unnoticed: %r" % stale)
     mask, standing = 9, 0
     for g in range(4):
         if not (mask & (1 << g)):

@@ -238,6 +238,12 @@ Livrat:
    diferente identice inainte si dupa.
 
 Urmatorul: de ales cu owner-ul. **Deschise si stiute:**
+- **Reincarcarea e pe tun, dar castigul ei e ingust.** `GunReload[2][4]`
+  inlocuieste cele doua float-uri pe bord, si magazia plateste per tun. Ce NU e
+  probat: doua ceasuri care chiar diverg in timp, fiindca singurul lucru care le
+  desincronizeaza azi e o magazie scurta, si dupa salva partiala magazia e goala.
+  Se vede abia dupa o reaprovizionare. Daca cineva vrea sa duca asta mai departe,
+  acolo e firul - nu in array.
 - **Capitanul AI a fost atins O SINGURA data**, la linia de bataie (19.09): nu
   se mai alinieaza dupa consorti care au incetat sa guverneze. Poarta lui de
   tragere e neatinsa. Trage pe poarta veche de 9 grade din centrul

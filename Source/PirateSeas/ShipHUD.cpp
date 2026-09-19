@@ -351,13 +351,26 @@ void AShipHUD::DrawGuns(AShipPawn* Ship)
 		for (int32 g = 0; g < 4; ++g)
 		{
 			const float Px = PipX + g * Pip * 1.8f;
-			if (!Ship->IsGunDown(bStarboard, g))
+			// THREE states, because the reload is per gun now and "the carriage is
+			// there" is no longer the same question as "she will fire". Bright:
+			// standing and loaded, she goes when you press. Dim: standing but
+			// still being served. Almost gone: the carriage is wreckage.
+			//
+			// The player has to be able to count, BEFORE he presses, how many
+			// guns will actually go. Without that this feature would only have
+			// swapped one hidden penalty for another - which is the criticism
+			// that asked for it in the first place.
+			if (Ship->IsGunDown(bStarboard, g))
+			{
+				DrawRect(FLinearColor(1.f, 1.f, 1.f, 0.12f), Px, Y + Line * 0.10f, Pip, Pip);
+			}
+			else if (Ship->IsGunLoaded(bStarboard, g))
 			{
 				DrawRect(Ink, Px, Y + Line * 0.10f, Pip, Pip);
 			}
 			else
 			{
-				DrawRect(FLinearColor(1.f, 1.f, 1.f, 0.12f), Px, Y + Line * 0.10f, Pip, Pip);
+				DrawRect(Faint, Px, Y + Line * 0.10f, Pip, Pip);
 			}
 		}
 

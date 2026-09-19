@@ -821,10 +821,9 @@ trei sunt reglabile dintr-o cifra - spune-mi care si cu cat.
 e mai strans decat limita istorica reala a unui sabord (~15). Daca se joaca prost,
 `MaxTraverseDeg` e o singura constanta. **Capitanul AI n-a fost atins** - el inca
 trage pe poarta lui veche de 9 grade din centrul cocii, deci deocamdata regula
-noua te leaga doar pe tine. Si mai e o capcana pe care o stiu si n-am reparat-o
-inca: o salva cu UN tun costa aceleasi 12 secunde de reincarcare ca una cu patru,
-fiindca `Reload` e neconditionat. Reincarcarea pe tun e reparatia corecta si e o
-felie separata.
+noua te leaga doar pe tine. Capcana cu reincarcarea pe care o semnalam aici - o salva
+cu UN tun costand aceleasi 12 secunde ca una cu patru - e reparata pe 19.09:
+fiecare tun isi tine ceasul lui.
 
 ## 34. Nava, dupa ce a fost ridicata pe linia ei de plutire
 
@@ -841,3 +840,24 @@ leagana prea mult, fiindca sferele coborate schimba si momentul de redresare.
 **De ce nu pot eu:** am masurat ca originea sta la +1,9 cm fata de -78,4 si ca
 gura de tun a urcat de la 19 la 297 cm. Daca proportia CITESTE bine pentru ochi -
 daca arata ca o nava de 30 m si nu ca o barca marita - nu pot spune eu.
+
+## 35. Panoul GUNS, cu trei stari
+
+**Ce te uiti:** Intra intr-o lupta cu magazia scurta - `-Shot=3` din linia de
+comanda, sau pur si simplu trage pana ramai cu cateva ghiulele - si urmareste
+cele patru pipuri de pe bordul cu care tragi, in secundele de dupa salva.
+
+**Cum arata bine:** Dupa o salva partiala se vede o diferenta intre tunurile care
+au tras si cel care n-a tras: trei se sting si se reaprind pe rand, al patrulea
+ramane aprins tot timpul. Trei stari care se deosebesc dintr-o privire, fara sa
+te uiti de doua ori: aprins, pe jumatate, si aproape sters pentru un afet scos.
+
+**Cum arata prost:** Cele trei stari se confunda intre ele - mai ales "se
+serveste" cu "afet scos", care inseamna lucruri opuse (unul revine, altul nu).
+Sau nu se vede nimic, si panoul pare inghetat.
+
+**De ce nu pot eu:** HUD-ul nu se randeaza deloc sub `-NullRHI`, deci pot masura
+STAREA din care deseneaza pipurile - si o masor, `guns_ready_stbd` si
+`guns_down_stbd` sunt in suita - dar nu pot vedea desenul. Cat de tare difera
+0,12 de alpha fata de `Faint` pe ecranul tau, si daca ochiul prinde diferenta in
+toiul unei lupte, e o judecata pe care doar tu o poti face.

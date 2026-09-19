@@ -1749,9 +1749,14 @@ void ASeaGameMode::QuitNow()
 			}
 		}
 		UE_LOG(LogTemp, Display,
-			TEXT("HUDLOG TOTAL guns_down_port=%d guns_down_stbd=%d"),
+			TEXT("HUDLOG TOTAL guns_down_port=%d guns_down_stbd=%d ")
+			TEXT("guns_ready_port=%d guns_ready_stbd=%d"),
 			Gunner ? Gunner->GetGunsDownMask(false) : 0,
-			Gunner ? Gunner->GetGunsDownMask(true) : 0);
+			Gunner ? Gunner->GetGunsDownMask(true) : 0,
+			// Standing AND loaded, which is what the pips now say and what the
+			// player counts before he presses.
+			Gunner ? Gunner->GetGunsReady(false) : 0,
+			Gunner ? Gunner->GetGunsReady(true) : 0);
 	}
 
 	// THE LINE OF BATTLE. How many times a consort had to be stepped over
