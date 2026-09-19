@@ -270,24 +270,33 @@ void AShotTrail::Tick(float DeltaSeconds)
 	// detach from the ball it belongs to.
 	int32 Expired = 0;
 	LiveChains = 0;
+	OldestLive = 0.f;
 	for (FChain& Chain : Chains)
 	{
 		if (!Chain.bInUse)
 		{
 			continue;
 		}
-		int32 Cut = 0;
+		// AGE EVERY SAMPLE. Separately, and first, because this loop used to do
+		// two jobs and `break` at the first survivor ended them both: every
+		// sample behind the oldest expired block stopped ageing entirely, which
+		// is most of the ribbon almost immediately. The owner saw the result
+		// before any counter did - the trails simply never went away - and the
+		// numbers had been saying it all along, 739 of 847 samples still alive
+		// at the end of a forty-five second run with a four-second life.
 		for (FSample& S : Chain.Points)
 		{
 			S.Age += DeltaSeconds;
-			if (S.Age >= LifeSeconds)
-			{
-				++Cut;
-			}
-			else
-			{
-				break;   // ordered by age, so the first survivor ends it
-			}
+			OldestLive = FMath::Max(OldestLive, S.Age);
+		}
+
+		// THEN cut the expired prefix. The samples are in age order, so this is
+		// a count and not a search - but it is its own pass, and it cannot stop
+		// anybody's clock.
+		int32 Cut = 0;
+		while (Cut < Chain.Points.Num() && Chain.Points[Cut].Age >= LifeSeconds)
+		{
+			++Cut;
 		}
 		if (Cut > 0)
 		{
@@ -327,8 +336,9 @@ void AShotTrail::Tick(float DeltaSeconds)
 	{
 		LogTimer = 0.f;
 		UE_LOG(LogTemp, Display,
-			TEXT("TRAILLOG live=%d chains=%d laid=%d discarded=%d stranded=%d expired=%d"),
-			Live, LiveChains, Laid, Discarded, Stranded, Expired);
+			TEXT("TRAILLOG live=%d chains=%d laid=%d discarded=%d stranded=%d ")
+			TEXT("expired=%d oldest=%.1f"),
+			Live, LiveChains, Laid, Discarded, Stranded, Expired, OldestLive);
 	}
 }
 

@@ -270,6 +270,41 @@ Urmatorul: de ales cu owner-ul. **Deschise si stiute:**
   depinde de timpul de zbor. Sub un procent la distantele la care se lupta, deci
   nu urgent - dar cifra e acolo si e sistematica, nu zgomot.
 
+## Efectele de tragere, cerute 19.09 - DE FACUT MAI TARZIU
+
+Owner-ul, cuvant cu cuvant: "scopul lor [al darelor] este doar sa faca ghiulelele
+si traseul lor mai vizibile, ca efect de tragere vom avea un mic fum care se
+disipeaza mai greu si imediat la tragere un foc scurt si o sa vreau si feedback
+la contact, dar noteaza asta pentru mai tarziu".
+
+Deci trei lucruri, SEPARATE de dara:
+
+1. **Un mic fum la gura tunului**, care se disipeaza MAI GREU decat dara. Asta
+   exista deja: `AGunSmoke`, cu 18 cartele pe puf si o viata de 9 secunde - dubla
+   fata de dara. E "parcat" fiindca arata ca funinginea, si acum se stie de ce:
+   `CoreColor` 0,055 si `LitColor` 0,78 intr-o scena cu punct alb 5793 cd/m2,
+   adica subexpus de trei ordine de marime. Vezi `Source/PirateSeas/ShotTrail.h`.
+   **Deci nu e o functie noua, e o reautorare de culoare in candele** - si tot
+   codul de imprastiere, varsta si stingere e deja scris si masurat.
+   ATENTIE: e pe `InstancedStaticMeshComponent`, care in proiectul asta deseneaza
+   UN material si niciunul altul. Daca reautorarea culorii nu ajunge, mutarea pe
+   `UProceduralMeshComponent` e drumul batut deja de dara.
+
+2. **Un foc scurt la gura tunului**, imediat la tragere. Nu exista nimic. Cel mai
+   ieftin drum e acelasi: cateva cartele foarte scurte de viata (sub 0,15 s) pe
+   aceeasi plasa procedurala, autorate la o luminanta MULT peste punctul alb - un
+   foc de tun e una dintre putinele lucruri din scena asta care au voie sa arda
+   la alb.
+
+3. **Feedback la contact.** Nedetaliat de owner. Exista deja `AOceanSurface`
+   pentru stropi, si `SHOTLOG hit` stie ce zona a fost lovita, deci datele sunt
+   acolo; ce lipseste e ce se VEDE. De cerut detalii inainte de a construi.
+
+Si o observatie a owner-ului care schimba o decizie de proiectare: **scopul darei
+e DOAR lizibilitatea**, nu atmosfera. Deci daca vreodata se pune intrebarea "sa
+traiasca mai mult ca sa arate mai bine", raspunsul e nu - fumul de la punctul 1 e
+cel care face atmosfera, iar dara face cititul.
+
 **Abordajul ramane AMANAT.**
 
 ## Ce aşteaptă ochiul owner-ului

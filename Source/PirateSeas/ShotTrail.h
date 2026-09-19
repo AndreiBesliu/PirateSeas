@@ -93,6 +93,9 @@ public:
 	 *  has landed and every ribbon has faded. */
 	int32 GetChains() const { return LiveChains; }
 
+	/** Age of the oldest sample still alive. */
+	float GetOldestLive() const { return OldestLive; }
+
 protected:
 	UPROPERTY(VisibleAnywhere, Category = "Trail")
 	TObjectPtr<UProceduralMeshComponent> Ribbon;
@@ -173,6 +176,11 @@ private:
 	int32 Stranded = 0;
 	int32 LiveChains = 0;
 	float LogTimer = 0.f;
+	/** The age of the oldest sample still alive, this frame. Not a fault
+	 *  detector on its own - a clock that STOPS never crosses any threshold -
+	 *  but it is the number that says out loud whether the ribbon is ageing at
+	 *  all, and it costs one comparison. */
+	float OldestLive = 0.f;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UMaterialInstanceDynamic> TrailMaterial;
