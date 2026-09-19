@@ -51,7 +51,7 @@ vânt în plante şi greement, `-Hour=` pentru ora din zi.
   -platform=Win64 -clientconfig=Development -cook -build -stage -pak -archive
   -archivedirectory=<abs>\Packaged`. Iese la
   `Packaged\Windows\PirateSeas.exe`, ia ACELEAŞI flag-uri ca editorul, şi îşi
-  scrie logul la `%LOCALAPPDATA%\PirateSeas\Saved\Logs\`. `Packaged/` e în
+  scrie logul la `Packaged\Windows\PirateSeas\Saved\Logs\`. `Packaged/` e în
   `.gitignore`.
 - **Porţile:**
   - `python tools/ci_checks.py` — fără motor, rulează şi în CI hosted

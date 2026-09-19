@@ -28,8 +28,11 @@ comandă — toată verificarea proiectului trece prin ele, şi exact aceleaşi
 flag-uri merg pe executabil ca pe editor: `-ShipQuitAfter=`, `-Convoy=`,
 `-Port=`, tot tabelul de mai jos.
 
-Logul lui NU e în proiect, ci la
-`%LOCALAPPDATA%\PirateSeas\Saved\Logs\PirateSeas.log`.
+Logul lui nu e lângă cel al editorului, ci lângă jocul
+împachetat, la
+`Packaged\Windows\PirateSeas\Saved\Logs\PirateSeas.log`. (Aici a scris
+`%LOCALAPPDATA%\PirateSeas\Saved\Logs\` până pe 19.09, şi era
+greşit: directorul ăla nu există deloc.)
 
 **Pentru prima împachetare a trebuit reparat ce editorul tolera de doi ani.**
 Cook-ul numără erorile şi refuză să producă un build; editorul doar le derula pe
