@@ -170,6 +170,29 @@ arata tevile (pe care o conduci cu mouse-ul si care se OPRESTE cand mouse-ul nu
 se opreste), si o bara transversala la distanta pe care o da inaltarea curenta -
 aia e cadranul rotitei. Fara ea ai invarti un buton fara nicio citire pe el.
 
+**Si bara nu minte, masurat.** Pe douazeci de lovituri la fiecare inaltare, fata
+de unde cad ghiulelele de fapt:
+
+| inaltare | bara zice | cad la | imprastierea salvei | eroare |
+|---|---|---|---|---|
+| 2 grade | 217 m | 226 m | +/-11,9 m | +9 m |
+| 6 grade | 487 m | 489 m | +/-13 m | +2 m |
+
+Eroarea e sub imprastierea proprie a salvei, adica sub ce poate sti tunul insusi.
+
+Prima versiune a barei MINTEA, si urat: la doua grade arata 153 m acolo unde
+ghiulelele cadeau la 228 - patruzeci si noua la suta, si sase abateri standard.
+Folosea formula balistica pentru tragere de la nivelul SOLULUI, iar tunurile
+statusera dintotdeauna aproape pe linia de plutire... pana cand au fost ridicate
+la 2,97 m, cu o zi inainte. Cadranul ramasese calibrat pentru o nava care nu mai
+exista. Formula tine acum cont de inaltimea reala a gurii deasupra marii LOCALE,
+deci si de val.
+
+Ce ramane, spus pe fata: reziduul isi schimba semnul pe la sapte grade, ceea ce
+inseamna ca nu mai e geometrie ci modelul de rezistenta a aerului - `RangeBias` e
+o constanta, iar rezistenta depinde de timpul de zbor, deci o constanta nu poate
+fi corecta la toate inaltarile. Sub un procent la distantele la care se lupta.
+
 Semnele stau pe VALURI, nu la zero: marea e deplasata pe GPU in `M_Sea`, si un
 semn plat la zero ar sta jumatate din timp ingropat.
 

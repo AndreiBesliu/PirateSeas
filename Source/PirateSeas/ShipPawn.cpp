@@ -2100,6 +2100,14 @@ void AShipPawn::UpdateGunLaying()
 	bAgainstStop = FMath::Abs(Wanted) > MaxTraverseDeg + 0.01f;
 }
 
+float AShipPawn::GetGunPortHeightCm() const
+{
+	// One door out of the anonymous namespace, so the fall-of-shot dial and the
+	// guns cannot disagree about how high the guns are. They already disagreed
+	// once about something simpler than this.
+	return GGunPortZ;
+}
+
 float AShipPawn::LayForwardDot() const
 {
 	const float Side = bLayStarboard ? 1.f : -1.f;
@@ -2110,19 +2118,37 @@ float AShipPawn::LayForwardDot() const
 
 float AShipPawn::RangeForElevationCm(float ElevationDeg) const
 {
-	// The inverse of ElevationForRangeDeg. Flat-water ballistic range with the
-	// same drag correction the solver uses, so the mark the player reads and the
-	// place the ball lands are computed from ONE relationship rather than two
-	// that can drift apart.
-	const float Theta = FMath::DegreesToRadians(FMath::Max(0.05f, ElevationDeg));
+	// FROM THE HEIGHT THE GUNS ACTUALLY STAND AT, and the first version was the
+	// flat-ground formula. Measured against where the balls really fell, it read
+	// 153 m where they landed at 228, 307 where they landed at 355, 458 against
+	// 490, 608 against 625 - wrong by half at the flattest elevation and closing
+	// as the barrels rose. That shape is the signature of muzzle height, and the
+	// guns had been raised to 2.97 m above the sea the day before: the bar was a
+	// dial calibrated for a ship that no longer existed.
+	//
+	// A shot leaving at height h still has to fall that extra h before it stops,
+	// so it flies on past the flat-ground answer, and the surplus is largest when
+	// the trajectory is flattest. Hence
+	//
+	//     R = (V cos0 / g) * ( V sin0 + sqrt( (V sin0)^2 + 2 g h ) )
+	//
+	// which collapses to the old V^2 sin(20) / g exactly when h is zero.
+	const float Theta = FMath::DegreesToRadians(FMath::Clamp(ElevationDeg, 0.05f, 89.f));
 	const float V = MuzzleVelocityMS * 100.f;
 	const float G = FMath::Abs(GetWorld() ? GetWorld()->GetGravityZ() : -980.f);
 	if (G < 1.f)
 	{
 		return 0.f;
 	}
-	const float Flat = V * V * FMath::Sin(2.f * Theta) / G;
-	return Flat / FMath::Max(0.01f, RangeBias);
+	// The height the muzzles ride above the LOCAL sea, not above zero: she rises
+	// and falls on the swell, and a dial that ignored that would be right only
+	// between waves.
+	const float Height = FMath::Max(0.f,
+		GetActorLocation().Z + GetGunPortHeightCm() - WaterSurfaceZ());
+	const float VS = V * FMath::Sin(Theta);
+	const float VC = V * FMath::Cos(Theta);
+	const float Reach = (VC / G) * (VS + FMath::Sqrt(VS * VS + 2.f * G * Height));
+	return Reach / FMath::Max(0.01f, RangeBias);
 }
 
 void AShipPawn::OnFirePort()

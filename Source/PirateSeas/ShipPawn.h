@@ -192,6 +192,9 @@ public:
 	 *  on it, which is not aiming, it is guessing. */
 	float RangeForElevationCm(float ElevationDeg) const;
 
+	/** How high the gun ports sit above the hull origin, centimetres. */
+	float GetGunPortHeightCm() const;
+
 	/** The water body this ship floats on, so the aim marks can be laid on the
 	 *  same Gerstner surface she rides rather than on a flat plane at zero. The
 	 *  splash code learned that lesson the hard way: tested against the plane,

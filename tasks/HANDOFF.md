@@ -264,6 +264,12 @@ Urmatorul: de ales cu owner-ul. **Deschise si stiute:**
 - Linia de bataie lasa urmaritorii pe un lider care a incetat sa navigheze, si
   commitul de impachetare n-a fost citit de nicio lentila.
 
+- **`RangeBias` e o constanta si nu poate fi.** Dupa ce bara de cadere a invatat
+  inaltimea gurii de tun, reziduul ei isi schimba SEMNUL pe la sapte grade: +4%
+  la doua grade, -0,8% la opt. Asta e semnatura unui model de rezistenta care nu
+  depinde de timpul de zbor. Sub un procent la distantele la care se lupta, deci
+  nu urgent - dar cifra e acolo si e sistematica, nu zgomot.
+
 **Abordajul ramane AMANAT.**
 
 ## Ce aşteaptă ochiul owner-ului

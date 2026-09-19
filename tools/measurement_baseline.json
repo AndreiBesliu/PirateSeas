@@ -2,7 +2,7 @@
   "aim_laid": {
     "aim_by_hand": 1,
     "aim_elev": 5.0,
-    "aim_fall_m": 383,
+    "aim_fall_m": 413,
     "aim_layfwd": 0.104,
     "aim_segments": 4,
     "aim_stop": 0,
@@ -75,7 +75,7 @@
   "aim_nomarks": {
     "aim_by_hand": 1,
     "aim_elev": 5.0,
-    "aim_fall_m": 383,
+    "aim_fall_m": 413,
     "aim_layfwd": 0.104,
     "aim_segments": 0,
     "aim_stop": 0,
@@ -148,7 +148,7 @@
   "aim_port": {
     "aim_by_hand": 1,
     "aim_elev": 5.0,
-    "aim_fall_m": 383,
+    "aim_fall_m": 413,
     "aim_layfwd": 0.105,
     "aim_segments": 4,
     "aim_stop": 0,
@@ -221,7 +221,7 @@
   "aim_stop": {
     "aim_by_hand": 1,
     "aim_elev": 5.0,
-    "aim_fall_m": 383,
+    "aim_fall_m": 413,
     "aim_layfwd": 0.208,
     "aim_segments": 4,
     "aim_stop": 1,
@@ -294,7 +294,7 @@
   "carried_shot": {
     "aim_by_hand": 0,
     "aim_elev": 3.0,
-    "aim_fall_m": 230,
+    "aim_fall_m": 277,
     "aim_layfwd": 0.0,
     "aim_segments": 0,
     "aim_stop": 0,
@@ -367,7 +367,7 @@
   "convoy_lee": {
     "aim_by_hand": 0,
     "aim_elev": 3.0,
-    "aim_fall_m": 230,
+    "aim_fall_m": 275,
     "aim_layfwd": 0.0,
     "aim_segments": 0,
     "aim_stop": 0,
@@ -452,7 +452,7 @@
   "convoy_sunk": {
     "aim_by_hand": 0,
     "aim_elev": 3.0,
-    "aim_fall_m": 230,
+    "aim_fall_m": 276,
     "aim_layfwd": 0.0,
     "aim_segments": 0,
     "aim_stop": 0,
@@ -527,7 +527,7 @@
   "convoy_weather": {
     "aim_by_hand": 0,
     "aim_elev": 3.0,
-    "aim_fall_m": 230,
+    "aim_fall_m": 275,
     "aim_layfwd": 0.0,
     "aim_segments": 0,
     "aim_stop": 0,
@@ -616,7 +616,7 @@
   "crew_fight": {
     "aim_by_hand": 0,
     "aim_elev": 3.0,
-    "aim_fall_m": 230,
+    "aim_fall_m": 274,
     "aim_layfwd": 0.0,
     "aim_segments": 0,
     "aim_stop": 0,
@@ -689,7 +689,7 @@
   "crew_repair": {
     "aim_by_hand": 0,
     "aim_elev": 3.0,
-    "aim_fall_m": 230,
+    "aim_fall_m": 274,
     "aim_layfwd": 0.0,
     "aim_segments": 0,
     "aim_stop": 0,
@@ -762,7 +762,7 @@
   "crowded": {
     "aim_by_hand": 0,
     "aim_elev": 3.0,
-    "aim_fall_m": 230,
+    "aim_fall_m": 275,
     "aim_layfwd": -0.001,
     "aim_segments": 0,
     "aim_stop": 0,
@@ -831,7 +831,7 @@
   "dusk": {
     "aim_by_hand": 0,
     "aim_elev": 3.0,
-    "aim_fall_m": 230,
+    "aim_fall_m": 274,
     "aim_layfwd": -0.0,
     "aim_segments": 0,
     "aim_stop": 0,
@@ -910,7 +910,7 @@
   "gale": {
     "aim_by_hand": 0,
     "aim_elev": 3.0,
-    "aim_fall_m": 230,
+    "aim_fall_m": 275,
     "aim_layfwd": -0.0,
     "aim_segments": 0,
     "aim_stop": 0,
@@ -983,7 +983,7 @@
   "grounding": {
     "aim_by_hand": 0,
     "aim_elev": 3.0,
-    "aim_fall_m": 230,
+    "aim_fall_m": 281,
     "aim_layfwd": 0.0,
     "aim_segments": 0,
     "aim_stop": 0,
@@ -1062,7 +1062,7 @@
   "gunnery": {
     "aim_by_hand": 0,
     "aim_elev": 3.0,
-    "aim_fall_m": 230,
+    "aim_fall_m": 276,
     "aim_layfwd": -0.0,
     "aim_segments": 0,
     "aim_stop": 0,
@@ -1135,7 +1135,7 @@
   "lee_shore": {
     "aim_by_hand": 0,
     "aim_elev": 3.0,
-    "aim_fall_m": 230,
+    "aim_fall_m": 279,
     "aim_layfwd": -0.001,
     "aim_segments": 0,
     "aim_stop": 0,
@@ -1210,7 +1210,7 @@
   "loose_shot": {
     "aim_by_hand": 0,
     "aim_elev": 3.0,
-    "aim_fall_m": 230,
+    "aim_fall_m": 277,
     "aim_layfwd": 0.0,
     "aim_segments": 0,
     "aim_stop": 0,
@@ -1283,7 +1283,7 @@
   "magazine_enough": {
     "aim_by_hand": 0,
     "aim_elev": 3.0,
-    "aim_fall_m": 230,
+    "aim_fall_m": 275,
     "aim_layfwd": 0.0,
     "aim_segments": 0,
     "aim_stop": 0,
@@ -1372,7 +1372,7 @@
   "magazine_short": {
     "aim_by_hand": 0,
     "aim_elev": 3.0,
-    "aim_fall_m": 230,
+    "aim_fall_m": 275,
     "aim_layfwd": 0.0,
     "aim_segments": 0,
     "aim_stop": 0,
@@ -1456,7 +1456,7 @@
   "prize_home": {
     "aim_by_hand": 0,
     "aim_elev": 3.0,
-    "aim_fall_m": 230,
+    "aim_fall_m": 278,
     "aim_layfwd": -0.0,
     "aim_segments": 0,
     "aim_stop": 0,
@@ -1545,7 +1545,7 @@
   "prize_hull": {
     "aim_by_hand": 0,
     "aim_elev": 3.0,
-    "aim_fall_m": 230,
+    "aim_fall_m": 275,
     "aim_layfwd": 0.0,
     "aim_segments": 0,
     "aim_stop": 0,
@@ -1634,7 +1634,7 @@
   "prize_left": {
     "aim_by_hand": 0,
     "aim_elev": 3.0,
-    "aim_fall_m": 230,
+    "aim_fall_m": 278,
     "aim_layfwd": -0.0,
     "aim_segments": 0,
     "aim_stop": 0,
@@ -1723,7 +1723,7 @@
   "prize_noport": {
     "aim_by_hand": 0,
     "aim_elev": 3.0,
-    "aim_fall_m": 230,
+    "aim_fall_m": 278,
     "aim_layfwd": -0.0,
     "aim_segments": 0,
     "aim_stop": 0,
@@ -1812,7 +1812,7 @@
   "prize_shorthanded": {
     "aim_by_hand": 0,
     "aim_elev": 3.0,
-    "aim_fall_m": 230,
+    "aim_fall_m": 275,
     "aim_layfwd": -0.0,
     "aim_segments": 0,
     "aim_stop": 0,
@@ -1901,7 +1901,7 @@
   "refit_off": {
     "aim_by_hand": 0,
     "aim_elev": 3.0,
-    "aim_fall_m": 230,
+    "aim_fall_m": 275,
     "aim_layfwd": -0.0,
     "aim_segments": 0,
     "aim_stop": 0,
@@ -1990,7 +1990,7 @@
   "refit_on": {
     "aim_by_hand": 0,
     "aim_elev": 3.0,
-    "aim_fall_m": 230,
+    "aim_fall_m": 275,
     "aim_layfwd": -0.0,
     "aim_segments": 0,
     "aim_stop": 0,
@@ -2079,7 +2079,7 @@
   "refit_shot": {
     "aim_by_hand": 0,
     "aim_elev": 3.0,
-    "aim_fall_m": 230,
+    "aim_fall_m": 275,
     "aim_layfwd": -0.0,
     "aim_segments": 0,
     "aim_stop": 0,
@@ -2168,7 +2168,7 @@
   "sailing": {
     "aim_by_hand": 0,
     "aim_elev": 3.0,
-    "aim_fall_m": 230,
+    "aim_fall_m": 275,
     "aim_layfwd": -0.001,
     "aim_segments": 0,
     "aim_stop": 0,
@@ -2237,7 +2237,7 @@
   "sinking": {
     "aim_by_hand": 0,
     "aim_elev": 3.0,
-    "aim_fall_m": 230,
+    "aim_fall_m": 279,
     "aim_layfwd": 0.0,
     "aim_segments": 0,
     "aim_stop": 0,
@@ -2306,7 +2306,7 @@
   "trail_off": {
     "aim_by_hand": 0,
     "aim_elev": 3.0,
-    "aim_fall_m": 230,
+    "aim_fall_m": 276,
     "aim_layfwd": -0.0,
     "aim_segments": 0,
     "aim_stop": 0,

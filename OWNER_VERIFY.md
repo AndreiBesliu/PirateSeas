@@ -810,7 +810,10 @@ cadere iti spune unde ajunge lovitura inainte s-o tragi. `X` e util, nu doar
 prezent.
 
 **Cum arata prost:** Arcul de **12 grade** e prea strans si ratezi tot timpul din
-motive pe care nu le poti corecta. Sau linia de ochire e greu de urmarit pe
+motive pe care nu le poti corecta. (Daca ai incercat inainte de 19.09 si ti s-a
+parut ca mouse-ul o ia razna: avea dreptate, mergea INVERS la tribord. Si bara de
+cadere arata cu pana la 75 m mai putin decat adevarul. Ambele reparate - merita
+reincercat pe curat.) Sau linia de ochire e greu de urmarit pe
 valuri. Sau rotita e prea fina si iti ia zece secunde sa schimbi distanta. Toate
 trei sunt reglabile dintr-o cifra - spune-mi care si cu cat.
 
