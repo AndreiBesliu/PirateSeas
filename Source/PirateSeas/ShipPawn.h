@@ -1237,6 +1237,11 @@ private:
 	 *  starts laid at something usable rather than at zero. */
 	float LayElevationDeg = 3.f;
 
+	/** The elevation the LAST broadside was actually laid to, whichever path laid
+	 *  it. Written where it is used and printed from here, so the log cannot
+	 *  disagree with the guns. */
+	float LaidElevationDeg = 0.f;
+
 	/** How far the wheel moves the barrels per notch. A whole degree a notch
 	 *  makes the wheel unusable at long range, where a degree is forty metres
 	 *  of fall of shot; a fifth of that is a metre of elevation quoin, which is

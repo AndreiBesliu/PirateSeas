@@ -376,6 +376,21 @@ def check_comparison():
         fail("the gun-lay reader still accepts the line shape from BEFORE layfwd, "
              "so the pair that catches a mirrored sign could go quiet unnoticed")
 
+    # A DEPRESSED GUN. The carriages allow three degrees below level, so the
+    # player's elevation goes negative the moment the wheel is wound down - and
+    # a reader anchored on digits alone loses this key and every other one on
+    # the line with it. Nothing had gone wrong yet when this was added; it was
+    # found by looking at a neighbouring field that had started printing
+    # negatives, which is the only reason it is here before rather than after.
+    low = ci_measure.measure("fixture", "LogTemp: Display: AIMLOG TOTAL hand=1 "
+                             "side=port train=-4.5 layfwd=-0.078 elev=-2.5 "
+                             "fall=90m stop=0 locked=1 segs=4\n")
+    for key, want in (("aim_train", -4.5), ("aim_layfwd", -0.078),
+                      ("aim_elev", -2.5), ("aim_fall_m", 90)):
+        if low.get(key) != want:
+            fail("a gun laid BELOW level is not read: %s is %r, expected %r"
+                 % (key, low.get(key), want))
+
     # AND THE SIGN ITSELF, as arithmetic rather than as a fixture. A lay six
     # degrees forward of the beam puts sin(6) = 0.1045 of the barrels' direction
     # along the bow, on EITHER battery. The defect the owner found by playing

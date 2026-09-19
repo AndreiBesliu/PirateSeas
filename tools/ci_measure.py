@@ -745,7 +745,12 @@ def measure(name, text):
     # stop flag with it, and the pair meant to prove the picture moves nothing
     # would report five missing numbers instead of one moved one.
     am = re.search(r"AIMLOG TOTAL hand=(\d+) side=(\w+) train=([-+0-9.]+) "
-                   r"layfwd=([-+0-9.]+) elev=([0-9.]+) fall=(\d+)m stop=(\d+) "
+                   # A MINUS SIGN. The carriages allow three degrees of
+                   # depression, so the player's elevation goes negative the
+                   # moment the wheel is wound below level - and a reader that
+                   # cannot see that loses this key AND every other one on the
+                   # line, without a word.
+                   r"layfwd=([-+0-9.]+) elev=(-?[0-9.]+) fall=(\d+)m stop=(\d+) "
                    r"locked=(\d+) segs=(\d+)", text)
     if am:
         m["aim_by_hand"] = int(am.group(1))

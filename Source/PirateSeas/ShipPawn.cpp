@@ -923,6 +923,11 @@ bool AShipPawn::FireBroadside(bool bStarboard, AActor* AimAt, bool bHigh)
 				Elevation += FMath::RadiansToDegrees(FMath::Atan2(AimZ, GroundRange));
 			}
 		}
+		// WHAT THIS GUN WAS ACTUALLY LAID TO, recorded once, after every path has
+		// had its say. The log line used to work the solver's answer out a second
+		// time and printed 14.47 while the guns fired at two - a fact stated
+		// twice drifts, and it is always the report that is wrong quietly.
+		LaidElevationDeg = Elevation;
 		// Scatter traverse and elevation separately: a symmetric cone lets the
 		// elevation error dominate range far more than any gun crew would.
 		const float TrainJitter = FMath::FRandRange(-SpreadDeg, SpreadDeg);
@@ -996,7 +1001,13 @@ bool AShipPawn::FireBroadside(bool bStarboard, AActor* AimAt, bool bHigh)
 		GetActorRotation().Roll, FirstMuzzle.Z,
 		FVector::DotProduct(Vel, GetActorRightVector() * Side) * 0.01f,
 		FVector::DotProduct(Vel, GetActorForwardVector()) * 0.01f,
-		AimAt ? ElevationForRangeDeg(FVector::Dist2D(AimAt->GetActorLocation(), FirstMuzzle)) : GunElevationDeg,
+		// WHAT THE GUNS WERE LAID TO, not the solver's answer recomputed here. This
+		// field used to do the latter, and with the guns laid by hand at two
+		// degrees it printed 14.47 - the solver's answer for a target a kilometre
+		// off - while the balls fell where two degrees puts them. A fact stated
+		// twice, once as the action and once as the report, drifts apart, and it
+		// is always the report that is wrong without anyone noticing.
+		LaidElevationDeg,
 		bHigh ? TEXT("high") : TEXT("low"),
 		LastLeadCm * 0.01f, bInheritShipVelocity ? 1 : 0, RangeBias, GetWorld()->GetTimeSeconds());
 	return Fired > 0;
