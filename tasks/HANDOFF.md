@@ -55,7 +55,7 @@ vânt în plante şi greement, `-Hour=` pentru ora din zi.
   `.gitignore`.
 - **Porţile:**
   - `python tools/ci_checks.py` — fără motor, rulează şi în CI hosted
-  - `python tools/ci_measure.py` — 36 scenarii headless vs `tools/measurement_baseline.json`
+  - `python tools/ci_measure.py` — 37 scenarii headless vs `tools/measurement_baseline.json`
   - `python tools/ci_measure.py --record` — rescrie linia de bază, DELIBERAT, în
     acelaşi commit care o mişcă
   - `python tools/png_diff.py a.png b.png x0 y0 x1 y1` — compară o casetă

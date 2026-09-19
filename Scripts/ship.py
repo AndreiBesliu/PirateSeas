@@ -446,15 +446,33 @@ def build_rig(m_wood, m_dark, m_sail, m_metal):
     # rudder
     parts.append(box("Rudder", m_dark, (0.35, 0.22, 3.6),
                      (-LENGTH * 0.5 - 0.15, 0, -0.9)))
-    # cannons poking through the gunports
+    # CANNONS POKING THROUGH THE GUNPORTS - and at the height the GUNS FIRE
+    # FROM, which is not where they used to be.
+    #
+    # They were placed at section_point(t, 0.62) + 0.55, which is 37 to 49 cm
+    # above the waterline: near enough ON it. The C++ fires from GGunPortZ = 280,
+    # the deck plus about seventy centimetres, because the guns stand on the deck
+    # and fire through ports cut in the bulwark. So the barrels sat two and a
+    # third metres BELOW the muzzle flashes and smoke that come out of them, and
+    # the comment beside GGunPortsX in ShipPawn.cpp - "taken from the same
+    # positions the barrels were modelled at in Blender" - was true of X only.
+    #
+    # The gap was 77 cm while GGunPortZ was 120 and nobody saw it; raising it to
+    # 280 on 18.09 to put the muzzles above the sea widened it to 235 and the
+    # muzzle flash made it obvious. A number shared by two files and written down
+    # in both is a number that drifts: this one now names the other.
+    GUNPORT_Z = 2.80    # metres; ShipPawn.cpp GGunPortZ = 280 cm
     for side in (1, -1):
         for k in range(4):
             x = -6.0 + k * 3.6
             t = (x / LENGTH) + 0.5
-            y, z = section_point(t, 0.62)
+            # The half width at the DECK EDGE, which is where the bulwark stands
+            # and therefore where a port is cut. section_point tops out at the
+            # gunwale, so it cannot be asked for a height inside the rail.
+            y, _ = section_point(t, 1.0)
             parts.append(cylinder("Cannon%s%d" % ("S" if side > 0 else "P", k),
                                   m_metal, 0.19, 2.3,
-                                  (x, side * (y + 0.35), z + 0.55),
+                                  (x, side * (y + 0.35), GUNPORT_Z),
                                   rotation=(math.radians(90), 0, 0),
                                   verts=10, taper=0.8))
     return parts

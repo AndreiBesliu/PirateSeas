@@ -403,6 +403,25 @@ def check_comparison():
         fail("a zero must still be RECORDED, or the one number that must never "
              "move could vanish instead of moving: %r" % smoke)
 
+    # THE MUZZLE FLASH's quit line. Three fields, not four: it has no cull, and
+    # a fixture written to the smoke's shape would have passed on a reader that
+    # silently matched nothing.
+    flash = ci_measure.measure("fixture", "LogTemp: Display: FLASHLOG TOTAL "
+                               "spawned=16 live=2 stranded=0\n")
+    if flash.get("flash_spawned") != 16 or flash.get("flash_live_end") != 2:
+        fail("the muzzle-flash quit line is no longer read: %r" % flash)
+    if "flash_stranded" not in flash:
+        fail("a zero must still be RECORDED, or the one number that must never "
+             "move could vanish instead of moving: %r" % flash)
+
+    # AND THE TWO LINES MUST NOT READ EACH OTHER. They share a shape and differ
+    # in one field; a reader loose about its prefix would score the smoke's
+    # numbers as the flash's, and every scenario would agree with itself.
+    crossed = ci_measure.measure("fixture", "LogTemp: Display: SMOKELOG TOTAL "
+                                 "spawned=99 live=98 culled=97 stranded=96\n")
+    if "flash_spawned" in crossed:
+        fail("the smoke's quit line is being read as the flash's: %r" % crossed)
+
     # AND THE OLD ONE-OFF DIAGNOSTIC MUST NOT BE MISTAKEN FOR IT. SMOKELOG also
     # prints a per-puff spread line at t=1.0; a reader loose enough to match that
     # would report some puff's card sizes as the run's totals.

@@ -2,6 +2,7 @@
 
 #include "EnemyShipPawn.h"
 #include "GunSmoke.h"
+#include "MuzzleFlash.h"
 #include "MerchantShipPawn.h"
 #include "Engine/Engine.h"
 #include "Engine/World.h"
@@ -49,6 +50,7 @@ void ASeaGameMode::BeginPlay()
 	// counters that outlive a level do not fail, they answer - with last
 	// level's numbers.
 	AGunSmoke::ResetForNewLevel();
+	AMuzzleFlash::ResetForNewLevel();
 
 	// Seed the world's randomness before anything draws from it.
 	//
@@ -1696,6 +1698,14 @@ void ASeaGameMode::QuitNow()
 		TEXT("SMOKELOG TOTAL spawned=%d live=%d culled=%d stranded=%d"),
 		AGunSmoke::GetSpawned(), AGunSmoke::CountLive(),
 		AGunSmoke::GetCulled(), AGunSmoke::GetStranded());
+
+	// The muzzle flash, on the same terms: a counted zero rather than an absent
+	// line. No cull of its own - a flash lives a tenth of a second, so at most
+	// one per gun can be alive and there is nothing for a cap to trim.
+	UE_LOG(LogTemp, Display,
+		TEXT("FLASHLOG TOTAL spawned=%d live=%d stranded=%d"),
+		AMuzzleFlash::GetSpawned(), AMuzzleFlash::CountLive(),
+		AMuzzleFlash::GetStranded());
 
 	// The trail, at quit, whether it was on or off: a counted zero rather than
 	// an absent line. stranded is the one that must never move.

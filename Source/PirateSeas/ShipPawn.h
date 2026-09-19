@@ -791,6 +791,10 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Guns")
 	bool bGunSmoke = true;
 
+	/** The short fire at the muzzle. -ShipFlash=0 turns it off. */
+	UPROPERTY(EditAnywhere, Category = "Guns")
+	bool bMuzzleFlash = true;
+
 	/** How many times the lead is refined. The flight time depends on the
 	 *  range and the range depends on the lead, so one pass is already close
 	 *  and two is inside a metre at any range these guns can reach. */

@@ -868,3 +868,25 @@ STAREA din care deseneaza pipurile - si o masor, `guns_ready_stbd` si
 `guns_down_stbd` sunt in suita - dar nu pot vedea desenul. Cat de tare difera
 0,12 de alpha fata de `Faint` pe ecranul tau, si daca ochiul prinde diferenta in
 toiul unei lupte, e o judecata pe care doar tu o poti face.
+
+## 36. Focul de la gura tunului, si inaltimea tevilor
+
+**Ce te uiti:** Trage o salva si uita-te la gurile de tun in clipa aia - e o
+zecime de secunda, deci uita-te la bordul cu care tragi INAINTE sa apesi. Apoi
+priveste nava din lateral, fara sa tragi, si uita-te unde stau tevile pe bordaj.
+
+**Cum arata bine:** Un foc scurt, galben-portocaliu, care infloreste o clipa la
+gura fiecarui tun si e inghitit imediat de fum. Trebuie sa fie DE LA TEAVA: focul,
+fumul si teava in acelasi loc. Tevile stau sub copastie, la gurile de tun, nu jos
+pe bordaj langa apa.
+
+**Cum arata prost:** Focul e prea lung si citeste a lampa aprinsa, nu a foc -
+atunci scad `LifeSeconds` de la 0,10. Sau e prea slab si se pierde in fum, si
+atunci urc `Brightness` peste 60 000. Sau, invers, ecranul se albeste tot.
+
+**De ce nu pot eu:** pot masura ca exista (16 focuri la patru salve de cate patru
+tunuri), ca nu atinge nimic din simulare (o singura cheie difera intre `gunnery`
+si `flash_off`) si ca niciun foc nu supravietuieste varstei lui. Dar cat de scurt
+e "scurt" si cat de tare e "tare" sunt judecati de ochi, si sunt exact cele doua
+numere pe care le-am ales singur.
+

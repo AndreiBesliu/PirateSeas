@@ -4190,3 +4190,67 @@ Primele doua sunt judecati vizuale si au plecat la OWNER_VERIFY.
 
 **Task Completed.**
 
+## 19.09.2026 - Focul de la gura tunului, si teava din care nu iesea
+
+**Task Started.** Prompt: "Continua". Model: Opus 5.
+
+Owner-ul ceruse pe 16.09, in aceeasi fraza cu fumul: "un mic fum care se
+disipeaza mai greu si imediat la tragere un foc scurt". Fumul a fost deparcat cu
+doua commit-uri in urma; asta e cealalta jumatate.
+
+**O zecime de secunda.** Praful real e stins in 20-40 ms, adica unul-doua cadre
+la 60 fps - sub pragul la care un foc se deosebeste de un cadru pierdut. Sase
+cadre e un numar de LIZIBILITATE, nu unul fizic, si l-am ales eu: e in
+OWNER_VERIFY 36 ca atare.
+
+Trei cartonase pe axa tevii, micsorandu-se, toate cu fata la camera: un CON din
+orice unghi fara ca vreunul sa fie orientat.
+
+**60 000 cd/m², de zece ori punctul alb.** Materialul e scris in unitati fizice
+din prima, fiindca lectia era deja platita: cu EV100 ingradit la 12,5 albul e la
+5793 cd/m², si un emisiv pe langa 1 iese negru si arata ca o intrare moarta.
+
+**Translucid, nu aditiv, si asta a fost gratis.** Comentariul din
+`gunsmoke_material.py` consemneaza ca in proiectul asta fiecare build aditiv n-a
+randat nimic dupa ce s-a reparat steagul de ISM. Argumentul pentru aditiv e mai
+bun si motorul nu e de acord cu el; ora aia n-a mai fost platita a doua oara.
+
+### Steag separat, si de aceea se poate masura
+
+`-ShipFlash=` nu calareste pe `-ShipSmoke=`: un steag care misca doua lucruri le
+masoara suma. Cu doua, `gunnery` contra `flash_off` difera in **exact o cheie**,
+`flash_spawned` 16 -> 0, iar `smoke_off` lasa focul la 16 si duce fumul la 0.
+Decoratia nu atinge nimic din simulare, si asta e o masuratoare, nu o presupunere.
+
+`flash_stranded` probat prin mutatie: garda de moarte slabita la
+`LifeSeconds * 40` da 3760; restaurat octet cu octet, recompilat, zero.
+
+### Si defectul pe care l-a scos la iveala
+
+Captura de dupa arata fumul iesind la nivelul puntii si tevile jos pe bordaj.
+Socotit din `Scripts/ship.py`: tevile stateau la **37-49 cm** deasupra liniei de
+plutire - practic PE ea - iar tunurile trag de la `GGunPortZ = 280`. Fumul si
+focul ieseau cu **2,35 m deasupra tevilor din care ar fi trebuit sa iasa**.
+
+Comentariul de langa `GGunPortsX` spunea "luate din aceleasi pozitii la care au
+fost modelate in Blender". Adevarat pentru X - -600/-240/+120/+480 cm sunt fix
+-6,0/-2,4/+1,2/+4,8 m - si fals pentru Z, care nu fusese niciodata acelasi numar.
+Gaura a fost 77 cm cat `GGunPortZ` a fost 120 si n-a vazut-o nimeni; ridicarea la
+280 de ieri a largit-o la 235, iar focul a facut-o evidenta.
+
+Reparat in Blender, mesh regenerat si reimportat de doua ori (comandletul moare
+dupa ce scrie asset-ul), materialele reasignate. Numarul e scris o singura data
+si il numeste pe celalalt: `GUNPORT_Z = 2.80  # ShipPawn.cpp GGunPortZ = 280 cm`.
+
+**Suita: 37 de scenarii, zero cifre miscate, zero disparute, 109 chei noi.**
+Schimbarea de mesh chiar e vizuala - dar asta era o intrebare, nu o presupunere,
+iar jumatatea Y a gabaritului a crescut de la 527 la 568 cm fiindca tevile ies
+acum de la copastie, unde coca e mai lata. Ghiulelele se nasc la 640, deci tot in
+afara lor.
+
+**Ramas, stiut:** nu exista NICIUN sunet in proiect, deci focul e singurul semn
+ca a plecat o salva partiala. Si `smoke_culled` e zero in toate cele 37 -
+plafonul de 48 de puf-uri nu musca nicaieri azi.
+
+**Task Completed.**
+

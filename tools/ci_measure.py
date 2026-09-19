@@ -371,6 +371,13 @@ SCENARIOS = {
                   "-EnemyY=1500", "-ShipFireTest=8", "-ShipQuitAfter=45",
                   "-ShipSmoke=0"],
 
+    # THE MUZZLE FLASH, its own flag and its own row. It could have ridden on
+    # -ShipSmoke, and then neither effect could have been isolated from the
+    # other: one flag that moves two things measures their sum.
+    "flash_off": ["-WindBearing=120", "-WindSpeed=11", "-EnemyX=9000",
+                  "-EnemyY=1500", "-ShipFireTest=8", "-ShipQuitAfter=45",
+                  "-ShipFlash=0"],
+
     # THE GUNS LAID BY HAND. Three rows around one idea, and each pair says a
     # different thing.
     #
@@ -849,6 +856,19 @@ def measure(name, text):
         m["smoke_live_end"] = int(sm.group(2))
         m["smoke_culled"] = int(sm.group(3))
         m["smoke_stranded"] = int(sm.group(4))
+
+    # THE MUZZLE FLASH. spawned is the proof it exists and the number
+    # -ShipFlash=0 must take to zero; live is what was still burning at quit,
+    # which at a tenth of a second is all but certainly nothing.
+    #
+    # stranded must never move, and sits directly after the guard that destroys
+    # a flash past its life - the same construction as the smoke's, and proven
+    # the same way rather than assumed.
+    fl = re.search(r"FLASHLOG TOTAL spawned=(\d+) live=(\d+) stranded=(\d+)", text)
+    if fl:
+        m["flash_spawned"] = int(fl.group(1))
+        m["flash_live_end"] = int(fl.group(2))
+        m["flash_stranded"] = int(fl.group(3))
 
     # The shot trails. laid is the proof they exist; stranded is the one that
     # must never move - a wisp still drawn after its life ran out is the defect

@@ -9,6 +9,7 @@
 #include "TimerManager.h"
 #include "CannonBall.h"
 #include "GunSmoke.h"
+#include "MuzzleFlash.h"
 #include "Island.h"
 #include "Camera/CameraComponent.h"
 #include "Components/BoxComponent.h"
@@ -339,6 +340,15 @@ void AShipPawn::BeginPlay()
 	if (FParse::Value(FCommandLine::Get(), TEXT("ShipSmoke="), Flag))
 	{
 		bGunSmoke = Flag != 0;
+	}
+	// The flash gets its own switch rather than riding on the smoke's: they are
+	// two effects at one place and the owner may well want one without the
+	// other, and a pair of scenarios cannot isolate either if one flag moves
+	// both.
+	Flag = 1;
+	if (FParse::Value(FCommandLine::Get(), TEXT("ShipFlash="), Flag))
+	{
+		bMuzzleFlash = Flag != 0;
 	}
 	// RangeBias makes the guns fire long by a few percent. It was calibrated
 	// when the shot was laid on where the target WAS, so part of what it was
@@ -1059,6 +1069,13 @@ bool AShipPawn::FireBroadside(bool bStarboard, AActor* AimAt, bool bHigh)
 		if (bGunSmoke)
 		{
 			AGunSmoke::Spawn(GetWorld(), WorldMuzzle, Aim, ThisShot);
+		}
+		// And the flash, at the same muzzle along the same line, seeded from the
+		// same shot index but through its own stream. It is gone before the
+		// smoke has formed, which is the order these two happen in.
+		if (bMuzzleFlash)
+		{
+			AMuzzleFlash::Spawn(GetWorld(), WorldMuzzle, Aim, ThisShot);
 		}
 		++Fired;
 		// HER OWN clock, not the battery's. This is the whole of what the owner

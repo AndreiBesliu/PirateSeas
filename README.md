@@ -120,6 +120,52 @@ laterale.
 Nava primește recul: fiecare tun împinge coca în sens opus, aplicat chiar în
 dreptul gurii de foc, deci o salvă o și înclină puțin.
 
+## Focul de la gura tunului
+
+**Un foc scurt, de o zecime de secunda.** Praful de pusca real e stins in
+douazeci-patruzeci de milisecunde, adica unul-doua cadre la 60 fps - sub pragul
+la care ochiul deosebeste un foc de un cadru pierdut. O zecime inseamna sase
+cadre: destul de scurt cat sa citeasca a foc, destul de lung cat sa fie vazut. E
+un numar de LIZIBILITATE, nu unul fizic, si e primul care se schimba daca
+owner-ului i se pare ca arata a lampa.
+
+Trei cartonase insirate pe axa tevii, micsorandu-se de la 130 cm la o treime, si
+fiecare cu fata la camera. Asta da un CON din orice unghi fara ca vreunul sa fie
+orientat - trei discuri de aceeasi marime ar fi dat un bulgare.
+
+**Miezul e la 60 000 cd/m², de zece ori punctul alb al scenei.** EV100 e ingradit
+intre 12,5 si 16 cu `ExtendDefaultLuminanceRange`, deci albul e la 2^12,5 = 5793
+cd/m²; un emisiv scris pe langa 1, adica valoarea din orice tutorial, iese NEGRU
+si arata exact ca o intrare moarta, nu ca una slaba. Proiectul a platit o zi pe
+lectia asta la fumul de tun.
+
+Translucid, nu aditiv - si asta nu e o preferinta. Scriptul fumului consemneaza
+masuratoarea: dupa ce s-a reparat steagul de folosire pe ISM, **fiecare build
+aditiv din proiectul asta n-a randat NIMIC**, pe cand fiecare build translucid
+si-a randat cartonasele. Aditivul e argumentul mai bun pentru un foc, si motorul
+nu e de acord cu el.
+
+`-ShipFlash=0` il stinge, si e un steag SEPARAT de `-ShipSmoke=`. Un steag care
+misca doua lucruri le masoara suma: cu doua steaguri, `gunnery` contra
+`flash_off` difera in exact o cheie (`flash_spawned` 16 -> 0) si `smoke_off`
+lasa focul la 16 in timp ce duce fumul la 0.
+
+### Si teava din care iese
+
+Construind focul s-a vazut ca **tevile modelate stateau la 37-49 cm deasupra
+liniei de plutire, iar tunurile trag de la 280**: fumul si focul ieseau cu 2,35 m
+deasupra tevilor din care ar fi trebuit sa iasa. Comentariul de langa
+`GGunPortsX` zicea "luate din aceleasi pozitii la care au fost modelate in
+Blender" - adevarat numai pentru X.
+
+Gaura era de 77 cm cat `GGunPortZ` a fost 120 si n-a vazut-o nimeni; ridicarea la
+280 pe 18.09, ca gurile sa iasa deasupra marii, a largit-o la 235. Tevile sunt
+acum la gurile de tun, sub copastie, iar numarul e scris O SINGURA data si il
+numeste pe celalalt: `GUNPORT_Z = 2.80  # ShipPawn.cpp GGunPortZ = 280 cm`.
+
+Mesh-ul regenerat n-a miscat nicio cifra din suita - schimbarea e vizuala, si
+asta s-a verificat, nu s-a presupus.
+
 ## Dara ghiulelei
 
 Fiecare ghiulea trage dupa ea o linie fumurie, ca sa vezi unde se duce. Ceruta de
@@ -982,7 +1028,8 @@ pereche de rulări citea împrăștiere și credea că citește semnal.
 | `-ShipInheritVel=0` | ghiuleaua NU mai moşteneşte viteza navei (comportamentul de dinainte de 13.09) |
 | `-ShipLead=0` | tunurile nu mai anticipează mişcarea ţintei |
 | `-ShipRangeBias=x` | cât de lung trag tunurile (implicit 1,04) |
-| `-ShipSmoke=1` | fum de tun (implicit STINS, şi **încă nu arată bine**) |
+| `-ShipSmoke=0` | stinge fumul de tun (implicit APRINS din 17364af) |
+| `-ShipFlash=0` | stinge focul de la gura tunului (implicit APRINS) |
 | `-WindBearing=N` | fixează DIRECȚIA vântului, altfel „mal sub vânt" nu e reproductibil |
 | `-WindSpeed=N` | fixează și TĂRIA lui; fără asta două treceri peste același unghi sunt luate pe vreme diferită |
 | `-ShipPolar=1` | polarul de regim STABILIZAT: ține cârma pe un cap, așteaptă până nava nu mai schimbă nimic, abia atunci scrie rândul |
@@ -1535,11 +1582,11 @@ citesc ÎNAPOI şi se asertează: helper-ul `sp()` al proiectului înghite un e�
 randat o placă gri.
 
 **Acum arată a fum:** o vălătucire întunecată la gura tunului, ruptă şi cu
-şuviţe, care se subţiază şi derivă sub vânt. Livrat tot STINS, dar nu fiindcă e
-stricat — fiindcă fiecare măsurătoare de tir din proiect a fost luată fără el, iar
-un implicit pornit ar schimba baza tuturor comparaţiilor viitoare.
-`-ShipSmoke=1` îl aprinde. Dacă la privit merită să devină implicit, e o
-judecată de ochi: punctul 20 din OWNER_VERIFY.
+şuviţe, care se subţiază şi derivă sub vânt. **APRINS implicit din 17364af**, după
+ce s-a văzut că era subexpus, nu întunecat. Livrarea a fost stânjenită exact de
+motivul scris aici cât a fost stins: fiecare măsurătoare de tir din proiect fusese
+luată fără el, deci aprinderea a cerut o reînregistrare DELIBERATĂ a liniei de
+bază, în acelaşi commit. `-ShipSmoke=0` cumpără lumea veche înapoi.
 
 **Măsurat că nu atinge tirul:** aceeaşi rulare cu fum stins şi cu fum pornit dă
 **56 de linii de tir şi 11 lovituri în amândouă**. Fumul îşi trage cele treizeci
