@@ -66,7 +66,13 @@ Apoi apeși **Play**.
 | E | salvă la tribord |
 | Shift stânga (ținut) | ochești în greement, nu în cocă |
 | R | muți un sfert din oameni la reparații, apoi jumătate, apoi toți înapoi la tunuri |
-| Mouse | rotești doar camera, nu nava |
+| Mouse | roteşti camera **şi tunurile**; bateria se schimbă singură când treci prova sau pupa |
+| Rotiţa | înălţarea ţevilor, 0,2° pe cârtiţă, între −3° şi +10° |
+| X | fixezi tunurile perpendicular pe navă şi ignori mouse-ul (comutator) |
+
+**Tunurile se opresc la 12 grade de travers.** Cand mouse-ul cere mai mult, ele
+raman la limita si linia de ochire se face chihlimbarie: de acolo incolo doar
+carma le mai duce. Vezi „Cum ochesti".
 
 **Nu ai accelerație.** W nu împinge nava, ci întinde pânza. Viteza iese din trei
 lucruri: câtă pânză e sus, cât de tare bate vântul și sub ce unghi îl prinzi.

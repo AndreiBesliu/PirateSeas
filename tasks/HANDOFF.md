@@ -247,9 +247,17 @@ Urmatorul: de ales cu owner-ul. **Deschise si stiute:**
   cu un tun costa tot 12 secunde. Nu exista NICIUN sunet in proiect si fumul e
   stins implicit, deci jucatorul nu are cum sa afle. Reincarcarea pe tun e
   reparatia corecta si e o felie separata.
-- **`sinking.casualties_max` a cazut la 0** dupa ridicarea tunurilor. Probabil
-  divergenta de samanta si nu un defect - in `prize_hull` loviturile au CRESCUT -
-  dar verificarea e acum vida in scenariul ala si trebuie facuta determinista.
+- ~~`sinking.casualties_max` a cazut la 0~~ **FALSA ALARMA, verificata si
+  inchisa.** Acelasi rand arata acum si `broadsides: 0` si `struck: 0`: NIMENI nu
+  trage in scenariul ala, care e un test de scufundare deliberata si nu o lupta.
+  Inainte se nimerea o salva pana la scuttle-ul de la t=6; cu navele ridicate,
+  angajarea se decaleaza si scuttle-ul vine primul. Deplasare de sincronizare, nu
+  defect. Victimele sunt masurate in opt scenarii, de la 3 la 34 (`crew_fight`),
+  deci cheia ramane bine exercitata.
+
+  Merita retinut CUM am gresit: am citit o cheie in loc de rand. Aceeasi clasa de
+  eroare ca verificarea intr-o singura directie de mai devreme in sesiune - o
+  bucata din instrument, luata drept instrumentul intreg.
 - **Fumul de tun e parcat, si acum se stie de ce**: culoarea lui e autorata in
   jurul lui 0,78 intr-o scena cu punct alb 5793 cd/m2. Nu era intunecat, era
   subexpus de trei ordine de marime.
