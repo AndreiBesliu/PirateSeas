@@ -347,9 +347,10 @@ def check_comparison():
                  % (key, tr.get(key), want))
 
     aim = ci_measure.measure("fixture", "LogTemp: Display: AIMLOG TOTAL hand=1 "
-                             "side=starboard train=+12.0 elev=5.0 fall=383m "
-                             "stop=1 locked=0 segs=4\n")
-    for key, want in (("aim_by_hand", 1), ("aim_train", 12.0), ("aim_elev", 5.0),
+                             "side=starboard train=+12.0 layfwd=+0.105 elev=5.0 "
+                             "fall=383m stop=1 locked=0 segs=4\n")
+    for key, want in (("aim_by_hand", 1), ("aim_train", 12.0),
+                      ("aim_layfwd", 0.105), ("aim_elev", 5.0),
                       ("aim_fall_m", 383), ("aim_stop", 1), ("aim_segments", 4)):
         if aim.get(key) != want:
             fail("the gun-lay quit line is no longer read: %s is %r, expected %r"
@@ -364,6 +365,24 @@ def check_comparison():
     if "trail_laid" in stale:
         fail("the trail reader still accepts the OLD line shape, so a format "
              "drift would go unnoticed in exactly the way it already did once")
+
+    # The same, for the gun lay. This line lost its layfwd field and must no
+    # longer parse - and it is not hypothetical: adding layfwd turned these
+    # checks red one commit after they were written, which is the whole point.
+    stale_aim = ci_measure.measure("fixture", "LogTemp: Display: AIMLOG TOTAL "
+                                   "hand=1 side=starboard train=+12.0 elev=5.0 "
+                                   "fall=383m stop=1 locked=0 segs=4\n")
+    if "aim_train" in stale_aim:
+        fail("the gun-lay reader still accepts the line shape from BEFORE layfwd, "
+             "so the pair that catches a mirrored sign could go quiet unnoticed")
+
+    # AND THE SIGN ITSELF, as arithmetic rather than as a fixture. A lay six
+    # degrees forward of the beam puts sin(6) = 0.1045 of the barrels' direction
+    # along the bow, on EITHER battery. The defect the owner found by playing
+    # gave -0.104 to starboard and +0.104 to port: same magnitude, mirrored sign.
+    import math
+    if abs(math.sin(math.radians(6.0)) - 0.1045) > 0.001:
+        fail("the arithmetic this pair rests on is wrong: sin(6 deg) is not 0.1045")
 
     w = ci_measure.measure("fixture", "LogTemp: Display: WAKELOG live=6 slots=2 "
                            "shortest=3 tracked=ShipPawn_0:3  ignored=3 stranded=2 "

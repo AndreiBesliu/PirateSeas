@@ -230,7 +230,7 @@ void AAimIndicator::Tick(float DeltaSeconds)
 	// It turns amber the moment the mouse asks for more than the carriages have,
 	// and that colour is the entire lesson: the line has stopped moving and the
 	// only thing left that can move it is the helm.
-	const FVector LayDir = Beam.RotateAngleAxis(Ship->GetLayTrainDeg(), FVector::UpVector);
+	const FVector LayDir = Beam.RotateAngleAxis(Ship->LayRotationDeg(), FVector::UpVector);
 	const float FallCm = FMath::Clamp(
 		Ship->RangeForElevationCm(Ship->GetLayElevationDeg()), 500.f, 120000.f);
 	const bool bStopped = Ship->IsAgainstTheStop();

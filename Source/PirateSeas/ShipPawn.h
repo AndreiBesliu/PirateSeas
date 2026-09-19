@@ -157,6 +157,27 @@ public:
 	/** Which side the guns are laid on: the side the player is looking at. */
 	bool IsLayingStarboard() const { return bLayStarboard; }
 
+	/** The lay as a ROTATION ABOUT UP, which is not the same number as the lay
+	 *  itself and is the reason the mouse ran backwards to starboard for a day.
+	 *
+	 *  GetLayTrainDeg() is stored positive-FORWARD on both sides, because that is
+	 *  what a HUD and a log line want: one number that reads the same whichever
+	 *  battery is up. But a positive rotation about the world's up axis carries
+	 *  the STARBOARD beam AFT and the PORT beam FORWARD - opposite senses - so
+	 *  feeding the stored number straight to RotateAngleAxis mirrors one side.
+	 *
+	 *  Everything that turns a beam vector calls THIS, and nothing works the sign
+	 *  out for itself. Three places each deriving it separately is how the bug
+	 *  was born. */
+	float LayRotationDeg() const { return LayTrainDeg * (bLayStarboard ? -1.f : 1.f); }
+
+	/** How far forward of the beam the guns actually point, as a fraction: +1 is
+	 *  dead ahead, 0 is square abeam, -1 is dead astern. Derived from the WORLD
+	 *  direction rather than from the stored angle, so it is the one number that
+	 *  can catch the sign being wrong - the stored angle reads +6 on both sides
+	 *  whether or not the guns agree with it. */
+	float LayForwardDot() const;
+
 	/** True while the guns are pegged dead abeam and ignoring the mouse. */
 	bool IsLayLocked() const { return bLayLocked; }
 

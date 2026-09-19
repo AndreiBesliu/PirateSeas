@@ -1689,11 +1689,15 @@ void ASeaGameMode::QuitNow()
 			break;
 		}
 		UE_LOG(LogTemp, Display,
-			TEXT("AIMLOG TOTAL hand=%d side=%s train=%+.1f elev=%.1f fall=%dm ")
-			TEXT("stop=%d locked=%d segs=%d"),
+			TEXT("AIMLOG TOTAL hand=%d side=%s train=%+.1f layfwd=%+.3f elev=%.1f ")
+			TEXT("fall=%dm stop=%d locked=%d segs=%d"),
 			Laid && Laid->IsLayingByHand() ? 1 : 0,
 			Laid && Laid->IsLayingStarboard() ? TEXT("starboard") : TEXT("port"),
 			Laid ? Laid->GetLayTrainDeg() : 0.f,
+			// WHERE THE GUNS REALLY POINT, not what was stored. The stored angle
+			// reads +6 on both sides whether or not the guns agree with it, so it
+			// cannot see a mirrored sign; this can, and did.
+			Laid ? Laid->LayForwardDot() : 0.f,
 			Laid ? Laid->GetLayElevationDeg() : 0.f,
 			Laid ? (int32)(Laid->RangeForElevationCm(Laid->GetLayElevationDeg()) * 0.01f) : 0,
 			Laid && Laid->IsAgainstTheStop() ? 1 : 0,

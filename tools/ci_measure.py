@@ -373,6 +373,24 @@ SCENARIOS = {
     "aim_nomarks": ["-WindBearing=120", "-WindSpeed=11", "-EnemyX=9000",
                     "-EnemyY=1500", "-ShipFireTest=8", "-ShipQuitAfter=45",
                     "-LayTrain=6", "-LayElev=5", "-AimMarks=0"],
+
+    # aim_port against aim_laid: THE SAME LAY, THE OTHER BATTERY. Six degrees
+    # forward of the beam on port instead of starboard.
+    #
+    # This row exists because of a defect the owner found by playing: the mouse
+    # ran BACKWARDS on the starboard side. LayTrainDeg is stored positive-forward
+    # on both sides, but a positive rotation about the world up axis carries the
+    # starboard beam AFT and the port beam FORWARD - opposite senses - so feeding
+    # the stored number straight to RotateAngleAxis mirrored one side.
+    #
+    # And note WHY aim_train could not catch it: it reads +6.0 in both rows
+    # whether or not the guns agree with it. `aim_layfwd` is taken from the world
+    # direction the guns actually point, and it must be POSITIVE in BOTH rows.
+    # If either side is mirrored, its sign flips and the pair disagrees about a
+    # number it has no business disagreeing about.
+    "aim_port": ["-WindBearing=120", "-WindSpeed=11", "-EnemyX=9000",
+                 "-EnemyY=1500", "-ShipFireTest=8", "-ShipQuitAfter=45",
+                 "-LayTrain=6", "-LayElev=5", "-LayStarboard=0"],
 }
 
 
@@ -727,18 +745,23 @@ def measure(name, text):
     # stop flag with it, and the pair meant to prove the picture moves nothing
     # would report five missing numbers instead of one moved one.
     am = re.search(r"AIMLOG TOTAL hand=(\d+) side=(\w+) train=([-+0-9.]+) "
-                   r"elev=([0-9.]+) fall=(\d+)m stop=(\d+) locked=(\d+) "
-                   r"segs=(\d+)", text)
+                   r"layfwd=([-+0-9.]+) elev=([0-9.]+) fall=(\d+)m stop=(\d+) "
+                   r"locked=(\d+) segs=(\d+)", text)
     if am:
         m["aim_by_hand"] = int(am.group(1))
         m["aim_train"] = float(am.group(3))
-        m["aim_elev"] = float(am.group(4))
-        m["aim_fall_m"] = int(am.group(5))
-        m["aim_stop"] = int(am.group(6))
+        # WHERE THE GUNS REALLY POINT. +1 is dead ahead, 0 square abeam, -1 dead
+        # astern. The stored train angle cannot see a mirrored sign because it
+        # reads the same on both sides either way; this can, and it is the key
+        # the aim_laid / aim_port pair turns on.
+        m["aim_layfwd"] = float(am.group(4))
+        m["aim_elev"] = float(am.group(5))
+        m["aim_fall_m"] = int(am.group(6))
+        m["aim_stop"] = int(am.group(7))
         # The picture's own count. It is NOT the proof the marks are right - a
         # wrong line is still a line - but it is the proof they are DRAWN, and
         # it is the number the -AimMarks=0 pair moves.
-        m["aim_segments"] = int(am.group(8))
+        m["aim_segments"] = int(am.group(9))
 
     # What the money BOUGHT. Printed at every quit whether there is a port or
     # not, so these are counted zeros rather than absences - and spent beside

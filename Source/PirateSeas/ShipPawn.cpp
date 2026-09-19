@@ -857,7 +857,7 @@ bool AShipPawn::FireBroadside(bool bStarboard, AActor* AimAt, bool bHigh)
 			// copy of FireBroadside for the player would have drifted from this
 			// one the first time either was edited, and this project has paid
 			// for exactly that before.
-			Beam = Beam.RotateAngleAxis(LayTrainDeg, FVector::UpVector);
+			Beam = Beam.RotateAngleAxis(LayRotationDeg(), FVector::UpVector);
 			Elevation = LayElevationDeg;
 		}
 		else if (AimAt)
@@ -2098,6 +2098,14 @@ void AShipPawn::UpdateGunLaying()
 	// the player sees the barrels refuse and works it out, which is the way a
 	// rule is actually learned.
 	bAgainstStop = FMath::Abs(Wanted) > MaxTraverseDeg + 0.01f;
+}
+
+float AShipPawn::LayForwardDot() const
+{
+	const float Side = bLayStarboard ? 1.f : -1.f;
+	const FVector Beam = (GetActorRightVector() * Side).GetSafeNormal2D();
+	const FVector Laid = Beam.RotateAngleAxis(LayRotationDeg(), FVector::UpVector);
+	return (float)FVector::DotProduct(Laid, GetActorForwardVector().GetSafeNormal2D());
 }
 
 float AShipPawn::RangeForElevationCm(float ElevationDeg) const
