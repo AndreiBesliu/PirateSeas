@@ -1030,6 +1030,7 @@ pereche de rulări citea împrăștiere și credea că citește semnal.
 | `-ShipRangeBias=x` | cât de lung trag tunurile (implicit 1,04) |
 | `-ShipSmoke=0` | stinge fumul de tun (implicit APRINS din 17364af) |
 | `-ShipFlash=0` | stinge focul de la gura tunului (implicit APRINS) |
+| `-ShipSplinters=0` | stinge aschiile de la o lovitura in cocca (implicit APRINSE) |
 | `-WindBearing=N` | fixează DIRECȚIA vântului, altfel „mal sub vânt" nu e reproductibil |
 | `-WindSpeed=N` | fixează și TĂRIA lui; fără asta două treceri peste același unghi sunt luate pe vreme diferită |
 | `-ShipPolar=1` | polarul de regim STABILIZAT: ține cârma pe un cap, așteaptă până nava nu mai schimbă nimic, abia atunci scrie rândul |

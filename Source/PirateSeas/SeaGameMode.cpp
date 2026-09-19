@@ -2,6 +2,7 @@
 
 #include "EnemyShipPawn.h"
 #include "GunSmoke.h"
+#include "HullSplinters.h"
 #include "MuzzleFlash.h"
 #include "MerchantShipPawn.h"
 #include "Engine/Engine.h"
@@ -51,6 +52,7 @@ void ASeaGameMode::BeginPlay()
 	// level's numbers.
 	AGunSmoke::ResetForNewLevel();
 	AMuzzleFlash::ResetForNewLevel();
+	AHullSplinters::ResetForNewLevel();
 
 	// Seed the world's randomness before anything draws from it.
 	//
@@ -1706,6 +1708,15 @@ void ASeaGameMode::QuitNow()
 		TEXT("FLASHLOG TOTAL spawned=%d live=%d stranded=%d"),
 		AMuzzleFlash::GetSpawned(), AMuzzleFlash::CountLive(),
 		AMuzzleFlash::GetStranded());
+
+	// The oak thrown out of a hull. spawned counts BURSTS, one per ball that
+	// went into a ship, so it can be read straight against the SHOTLOG hit lines
+	// - a burst count that drifted from the hit count would mean the effect is
+	// firing where no ball landed, or not firing where one did.
+	UE_LOG(LogTemp, Display,
+		TEXT("CHIPLOG TOTAL spawned=%d live=%d stranded=%d"),
+		AHullSplinters::GetSpawned(), AHullSplinters::CountLive(),
+		AHullSplinters::GetStranded());
 
 	// The trail, at quit, whether it was on or off: a counted zero rather than
 	// an absent line. stranded is the one that must never move.

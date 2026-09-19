@@ -95,6 +95,10 @@ private:
 		float Roll = 0.f;
 	};
 
+	/** Where one card goes, for a given camera. Shared by BeginPlay and Tick so
+	 *  the first frame cannot disagree with the rest. */
+	FTransform CardTransform(const FCard& C, const FVector& CamLoc) const;
+
 	TArray<FCard> Deck;
 	float Age = 0.f;
 

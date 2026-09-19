@@ -89,7 +89,11 @@ AMuzzleFlash* AMuzzleFlash::Spawn(UWorld* World, const FVector& Muzzle,
 		// as a blob at any one size; three of them strung out along the jet and
 		// falling from the mouth's width to a third of it read as a cone from
 		// every angle, without a single card being oriented.
-		const float T = static_cast<float>(i) / static_cast<float>(CardCount - 1);
+		// CardCount - 1 is a divisor, and CardCount is a tunable sitting in the
+		// header beside LifeSeconds and ReachCm. At 1 this divided by zero and
+		// filled the instance buffer with NaN.
+		const float T = (CardCount > 1)
+			? static_cast<float>(i) / static_cast<float>(CardCount - 1) : 0.f;
 		FCard C;
 		C.Offset = Jet * (Flash->ReachCm * T);
 		C.Size = Flash->MouthCm * FMath::Lerp(1.f, 0.33f, T)
@@ -103,17 +107,45 @@ AMuzzleFlash* AMuzzleFlash::Spawn(UWorld* World, const FVector& Muzzle,
 	return Flash;
 }
 
+FTransform AMuzzleFlash::CardTransform(const FCard& C, const FVector& CamLoc) const
+{
+	// ONE function, used by the first frame and by every frame after it. It was
+	// written twice - once in Tick and once as FTransform::Identity in BeginPlay
+	// - and the second copy was simply wrong.
+	const FVector World = GetActorLocation() + C.Offset;
+	const FVector ToCam = (CamLoc - World).GetSafeNormal();
+	const FQuat Face = FRotationMatrix::MakeFromZ(ToCam).ToQuat();
+	const FQuat Spun = Face * FQuat(FVector::UpVector, C.Roll);
+	const float S = C.Size / 100.f;    // the engine plane is 100 cm square
+	return FTransform(Spun, World - GetActorLocation(), FVector(S, S, S));
+}
+
 void AMuzzleFlash::BeginPlay()
 {
 	Super::BeginPlay();
 
 	FlashMaterial = Cards ? Cards->CreateAndSetMaterialInstanceDynamic(0) : nullptr;
+	if (FlashMaterial)
+	{
+		// Age01 BEFORE the first draw. The material's default is whatever the
+		// asset was saved with, and a flash whose first frame is drawn at some
+		// other age is a flash that flickers on.
+		FlashMaterial->SetScalarParameterValue(TEXT("Age01"), 0.f);
+	}
 	if (Cards)
 	{
+		// AT THEIR REAL TRANSFORMS, not at identity. AddInstance(Identity) put
+		// three cards at the actor's origin, unrotated and at scale 1 - which on
+		// the 100 cm engine plane is three coincident one-metre quads lying flat.
+		// Tick fixed them on the NEXT frame, so every flash opened with one frame
+		// of that; and a flash whose whole life is 0.10 s can be destroyed on its
+		// first tick if the frame was long, in which case that wrong frame is the
+		// only one it ever had.
 		Cards->ClearInstances();
-		for (int32 i = 0; i < Deck.Num(); ++i)
+		for (const FCard& C : Deck)
 		{
-			Cards->AddInstance(FTransform::Identity, false);
+			Cards->AddInstance(CardTransform(C, GetActorLocation()
+				+ FVector(0.f, 0.f, 1000.f)), false);
 		}
 	}
 }
@@ -160,12 +192,7 @@ void AMuzzleFlash::Tick(float DeltaSeconds)
 		// NOTHING MOVES. The cards sit where the gun put them for the whole tenth
 		// of a second, and that is the point: a flash that drifts is a small
 		// fire, and the ship has already moved on by the time it would show.
-		const FVector World = GetActorLocation() + C.Offset;
-		const FVector ToCam = (CamLoc - World).GetSafeNormal();
-		const FQuat Face = FRotationMatrix::MakeFromZ(ToCam).ToQuat();
-		const FQuat Spun = Face * FQuat(FVector::UpVector, C.Roll);
-		const float S = C.Size / 100.f;    // the engine plane is 100 cm square
-		Xforms.Add(FTransform(Spun, World - GetActorLocation(), FVector(S, S, S)));
+		Xforms.Add(CardTransform(C, CamLoc));
 	}
 
 	if (Cards && Xforms.Num() == Cards->GetInstanceCount())

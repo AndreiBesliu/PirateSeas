@@ -64,6 +64,25 @@ namespace
 	 *  was 19 CENTIMETRES: the broadside was fired from the waterline, which is
 	 *  what made the ship read as a barge with masts. */
 	const float GGunPortZ = 280.f;
+
+	/** Where the barrel MOUTHS are, per gun, for the smoke and the flash only.
+	 *
+	 *  The ball is born at GGunPortY = 640 and has to be: that clears the hull
+	 *  collision box's 520 half width, so a fresh shot never starts life already
+	 *  touching the ship that fired it. The barrels cannot reach 640 - the hull
+	 *  narrows towards the ends, and a barrel long enough to reach it amidships
+	 *  would stick out four metres at the bow.
+	 *
+	 *  So the effects got their own number, and the gap they close is real: 72 cm
+	 *  at the widest gun and 157 cm at the foremost. On 19.09 the Z disagreement
+	 *  between the barrels and the guns was found and fixed, and the SAME
+	 *  disagreement in Y was left standing one commit longer - the barrels were
+	 *  aligned in one axis of two.
+	 *
+	 *  Derived, not guessed: half_beam(t) from Scripts/ship.py at each gun's
+	 *  station, plus 35 cm of stand-off, plus half of the 2.3 m barrel. Recompute
+	 *  them from that file if the hull's beam ever changes. */
+	const float GGunMuzzleY[] = { 521.f, 568.f, 559.f, 483.f };
 }
 
 AShipPawn::AShipPawn()
@@ -1066,16 +1085,22 @@ bool AShipPawn::FireBroadside(bool bStarboard, AActor* AimAt, bool bHigh)
 		// Seeded from the shot index so the smoke draws its scatter from its own
 		// stream: taking numbers off the global one would move every ball fired
 		// afterwards, and -ShipSeed exists precisely so that cannot happen.
+		// AT THE BARREL'S MOUTH, not at the ball's birthplace. The two differ by
+		// up to a metre and a half, and the difference is visible: the owner's
+		// acceptance test for the flash is "the fire, the smoke and the barrel in
+		// the same place".
+		const FVector EffectMuzzle = HullTransform.TransformPosition(
+			FVector(PortX, Side * GGunMuzzleY[g], GGunPortZ));
 		if (bGunSmoke)
 		{
-			AGunSmoke::Spawn(GetWorld(), WorldMuzzle, Aim, ThisShot);
+			AGunSmoke::Spawn(GetWorld(), EffectMuzzle, Aim, ThisShot);
 		}
 		// And the flash, at the same muzzle along the same line, seeded from the
 		// same shot index but through its own stream. It is gone before the
 		// smoke has formed, which is the order these two happen in.
 		if (bMuzzleFlash)
 		{
-			AMuzzleFlash::Spawn(GetWorld(), WorldMuzzle, Aim, ThisShot);
+			AMuzzleFlash::Spawn(GetWorld(), EffectMuzzle, Aim, ThisShot);
 		}
 		++Fired;
 		// HER OWN clock, not the battery's. This is the whole of what the owner

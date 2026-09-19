@@ -55,7 +55,7 @@ vânt în plante şi greement, `-Hour=` pentru ora din zi.
   `.gitignore`.
 - **Porţile:**
   - `python tools/ci_checks.py` — fără motor, rulează şi în CI hosted
-  - `python tools/ci_measure.py` — 37 scenarii headless vs `tools/measurement_baseline.json`
+  - `python tools/ci_measure.py` — 38 scenarii headless vs `tools/measurement_baseline.json`
   - `python tools/ci_measure.py --record` — rescrie linia de bază, DELIBERAT, în
     acelaşi commit care o mişcă
   - `python tools/png_diff.py a.png b.png x0 y0 x1 y1` — compară o casetă
@@ -279,47 +279,47 @@ Urmatorul: de ales cu owner-ul. **Deschise si stiute:**
   depinde de timpul de zbor. Sub un procent la distantele la care se lupta, deci
   nu urgent - dar cifra e acolo si e sistematica, nu zgomot.
 
-## Efectele de tragere, cerute 19.09 - DE FACUT MAI TARZIU
+## ~~Efectele de tragere - DE FACUT MAI TARZIU~~ TOATE TREI LIVRATE 19.09
 
 Owner-ul, cuvant cu cuvant: "scopul lor [al darelor] este doar sa faca ghiulelele
 si traseul lor mai vizibile, ca efect de tragere vom avea un mic fum care se
 disipeaza mai greu si imediat la tragere un foc scurt si o sa vreau si feedback
 la contact, dar noteaza asta pentru mai tarziu".
 
-Deci trei lucruri, SEPARATE de dara:
+**Sectiunea asta a stat aici, cu titlul "DE FACUT MAI TARZIU" si data de azi,
+dupa ce toate trei fusesera construite.** O recenzie a prins-o. Conta, fiindca
+fisierul asta spune despre el insusi ca exista ca o sesiune noua sa poata
+continua fara sa reciteasca un DEVLOG de 4000 de randuri - iar o sesiune care il
+citea asa cum scrie era trimisa sa reconstruiasca focul, cu un plan de
+implementare DIFERIT de cel livrat.
 
-1. **Un mic fum la gura tunului**, care se disipeaza MAI GREU decat dara. Asta
-   exista deja: `AGunSmoke`, cu 18 cartele pe puf si o viata de 9 secunde - dubla
-   fata de dara. E "parcat" fiindca arata ca funinginea, si acum se stie de ce:
-   `CoreColor` 0,055 si `LitColor` 0,78 intr-o scena cu punct alb 5793 cd/m2,
-   adica subexpus de trei ordine de marime. Vezi `Source/PirateSeas/ShotTrail.h`.
-   **Deci nu e o functie noua, e o reautorare de culoare in candele** - si tot
-   codul de imprastiere, varsta si stingere e deja scris si masurat.
-   ATENTIE: e pe `InstancedStaticMeshComponent`, care in proiectul asta deseneaza
-   UN material si niciunul altul. Daca reautorarea culorii nu ajunge, mutarea pe
-   `UProceduralMeshComponent` e drumul batut deja de dara.
-
-2. **Un foc scurt la gura tunului**, imediat la tragere. Nu exista nimic. Cel mai
-   ieftin drum e acelasi: cateva cartele foarte scurte de viata (sub 0,15 s) pe
-   aceeasi plasa procedurala, autorate la o luminanta MULT peste punctul alb - un
-   foc de tun e una dintre putinele lucruri din scena asta care au voie sa arda
-   la alb.
-
-3. **Feedback la contact.** Nedetaliat de owner. Exista deja `AOceanSurface`
-   pentru stropi, si `SHOTLOG hit` stie ce zona a fost lovita, deci datele sunt
-   acolo; ce lipseste e ce se VEDE. De cerut detalii inainte de a construi.
+1. **Fum la gura tunului** - `AGunSmoke`, LIVRAT si aprins implicit din 17364af.
+   Nu era o functie noua: era o reautorare de culoare in candele, fiindca
+   `CoreColor` 0,055 intr-o scena cu punct alb 5793 cd/m2 e subexpus de trei
+   ordine de marime. Masurat cu `smoke_spawned` si perechea `smoke_off`.
+2. **Foc scurt la gura tunului** - `AMuzzleFlash`, LIVRAT in 05b5f26. 0,10 s,
+   trei cartele billboardate pe `InstancedStaticMeshComponent` (NU pe plasa
+   procedurala, cum propunea nota veche), miez la 60 000 cd/m2. `-ShipFlash=0`.
+3. **Feedback la contact** - `AHullSplinters`, LIVRAT. Paisprezece aschii de
+   stejar aruncate dintr-o cocca lovita. Nu s-au cerut detalii de la owner
+   fiindca intrebarea avea un raspuns masurabil: o RATARE arunca o coloana de apa
+   vizibila de la trei sute de metri, iar o LOVITURA nu producea nimic - singurul
+   rezultat pe care jucatorul il urmareste era cel fara nimic de privit.
+   `-ShipSplinters=0`.
 
 Si o observatie a owner-ului care schimba o decizie de proiectare: **scopul darei
 e DOAR lizibilitatea**, nu atmosfera. Deci daca vreodata se pune intrebarea "sa
-traiasca mai mult ca sa arate mai bine", raspunsul e nu - fumul de la punctul 1 e
-cel care face atmosfera, iar dara face cititul.
+traiasca mai mult ca sa arate mai bine", raspunsul e nu - fumul e cel care face
+atmosfera, iar dara face cititul.
 
 **Abordajul ramane AMANAT.**
 
 ## Ce aşteaptă ochiul owner-ului
 
-`OWNER_VERIFY.md` are 34 de puncte; **16–34 n-au fost confirmate niciodată** —
-sunt judecăţi vizuale pe care nu le pot face eu. Punctul 20 (fumul de tun) e o
-întrebare deschisă: merită pornit implicit?
+`OWNER_VERIFY.md` are **37** de puncte; **16–37 n-au fost confirmate niciodată**
+— sunt judecăţi vizuale pe care nu le pot face eu. (Scria 34 aici, şi numărul a
+rămas în urmă de două ori la rând: cele mai NOI puncte sunt exact cele pe care
+un cititor al acestei linii nu le-ar fi deschis.) Punctul 20 nu mai e o
+întrebare: fumul e pornit implicit din 17364af.
 
 `tasks/REVIEW2_OPEN.md`: recenzia a doua e închisă complet, 34 din 34.

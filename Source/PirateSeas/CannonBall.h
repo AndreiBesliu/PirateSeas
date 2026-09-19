@@ -84,6 +84,12 @@ private:
 	FVector LaunchLocation = FVector::ZeroVector;
 	float FlightTime = 0.f;
 	int32 ShotIndex = 0;
+
+	/** The burst of oak on a hull hit. -ShipSplinters=0 turns it off, and it is
+	 *  its own flag rather than riding on the smoke's or the flash's: one flag
+	 *  that moves two effects can only ever measure their sum. */
+	UPROPERTY(EditAnywhere, Category = "Shot")
+	bool bSplinters = true;
 	bool bSpent = false;
 
 	/** The wave-surface height under the ball, from the last query. Logged with

@@ -27,6 +27,7 @@ Run it anywhere:  python tools/ci_checks.py
 """
 import ast
 import io
+import json
 import os
 import subprocess
 import sys
@@ -413,6 +414,52 @@ def check_comparison():
     if "flash_stranded" not in flash:
         fail("a zero must still be RECORDED, or the one number that must never "
              "move could vanish instead of moving: %r" % flash)
+
+    # THE SPLINTERS' quit line, and the arithmetic that says what it is FOR:
+    # a burst per ball that went into a hull, so the count belongs beside the hit
+    # count rather than standing on its own.
+    chips = ci_measure.measure("fixture", "LogTemp: Display: CHIPLOG TOTAL "
+                               "spawned=9 live=1 stranded=0\n")
+    if chips.get("chips_spawned") != 9 or chips.get("chips_live_end") != 1:
+        fail("the splinter quit line is no longer read: %r" % chips)
+    if "chips_stranded" not in chips:
+        fail("a zero must still be RECORDED: %r" % chips)
+
+    # HULL HITS AND BURSTS, read apart and then compared. The reader must not
+    # score a rigging sweep or a splash as a hull hit, and it must not miss an
+    # enemy's or a merchant's name.
+    hh = ci_measure.measure("fixture",
+        "LogTemp: Display: SHOTLOG hit by=ShipPawn_0 shot=1 "
+        "target=EnemyShipPawn_0 damage=60\n"
+        "LogTemp: Display: SHOTLOG hit by=EnemyShipPawn_0 shot=2 "
+        "target=ShipPawn_0 damage=60\n"
+        "LogTemp: Display: SHOTLOG hit by=ShipPawn_0 shot=3 "
+        "target=MerchantShipPawn_1 damage=60\n"
+        "LogTemp: Display: SHOTLOG hit by=ShipPawn_0 shot=4 "
+        "target=Island_2 damage=60\n")
+    if hh.get("hull_hits") != 3:
+        fail("hull_hits must count the three SHIPS and not the island: %r" % hh)
+
+    # AND THE ARITHMETIC THIS PAIR EXISTS FOR, over the RECORDED baseline rather
+    # than over a fixture: a burst per ball into a hull, in every scenario. The
+    # comment that used to state this named `struck`, which counts damage ZONES -
+    # it was out by eight in the very row it was written for. A cross-check
+    # written in prose is one nobody runs.
+    base_path = os.path.join(ROOT, "tools", "measurement_baseline.json")
+    if os.path.exists(base_path):
+        rows = json.loads(io.open(base_path, encoding="utf-8-sig").read())
+        for name, row in sorted(rows.items()):
+            if "chips_spawned" not in row or "hull_hits" not in row:
+                continue
+            # chips_off is the row where they are MEANT to disagree.
+            if name == "chips_off":
+                if row["chips_spawned"] != 0:
+                    fail("chips_off must produce no bursts: %r" % row["chips_spawned"])
+                continue
+            if row["chips_spawned"] != row["hull_hits"]:
+                fail("%s: %d bursts for %d hull hits - one of the two is wrong "
+                     "about what happened" % (name, row["chips_spawned"],
+                                              row["hull_hits"]))
 
     # AND THE TWO LINES MUST NOT READ EACH OTHER. They share a shape and differ
     # in one field; a reader loose about its prefix would score the smoke's

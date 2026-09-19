@@ -460,7 +460,7 @@ distanţă înseamnă că butonul a scăpat pe o piesă care nu e cordaj.
 
 ## 20. Fumul de tun: merită să fie pornit implicit?
 
-**Ce te uiți:** Rulează cu `-ShipSmoke=1` şi dă o salvă de aproape
+**Ce te uiți:** Dă o salvă de aproape
 (`-ShipFireTest=8`), apoi priveşte de la travers şi de la pupă. Uită-te şi la o
 escadrilă întreagă care trage, nu doar la o navă.
 
@@ -478,8 +478,10 @@ privind.
 
 **Ce știu deja și n-am ascuns:** e mai închis la culoare decât fumul de pulbere
 alb-cenuşiu din tablouri — pentru că e privit contra cerului, ceea ce chiar îl
-face întunecat, dar poate părea prea funinginos. E stins implicit ca să nu
-schimbe baza măsurătorilor; dacă îţi place, se poate face implicit.
+face întunecat, dar poate părea prea funinginos. **APRINS implicit din 17364af** — întrebarea din titlul punctului a primit
+răspuns, iar linia de bază a fost reînregistrată deliberat în acelaşi commit.
+`-ShipSmoke=0` cumpără lumea veche înapoi. (Randul ăsta a spus „E stins
+implicit” încă două commit-uri după ce fusese aprins.)
 
 
 ---
@@ -880,6 +882,12 @@ gura fiecarui tun si e inghitit imediat de fum. Trebuie sa fie DE LA TEAVA: focu
 fumul si teava in acelasi loc. Tevile stau sub copastie, la gurile de tun, nu jos
 pe bordaj langa apa.
 
+(Randul de mai sus a fost fals cand l-am scris: reparasem inaltimea tevilor si
+lasasem LATIMEA. Focul si fumul ieseau la 640 cm de axa navei, iar gura tevii e
+intre 483 si 568 - adica intre 72 si 157 cm mai inauntru. O recenzie l-a prins.
+Efectele au acum propriul tabel de pozitii, `GGunMuzzleY`, iar ghiuleaua ramane
+la 640 fiindca trebuie sa scape de cutia de coliziune.)
+
 **Cum arata prost:** Focul e prea lung si citeste a lampa aprinsa, nu a foc -
 atunci scad `LifeSeconds` de la 0,10. Sau e prea slab si se pierde in fum, si
 atunci urc `Brightness` peste 60 000. Sau, invers, ecranul se albeste tot.
@@ -889,4 +897,28 @@ tunuri), ca nu atinge nimic din simulare (o singura cheie difera intre `gunnery`
 si `flash_off`) si ca niciun foc nu supravietuieste varstei lui. Dar cat de scurt
 e "scurt" si cat de tare e "tare" sunt judecati de ochi, si sunt exact cele doua
 numere pe care le-am ales singur.
+
+## 37. Aschiile de la o lovitura in cocca
+
+**Ce te uiti:** Trage de aproape intr-o nava - `-EnemyX=3000` din linia de
+comanda ajuta - si uita-te la locul unde intra ghiuleaua, nu la tunul tau.
+
+**Cum arata bine:** Un manunchi scurt de aschii de stejar sare afara din bordaj,
+se rasuceste, cade si intra in apa. Trebuie sa se vada ca ai LOVIT: pana acum o
+ratare arunca o coloana de apa vizibila de la trei sute de metri, iar o lovitura
+nu producea nimic.
+
+**Cum arata prost:** Aschiile sar dintr-un loc care nu e bordajul - **si asta e
+capcana pe care o STIU si n-am reparat-o**: ghiuleaua se opreste pe cutia de
+coliziune a navei, care e o cutie dreptunghiulara, nu forma cocii. La mijloc
+cutia sta cam un metru in afara scandurilor; la prova, unde coca se subtiaza, in
+jur de cinci. Deci o lovitura spre prova arunca aschii din aer. Repararea
+inseamna o forma de coliziune care urmareste coca, si e o felie separata.
+
+Sau: prea multe, prea mari, prea lente. Sau raman agatate in aer in loc sa cada.
+
+**De ce nu pot eu:** pot masura ca exista si ca sunt exact cate lovituri au fost
+(`chips_spawned` = `hull_hits` in fiecare scenariu, verificat de poarta), ca nu
+ating nimic din simulare, si ca niciun manunchi nu supravietuieste varstei lui.
+Dar cate aschii arata a lovitura si cate arata a explozie e o judecata de ochi.
 

@@ -4254,3 +4254,76 @@ plafonul de 48 de puf-uri nu musca nicaieri azi.
 
 **Task Completed.**
 
+## 19.09.2026 - Aschiile de la contact, si ce a gasit recenzia in toate trei efectele
+
+**Task Started.** Prompt: "atunci continua". Model: Opus 5.
+
+A treia parte din ce ceruse owner-ul pe 16.09. Motivul n-a avut nevoie de
+detalii de la el, fiindca intrebarea avea un raspuns masurabil: **o RATARE arunca
+o coloana de apa vizibila de la trei sute de metri, iar o LOVITURA producea o
+linie de log si o cifra pe o bara.** Singurul rezultat pe care jucatorul il
+urmareste era cel fara nimic de privit.
+
+`AHullSplinters`: paisprezece cuburi care se rasucesc, cu materialul cocii,
+aruncate intr-un con in jurul normalei loviturii, cu gravitatie si frecare.
+**Membrul ieftin al familiei, deliberat:** fumul si focul sunt neluminate si
+translucide si intre ele au costat o zi de gradienti scrisi de mana, un blend
+mode pe care motorul l-a refuzat si descoperirea ca un emisiv sub o mie de
+candele e negru. Aschiile sunt lemn in lumina zilei - cuburi luminate obisnuite,
+niciun script de material, nimic care sa poata fi strivit la negru de expunere.
+
+`gunnery` contra `chips_off`: **exact o cheie difera**. `chips_stranded` probat
+prin mutatie (garda slabita la `LifeSeconds * 20` da 4104).
+
+### Recenzia adversariala, 13 agenti: 2 confirmate, 2 respinse, 17 neverificate
+
+**Cea confirmata era in HANDOFF, si conta.** Sectiunea "Efectele de tragere - DE
+FACUT MAI TARZIU" statea acolo cu data de azi, listand toate trei efectele ca
+neconstruite, dupa ce toate trei fusesera livrate. Fisierul ala spune despre el
+insusi ca exista ca o sesiune noua sa continue fara sa reciteasca un DEVLOG de
+4000 de randuri - deci o sesiune care-l citea asa cum scrie era trimisa sa
+reconstruiasca focul, **cu un plan de implementare diferit de cel livrat**
+(plasa procedurala in loc de ISM). Nu munca refacuta: un al doilea foc, divergent,
+langa primul. Si `OWNER_VERIFY` 20 inca spunea ca fumul e stins implicit - exact
+clasa de afirmatie pe care commit-ul de dinainte o vanase in README.
+
+### Trei defecte de cod pe care le-a scos
+
+**Primul cadru era gresit la AMANDOUA efectele noi.**
+`AddInstance(FTransform::Identity)` poarta scara (1,1,1) si cubul motorului e de
+100 cm, deci fiecare manunchi se deschidea cu un cadru de **paisprezece blocuri
+de stejar de un metru**, iar focul cu trei patrate de un metru intinse orizontal.
+Tick le repara pe cadrul urmator. Pe un cadru lung ala era singurul pe care
+efectul il desena vreodata - si focul traieste 0,10 s. Reparat printr-o functie
+de transformare folosita si de `BeginPlay` si de `Tick`: era scrisa de doua ori,
+si a doua copie era pur si simplu gresita.
+
+**Reparasem o axa din doua.** Ieri am mutat tevile ca sa se potriveasca in Z.
+Focul si fumul ieseau in continuare la 640 cm de axa, iar gura tevii e intre 483
+si 568 - intre 72 si 157 cm mai inauntru. Criteriul pe care il scrisesem in
+`OWNER_VERIFY` 36, "focul, fumul si teava in acelasi loc", era fals cand l-am
+scris. Efectele au acum `GGunMuzzleY`, derivat din `half_beam(t)` la fiecare
+statie; ghiuleaua ramane la 640 fiindca trebuie sa scape de cutia de coliziune.
+
+**Si verificarea pe care o anuntasem in comentariu era falsa.** Scrisesem ca
+`chips_spawned` trebuie sa fie egal cu `struck` - dar `struck` numara ZONE de
+avarie, si era 12 contra 4 fix in scenariul pentru care scrisesem comentariul.
+Acum e o cheie, `hull_hits`, si o poarta care compara cele doua pe FIECARE rand
+din linia de baza. Probata prin mutatie: un burst in plus in `gunnery` o face
+rosie. **O verificare scrisa in proza e una pe care n-o ruleaza nimeni.**
+
+Plus doua reparatii mai mici din aceeasi recenzie: manunchiul mosteneste drumul
+navei lovite (fara asta stejarul iesea dintr-o cocca care mergea cu sase metri pe
+secunda si apoi statea pe loc, ramanand in urma gaurii), si aschiile nu se mai
+deseneaza sub apa - un cub opac nu poate sa se stinga, deci sfarsitul cinstit
+pentru o aschie e marea.
+
+**Ramas, semnalat, NEreparat:** aschiile sar de pe CUTIA de coliziune, nu de pe
+scanduri - cam un metru in afara la mijloc si vreo cinci la prova, unde coca se
+subtiaza. E in `OWNER_VERIFY` 37 ca atare. Repararea inseamna o forma de
+coliziune care urmareste coca, si e o felie separata.
+
+Suita: 38 de scenarii, zero cifre miscate, 149 de chei noi.
+
+**Task Completed.**
+

@@ -378,6 +378,13 @@ SCENARIOS = {
                   "-EnemyY=1500", "-ShipFireTest=8", "-ShipQuitAfter=45",
                   "-ShipFlash=0"],
 
+    # THE OAK OUT OF A HULL, third flag and third row of the same shape. What
+    # makes this one worth a row of its own rather than a counted zero: the burst
+    # count must equal the HIT count, and gunnery is a scenario with hits in it.
+    "chips_off": ["-WindBearing=120", "-WindSpeed=11", "-EnemyX=9000",
+                  "-EnemyY=1500", "-ShipFireTest=8", "-ShipQuitAfter=45",
+                  "-ShipSplinters=0"],
+
     # THE GUNS LAID BY HAND. Three rows around one idea, and each pair says a
     # different thing.
     #
@@ -869,6 +876,29 @@ def measure(name, text):
         m["flash_spawned"] = int(fl.group(1))
         m["flash_live_end"] = int(fl.group(2))
         m["flash_stranded"] = int(fl.group(3))
+
+    # BALLS THAT WENT INTO A HULL. One per SHOTLOG hit line whose target is a
+    # ship, which is a different question from `struck`: that one counts damage
+    # ZONES, and a single ball spreads over several of them and can be scored by
+    # a rigging sweep that never reaches the hull at all. In gunnery they read 4
+    # and 12.
+    #
+    # It exists so the splinters have something to be checked AGAINST. The first
+    # version of the comment below claimed the burst count should agree with
+    # `struck`; it was out by eight in the very scenario it was written for, and
+    # a cross-check stated in prose is one nobody runs. This one is a key, in
+    # every row of the baseline.
+    m["hull_hits"] = len(re.findall(
+        r"SHOTLOG hit by=\S+ shot=\d+ target=\w*ShipPawn_\d+", text))
+
+    # THE HULL SPLINTERS. spawned counts BURSTS, one per ball into a hull - so it
+    # must equal hull_hits above, in every scenario, and ci_checks.py asserts
+    # exactly that over the recorded baseline rather than trusting this comment.
+    ch = re.search(r"CHIPLOG TOTAL spawned=(\d+) live=(\d+) stranded=(\d+)", text)
+    if ch:
+        m["chips_spawned"] = int(ch.group(1))
+        m["chips_live_end"] = int(ch.group(2))
+        m["chips_stranded"] = int(ch.group(3))
 
     # The shot trails. laid is the proof they exist; stranded is the one that
     # must never move - a wisp still drawn after its life ran out is the defect

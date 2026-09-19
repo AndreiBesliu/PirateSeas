@@ -1,5 +1,6 @@
 #include "CannonBall.h"
 
+#include "HullSplinters.h"
 #include "ShotTrail.h"
 
 #include "Island.h"
@@ -62,6 +63,13 @@ void ACannonBall::BeginPlay()
 	if (Collision)
 	{
 		Collision->OnComponentHit.AddDynamic(this, &ACannonBall::OnHit);
+	{
+		int32 Flag = 1;
+		if (FParse::Value(FCommandLine::Get(), TEXT("ShipSplinters="), Flag))
+		{
+			bSplinters = Flag != 0;
+		}
+	}
 	}
 }
 
@@ -285,6 +293,26 @@ void ACannonBall::OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor,
 		UE_LOG(LogTemp, Display, TEXT("SHOTLOG hit by=%s shot=%d target=%s damage=%.0f"),
 			IsValid(Shooter) ? *Shooter->GetName() : TEXT("?"), ShotIndex,
 			*OtherActor->GetName(), ImpactDamage);
+
+		// AND SOMETHING TO SEE. Until 19.09 a hull hit produced this log line and
+		// a number on a bar, while a MISS threw up a column of water visible at
+		// three hundred metres - the one outcome the player is trying for was the
+		// one with nothing to look at.
+		//
+		// Ships only. Rock does not splinter, and a ball into a hillside already
+		// ends with its own reason string; oak coming out of an island would be
+		// the effect lying about what was hit.
+		if (bSplinters && Cast<AShipPawn>(OtherActor))
+		{
+			// The struck ship's way, so the burst stays with the hole, and the
+			// sea's height there, so the pieces end in the water rather than
+			// tumbling through it. Both are read HERE because this is the only
+			// place that knows which ship was hit.
+			AHullSplinters::Spawn(GetWorld(), Hit.ImpactPoint,
+				Hit.ImpactNormal, ShotIndex,
+				FVector(OtherActor->GetVelocity().X, OtherActor->GetVelocity().Y, 0.f),
+				SurfaceZAtDeath);
+		}
 	}
 
 	ReportAndDie(TEXT("impact"), Hit.ImpactPoint);
