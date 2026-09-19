@@ -456,6 +456,30 @@ private:
 
 	/** The ship this one keeps station on, or null if she leads. */
 	AShipPawn* FindNextAhead(const AShipPawn* Me) const;
+
+public:
+	/** LATCHED: the DEEPEST the walk up the line ever had to reach past consorts
+	 *  who had stopped steering - one when a single ship ahead has struck, two
+	 *  when two have, zero in any ordinary action.
+	 *
+	 *  A depth and not a tally, because a tally of skips counts TICKS: it was
+	 *  3600 in a thirty-second run at sixty frames, which is a measurement of
+	 *  the frame rate wearing a tactical name, and it would move if the run
+	 *  length did. The depth says the thing that is actually true about the
+	 *  line.
+	 *
+	 *  It is deliberately NOT "followers keeping station on a corpse", which
+	 *  would be zero both after the fix and before it - nothing was skipped
+	 *  before, because nothing was checked - and so could never tell the two
+	 *  apart. This one goes to zero the moment the filter is removed. */
+	int32 GetLineSkips() const { return LineSkips; }
+
+private:
+	/** Mutable because the walk that does the skipping is const, and
+	 *  making the walk non-const would push the change through every
+	 *  caller for the sake of one counter. */
+	mutable int32 LineSkips = 0;
+public:
 	void HandleOwnShipSunk(AShipPawn* Ship, AActor* Causer);
 
 	UPROPERTY(Transient)

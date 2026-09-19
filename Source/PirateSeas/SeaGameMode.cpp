@@ -172,6 +172,12 @@ void ASeaGameMode::BeginPlay()
 
 	FParse::Value(FCommandLine::Get(), TEXT("ShipSinkTest="), ShipSinkTestAt);
 	FParse::Value(FCommandLine::Get(), TEXT("EnemySinkTest="), EnemySinkTestAt);
+	FParse::Value(FCommandLine::Get(), TEXT("EnemyStrikeTest="), EnemyStrikeTestAt);
+	if (EnemyStrikeTestAt > 0.f)
+	{
+		GetWorldTimerManager().SetTimer(EnemyStrikeTestTimer, this,
+			&ASeaGameMode::StrikeEnemyForTest, EnemyStrikeTestAt, false);
+	}
 	FString Side;
 	if (FParse::Value(FCommandLine::Get(), TEXT("ShipSinkSide="), Side))
 	{
@@ -650,6 +656,30 @@ void ASeaGameMode::BindShip(AShipPawn* Ship)
 {
 	Ship->OnShipSunk.AddUObject(this, &ASeaGameMode::HandleShipSunk);
 	Ship->OnShipWrecked.AddUObject(this, &ASeaGameMode::HandleShipWrecked);
+}
+
+void ASeaGameMode::StrikeEnemyForTest()
+{
+	// The FIRST enemy still in the fight, so the ship that strikes is the one
+	// the rest of the line is dressing on - which is the case that matters. A
+	// consort at the tail striking proves nothing about closing up.
+	for (const TWeakObjectPtr<AShipPawn>& Ptr : Squadron)
+	{
+		AShipPawn* Ship = Ptr.Get();
+		if (IsValid(Ship) && !Ship->IsOutOfTheFight())
+		{
+			// Causer is nobody: she strikes because the test says so, not because
+			// anyone shot her, and a false attacker would show up in the prize
+			// bookkeeping as a capture that never happened.
+			Ship->Strike(nullptr);
+			UE_LOG(LogTemp, Display,
+				TEXT("AILOG %s STRUCK for the test at t=%.1f"),
+				*Ship->GetName(), GetWorld()->GetTimeSeconds());
+			return;
+		}
+	}
+	UE_LOG(LogTemp, Warning,
+		TEXT("AILOG the strike test found no enemy still in the fight"));
 }
 
 TArray<AShipPawn*> ASeaGameMode::GetOrderOfBattle() const
@@ -1703,6 +1733,27 @@ void ASeaGameMode::QuitNow()
 			Laid && Laid->IsAgainstTheStop() ? 1 : 0,
 			Laid && Laid->IsLayLocked() ? 1 : 0,
 			Picture ? Picture->GetSegments() : 0);
+	}
+
+	// THE LINE OF BATTLE. How many times a consort had to be stepped over
+	// because she had stopped steering - struck, made port, or landed as a
+	// prize. Zero in any ordinary action; non-zero exactly when the line closed
+	// up, which is the whole point of the fix this counts.
+	{
+		// THE MAXIMUM, not the sum. Summing the per-ship depths gave 2 where one
+		// consort had struck and two ships were following her - which is a count
+		// of FOLLOWERS wearing a depth's name, and it would have grown with the
+		// squadron rather than with anything tactical. The comment on
+		// GetLineSkips said "deepest"; this line said "total". Same class of
+		// mistake as the broadside that reported an elevation nobody fired at,
+		// and caught the same way: by asking why a number was 2 when the
+		// arithmetic said 1.
+		int32 Skips = 0;
+		for (TActorIterator<AShipAIController> It(GetWorld()); It; ++It)
+		{
+			Skips = FMath::Max(Skips, It->GetLineSkips());
+		}
+		UE_LOG(LogTemp, Display, TEXT("AILOG TOTAL line_skips=%d"), Skips);
 	}
 
 	// ALWAYS, even in a run with no convoy in it: a counted zero. A money

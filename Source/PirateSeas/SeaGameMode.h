@@ -420,6 +420,16 @@ private:
 	 *  last. */
 	void RefitInPort();
 
+	/** -EnemyStrikeTest=N: the first enemy of the squadron still in the fight
+	 *  strikes her colours at N seconds. A consort that stops steering has to
+	 *  happen at a KNOWN moment for the line to be measurable at all - waiting
+	 *  for one to strike under fire is the trap this project has already paid
+	 *  for twice, where a counter reads zero for a geometric reason and more
+	 *  running time does not help. */
+	float EnemyStrikeTestAt = -1.f;
+	FTimerHandle EnemyStrikeTestTimer;
+	void StrikeEnemyForTest();
+
 	/** -ConvoyStrikeTest=N: the first merchant still running strikes at N
 	 *  seconds, through Strike() and nothing else, so the whole path from a
 	 *  strike to a finished mission can be proved without a single shot. */

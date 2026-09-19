@@ -301,11 +301,31 @@ AShipPawn* AShipAIController::FindNextAhead(const AShipPawn* Me) const
 		return nullptr;
 	}
 	AShipPawn* Ahead = nullptr;
+	// How far past the fallen this particular walk had to reach. Reset per walk
+	// and latched at the end: the QUESTION is how deep the line had to look,
+	// not how many frames it spent looking.
+	int32 SkippedHere = 0;
 	for (AShipPawn* Ship : Sea->GetOrderOfBattle())
 	{
 		if (Ship == Me)
 		{
+			LineSkips = FMath::Max(LineSkips, SkippedHere);
 			return Ahead;
+		}
+		// STILL STEERING, which is what the comment above has always promised and
+		// what this loop did not check. A ship that has struck her colours is not
+		// sunk - she is afloat, drifting, and no longer has a course - and the
+		// call site only ever excluded the sunk. So the line dressed itself on a
+		// corpse, and every consort astern of her followed a hull that was going
+		// wherever the sea took it.
+		//
+		// Skipping her passes the station up the line to the last ship that is
+		// actually navigating, which is what a line does when a consort falls
+		// out: it closes up.
+		if (!IsValid(Ship) || Ship->IsOutOfTheFight() || Ship->HasLandedAsPrize())
+		{
+			++SkippedHere;
+			continue;
 		}
 		Ahead = Ship;
 	}
@@ -920,7 +940,10 @@ void AShipAIController::Tick(float DeltaSeconds)
 	// astern of the guns, ninety degrees from where they can ever train.
 	AShipPawn* NextAhead = FindNextAhead(Me);
 	bool bKeepingStation = false;
-	if (IsValid(NextAhead) && !NextAhead->IsSunk() && Tactic != EShipTactic::Disengage)
+	// FindNextAhead has already refused anyone who is not steering, so what is
+	// left here is the tactical question only: a ship running for her life does
+	// not dress a line.
+	if (IsValid(NextAhead) && Tactic != EShipTactic::Disengage)
 	{
 		const FVector AheadDir = NextAhead->GetActorForwardVector().GetSafeNormal2D();
 		const FVector Station = NextAhead->GetActorLocation() - AheadDir * LineIntervalCm;

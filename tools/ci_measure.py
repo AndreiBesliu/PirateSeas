@@ -391,6 +391,26 @@ SCENARIOS = {
     "aim_port": ["-WindBearing=120", "-WindSpeed=11", "-EnemyX=9000",
                  "-EnemyY=1500", "-ShipFireTest=8", "-ShipQuitAfter=45",
                  "-LayTrain=6", "-LayElev=5", "-LayStarboard=0"],
+
+    # THE LINE OF BATTLE, closing up over a consort who has stopped steering.
+    # An adversarial review found, some commits ago, that the followers dressed
+    # on whoever was ahead of them in the order whether or not she was still
+    # navigating - and a ship that has STRUCK is not sunk, she is afloat and
+    # drifting. The comment on FindNextAhead had always promised "that is still
+    # steering"; the loop never checked.
+    #
+    # The pair differs in one flag and `line_skips` MUST differ with it: the
+    # depth the walk had to reach past the fallen. It is a DEPTH and not a tally
+    # of skips, because a tally counts ticks - it read 3600 in a thirty-second
+    # run at sixty frames, which measures the frame rate, and it moved when the
+    # run length did. The depth does not: measured 2 at forty seconds and 2 at
+    # eighty.
+    "line_closes": ["-WindBearing=120", "-WindSpeed=11", "-EnemyX=12000",
+                    "-EnemyY=3000", "-EnemyCount=3", "-EnemyStrikeTest=10",
+                    "-ShipQuitAfter=40"],
+
+    "line_whole": ["-WindBearing=120", "-WindSpeed=11", "-EnemyX=12000",
+                   "-EnemyY=3000", "-EnemyCount=3", "-ShipQuitAfter=40"],
 }
 
 
@@ -767,6 +787,13 @@ def measure(name, text):
         # wrong line is still a line - but it is the proof they are DRAWN, and
         # it is the number the -AimMarks=0 pair moves.
         m["aim_segments"] = int(am.group(9))
+
+    # THE LINE OF BATTLE. How deep the walk up the line had to reach past
+    # consorts who had stopped steering: zero in any ordinary action, and the
+    # number of fallen ships ahead when the line closes up.
+    ln = re.search(r"AILOG TOTAL line_skips=(\d+)", text)
+    if ln:
+        m["line_skips"] = int(ln.group(1))
 
     # What the money BOUGHT. Printed at every quit whether there is a port or
     # not, so these are counted zeros rather than absences - and spent beside

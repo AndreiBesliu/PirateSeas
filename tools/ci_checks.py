@@ -391,6 +391,14 @@ def check_comparison():
             fail("a gun laid BELOW level is not read: %s is %r, expected %r"
                  % (key, low.get(key), want))
 
+    # THE LINE OF BATTLE's quit line, so a format drift on it fails here rather
+    # than by quietly reading nothing - which is what happened to the trail.
+    line = ci_measure.measure("fixture",
+                              "LogTemp: Display: AILOG TOTAL line_skips=2\n")
+    if line.get("line_skips") != 2:
+        fail("the line-of-battle quit line is no longer read: %r"
+             % line.get("line_skips"))
+
     # AND THE SIGN ITSELF, as arithmetic rather than as a fixture. A lay six
     # degrees forward of the beam puts sin(6) = 0.1045 of the barrels' direction
     # along the bow, on EITHER battery. The defect the owner found by playing
