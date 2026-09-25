@@ -334,6 +334,28 @@ parametrul funcţionează. Dar între 0,98 şi 1,06 diferenţa e **o singură
 lovitură din treizeci şi trei**, pe patru seminţe. Aia e împrăştiere, nu semnal,
 şi nu se calibrează nimic pe ea. Rămâne 1,04.
 
+## Urmele loviturilor
+
+**O lovitura in cocca lasa un semn care ramane.** Pana pe 25.09 se vedea in
+cifre, nu pe lemn: o bara HULL scazand si un manunchi de aschii care se stingea
+intr-o secunda. Acum fiecare ghiulea intrata in lemn lasa un disc intunecat de
+60 cm la punctul si cu inclinarea pe care le-a raportat coliziunea cocii, si
+discul calatoreste cu nava. E lemnul ei intunecat (`MI_DarkWood`), fara niciun
+material nou - un negru luminat de soare e ce e o gaura in stejar la trei sute
+de metri.
+
+Asta e jumatatea care RAMANE din „feedback la contact" - aschiile sunt cea care
+trece - si a devenit posibila abia cand ghiuleaua a inceput sa se opreasca pe
+lemn: pe cutia de coliziune semnul ar fi plutit cu un metru in afara bordajului.
+
+Numarate, nu presupuse: `HOLELOG` per nava la iesire, iar `holes_total` adunat
+peste toate cocile trebuie sa fie egal cu `hull_hits` pe fiecare rand din
+suita - aceeasi poarta sub care traiesc aschiile. `-ShipHoles=0` le stinge, si
+perechea `gunnery` / `holes_off` difera in exact familia asta. Plafon 32 pe
+nava, cele mai vechi primele, si taierea e numarata (`holes_culled`) - un zero
+pe care niciun scenariu de azi nu-l misca: randul cel mai lovit din suita
+numara 15 gauri, peste toate cocile lui.
+
 ## Coca pe care o loveste ghiuleaua
 
 **Pana pe 25.09 o ghiulea se oprea pe o CUTIE.** Radacina navei e o cutie de
@@ -1080,6 +1102,7 @@ pereche de rulări citea împrăștiere și credea că citește semnal.
 | `-ShipSmoke=0` | stinge fumul de tun (implicit APRINS din 17364af) |
 | `-ShipFlash=0` | stinge focul de la gura tunului (implicit APRINS) |
 | `-ShipSplinters=0` | stinge aschiile de la o lovitura in cocca (implicit APRINSE) |
+| `-ShipHoles=0` | stinge urmele loviturilor de pe cocca (implicit APRINSE) |
 | `-WindBearing=N` | fixează DIRECȚIA vântului, altfel „mal sub vânt" nu e reproductibil |
 | `-WindSpeed=N` | fixează și TĂRIA lui; fără asta două treceri peste același unghi sunt luate pe vreme diferită |
 | `-ShipPolar=1` | polarul de regim STABILIZAT: ține cârma pe un cap, așteaptă până nava nu mai schimbă nimic, abia atunci scrie rândul |

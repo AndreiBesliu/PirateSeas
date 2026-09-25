@@ -329,7 +329,7 @@ atmosfera, iar dara face cititul.
 
 ## Ce aşteaptă ochiul owner-ului
 
-`OWNER_VERIFY.md` are **38** de puncte; **16–36 n-au fost confirmate niciodată**, 37 e reparat, 38 e o DECIZIE a lui
+`OWNER_VERIFY.md` are **39** de puncte; **16–36 şi 39 n-au fost confirmate niciodată**, 37 e reparat, 38 e o DECIZIE a lui
 — sunt judecăţi vizuale pe care nu le pot face eu. (Scria 34 aici, şi numărul a
 rămas în urmă de două ori la rând: cele mai NOI puncte sunt exact cele pe care
 un cititor al acestei linii nu le-ar fi deschis.) Punctul 20 nu mai e o

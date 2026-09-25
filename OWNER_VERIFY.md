@@ -5,7 +5,7 @@ arată bine și de ce nu pot eu.
 
 ## Prima pagină — citește doar asta (25.09)
 
-Lista are 38 de puncte și de şase zile n-a fost atinsă. Nu-ţi cer să o parcurgi.
+Lista are 39 de puncte și de şase zile n-a fost atinsă. Nu-ţi cer să o parcurgi.
 **Mai jos sunt singurele lucruri care contează acum**, în ordinea în care
 contează; restul e arhivă, etichetată ca atare la sfârşitul paginii.
 
@@ -39,6 +39,8 @@ n-o repet aici ca fapt; dacă vrei să hotărăşti pe ea, o re-măsor întâi.
    mut banda, starea „afet distrus" o vei vedea rar.)
 4. **33 — ochirea: te obligă să manevrezi, sau doar te enervează?**
 5. **34 — proporţia navei** după ce a fost ridicată pe linia ei de plutire.
+6. **39 — urmele loviturilor.** Nou, 25.09: un disc de 60 cm la fiecare gaură.
+   Dacă citeşte a gaură sau a abţibild.
 
 ### Restul
 
@@ -1015,4 +1017,27 @@ E o alegere de echilibru, ca magazia finită, nu o reparaţie.
 până la vârful copastiei". O bandă mai largă ar lăsa mai multe dărâmări. Proba
 se poate rula din nou cu altă bandă (`--band=180,380`); rulează luptele în motor,
 deci durează câteva minute, nu secunde.
+
+## 39. Urmele loviturilor pe cocca
+
+**Ce te uiti:** Trage intr-o nava de aproape (`-EnemyX=3000 -EnemyY=600` si
+`-ShipFireTest=8`), apoi apropie camera de bordajul ei dupa salva. Sau lasa-te
+lovit si uita-te la propriul bordaj.
+
+**Cum arata bine:** Un disc intunecat, cat un cap de om, EXACT unde a intrat
+ghiuleaua, lipit de scanduri, care ramane acolo si se misca odata cu nava. Dupa
+o lupta lunga, bordajul unei nave batute e ciuruit si se vede de la distanta ca
+a incasat.
+
+**Cum arata prost:** Discul pluteste langa bordaj sau intra in el (e impins 2 cm
+in afara pe normala; daca nu ajunge, se vede z-fighting). Sau e prea mic ca sa
+se vada la distanta de lupta (60 cm e alegerea mea; 80 e urmatoarea). Sau arata
+a abtibild rotund, nu a gaura - atunci ii trebuie o margine rupta, si aia e alt
+material.
+
+**De ce nu pot eu:** pot numara ca sunt exact cate lovituri au fost (poarta o
+cere pe fiecare rand din suita) si ca stau la punctul raportat de coliziune. Am
+incercat sa le fotografiez: la 30 m un disc de 60 cm e cinci pixeli intr-un
+cadru de 1920, si nu l-am putut deosebi de fum. Cat de tare se vede, si daca
+citeste a gaura, e ochiul tau.
 

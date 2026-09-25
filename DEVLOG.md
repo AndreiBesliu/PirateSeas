@@ -4531,3 +4531,31 @@ Baseline reinregistrat.
 
 **Task Completed.**
 
+## 25.09.2026 - Urmele loviturilor: jumatatea care ramane din „feedback la contact"
+
+**Task Started.** Prompt: "continua". Model: Fable 5.1.
+
+Aschiile (19.09) sunt jumatatea care trece; asta e cea care ramane. Fiecare
+ghiulea intrata in lemn - cocca, tunuri, carma; niciodata greementul, niciodata
+o lovitura de esuare (punctul ei e sintetic), niciodata un sabordaj - lasa un
+disc intunecat de 60 cm la punctul si pe normala raportate de coliziunea cocii,
+impins 2 cm in afara, intr-un `InstancedStaticMeshComponent` prins de cutia
+radacina, ca sa calatoreasca cu nava. Lemnul ei intunecat (`MI_DarkWood`) si un
+cilindru al motorului turtit: niciun material nou, nimic de strivit la negru.
+
+A devenit posibil abia azi dimineata: pe cutia de coliziune semnul ar fi plutit
+la un metru de bordaj.
+
+**Numarat:** `HOLELOG` per nava la iesire; `holes_total` adunat peste coci
+trebuie sa fie egal cu `hull_hits` pe fiecare rand - poarta o cere, ca la aschii.
+Suita: **39 de scenarii, zero cifre miscate, 115 chei noi**, egalitatea tinuta
+pe toate cele 38 de randuri cu urme, `holes_off` la 0. Plafonul de 32 pe nava
+nu musca nicaieri (randul cel mai lovit numara 15, peste toate cocile lui).
+
+**Fotografia n-a iesit**, si o spun in loc s-o pretind: la 30 m un disc de 60
+cm e cinci pixeli intr-un cadru de 1920 si nu l-am putut deosebi de fum. Cifrele
+probeaza ca sunt exact cate lovituri au fost si ca stau unde a spus coliziunea;
+daca se VAD, si daca citesc a gaura sau a abtibild, e `OWNER_VERIFY` 39.
+
+**Task Completed.**
+

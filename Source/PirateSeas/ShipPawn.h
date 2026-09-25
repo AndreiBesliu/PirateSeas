@@ -487,6 +487,12 @@ public:
 	 *  from. Asked of the ship rather than guessed from a name. */
 	bool IsRigVolume(const UPrimitiveComponent* Comp) const;
 
+	/** The scars, for the quit line. Public, beside IsRigVolume: the third time
+	 *  this session an accessor landed under `protected:` beside its data. */
+	int32 GetHolesAdded() const { return HolesAdded; }
+	int32 GetHolesCulled() const { return HolesCulled; }
+	int32 GetHolesLive() const;
+
 	/** How many carriages on that side are standing AND loaded - which is how
 	 *  many will actually go if the order is given now, magazine permitting. */
 	int32 GetGunsReady(bool bStarboard) const;
@@ -560,6 +566,14 @@ protected:
 	 *  the ball, and the ball finds this instead. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Ship")
 	TObjectPtr<UStaticMeshComponent> HullShot;
+
+	/** THE HITS THAT STAY. One dark disc per ball that went into the timber,
+	 *  placed at the hull-local point and normal the collision skin reported,
+	 *  riding with the ship. Capped at MaxShotHoles oldest-first, and the cull
+	 *  is counted: a cap that trims silently reads as "she was never hit more
+	 *  than this". Counted against hull_hits by the suite. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Ship")
+	TObjectPtr<UInstancedStaticMeshComponent> ShotHoles;
 
 	/** One dynamic material per slot of the hull mesh, made on the first tick.
 	 *  They exist to carry the wind into the rig: the master bends masts, sails
@@ -818,6 +832,17 @@ protected:
 	/** The short fire at the muzzle. -ShipFlash=0 turns it off. */
 	UPROPERTY(EditAnywhere, Category = "Guns")
 	bool bMuzzleFlash = true;
+
+	/** The scars. -ShipHoles=0 turns them off. */
+	UPROPERTY(EditAnywhere, Category = "Guns")
+	bool bShotHoles = true;
+
+	/** Diameter of a scar, centimetres. A 15 cm ball tears more than its own
+	 *  width out of plank; sixty reads at three hundred metres, forty does not. */
+	UPROPERTY(EditAnywhere, Category = "Damage")
+	float ShotHoleCm = 60.f;
+
+	static constexpr int32 MaxShotHoles = 32;
 
 	/** How many times the lead is refined. The flight time depends on the
 	 *  range and the range depends on the lead, so one pass is already close
@@ -1243,6 +1268,12 @@ private:
 	FVector LastHitLocal = FVector::ZeroVector;
 	/** The ball's direction at that hit, hull-local, for the zone log only. */
 	FVector LastHitDirLocal = FVector::ZeroVector;
+
+	/** The surface normal at that hit, hull-local: where a scar faces. */
+	FVector LastHitNormalLocal = FVector::ZeroVector;
+
+	int32 HolesAdded = 0;
+	int32 HolesCulled = 0;
 	bool bHasLastHit = false;
 	FVector BreachLocal = FVector::ZeroVector;
 	float LiftFraction = 0.f;

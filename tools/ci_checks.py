@@ -404,6 +404,29 @@ def check_comparison():
         fail("a zero must still be RECORDED, or the one number that must never "
              "move could vanish instead of moving: %r" % smoke)
 
+    # THE SCARS' quit line, summed over hulls.
+    ho = ci_measure.measure("fixture",
+        "LogTemp: Display: HOLELOG ShipPawn_0 added=2 live=2 culled=0\n"
+        "LogTemp: Display: HOLELOG EnemyShipPawn_0 added=5 live=4 culled=1\n")
+    if ho.get("holes_total") != 7 or ho.get("holes_live_end") != 6 or ho.get("holes_culled") != 1:
+        fail("the scar quit line is not summed over hulls: %r" % ho)
+
+    # AND THE ARITHMETIC: a scar per ball into timber, so holes_total must
+    # equal hull_hits on every recorded row but holes_off - the same gate the
+    # splinters live under, for the same reason.
+    base_path = os.path.join(ROOT, "tools", "measurement_baseline.json")
+    if os.path.exists(base_path):
+        rows = json.loads(io.open(base_path, encoding="utf-8-sig").read())
+        for name, row in sorted(rows.items()):
+            if "holes_total" not in row or "hull_hits" not in row:
+                continue
+            if name == "holes_off":
+                if row["holes_total"] != 0:
+                    fail("holes_off must add no scars: %r" % row["holes_total"])
+                continue
+            if row["holes_total"] != row["hull_hits"]:
+                fail("%s: %d scars for %d hull hits" % (name, row["holes_total"], row["hull_hits"]))
+
     # ENEMY GUNS KNOCKED OUT: only the enemy's, only the guns zone. A player
     # gun hit and an enemy hull hit must both count for nothing here.
     eg = ci_measure.measure("fixture",

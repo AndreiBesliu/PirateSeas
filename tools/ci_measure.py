@@ -385,6 +385,12 @@ SCENARIOS = {
                   "-EnemyY=1500", "-ShipFireTest=8", "-ShipQuitAfter=45",
                   "-ShipSplinters=0"],
 
+    # THE SCARS, fourth flag of the same shape. holes_total must equal hull_hits
+    # everywhere but here.
+    "holes_off": ["-WindBearing=120", "-WindSpeed=11", "-EnemyX=9000",
+                  "-EnemyY=1500", "-ShipFireTest=8", "-ShipQuitAfter=45",
+                  "-ShipHoles=0"],
+
     # THE GUNS LAID BY HAND. Three rows around one idea, and each pair says a
     # different thing.
     #
@@ -872,6 +878,17 @@ def measure(name, text):
     # the number that gate suppressed (7 where the timber says 13).
     m["enemy_gun_hits"] = len(re.findall(
         r"SHOTLOG zone guns target=EnemyShipPawn_\d+ ", text))
+
+    # THE SCARS. Summed over every hull, because a hit is a hit whoever took
+    # it, and the number to hold against is hull_hits, which counts them the
+    # same way. live and culled are per run, summed too; culled is a zero no
+    # scenario can move today (32 per ship; the most any ROW sums to is 15,
+    # over every hull in it), which is said here so nobody reads it as a proof.
+    holes = re.findall(r"HOLELOG \S+ added=(\d+) live=(\d+) culled=(\d+)", text)
+    if holes:
+        m["holes_total"] = sum(int(a) for a, _, _ in holes)
+        m["holes_live_end"] = sum(int(l) for _, l, _ in holes)
+        m["holes_culled"] = sum(int(c) for _, _, c in holes)
 
     # WHETHER A BALL CAN FIND A HULL AT ALL. Every ship says at BeginPlay whether
     # her collision skin carries complex-as-simple; the failure is otherwise

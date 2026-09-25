@@ -1685,6 +1685,12 @@ void ASeaGameMode::QuitNow()
 			TEXT("SHOTLOG %s magazine shot=%d/%d fired=%d dry=%d"),
 			*It->GetName(), It->GetShot(), It->GetShotMax(), It->GetShotFired(),
 			It->GetDryRefusals());
+		// The scars she carries at quit: added over the run, still drawn, and
+		// how many the cap threw away. added summed over every hull must equal
+		// hull_hits, and the gate says so.
+		UE_LOG(LogTemp, Display,
+			TEXT("HOLELOG %s added=%d live=%d culled=%d"),
+			*It->GetName(), It->GetHolesAdded(), It->GetHolesLive(), It->GetHolesCulled());
 		UE_LOG(LogTemp, Display,
 			TEXT("CREWLOG %s hands=%d/%d casualties=%d repairShare=%.2f repaired=%.3f gunCrew=%.2f rig=%.2f rudder=%.2f"),
 			*It->GetName(), It->GetHands(), It->GetHandsMax(), It->GetCasualties(),

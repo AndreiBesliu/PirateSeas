@@ -1,6 +1,7 @@
 #include "ShipPawn.h"
 
 #include "PhysicsEngine/BodySetup.h"
+#include "Components/InstancedStaticMeshComponent.h"
 
 #include "AimIndicator.h"
 
@@ -177,6 +178,31 @@ AShipPawn::AShipPawn()
 	if (ShotHullAsset.Succeeded())
 	{
 		HullShot->SetStaticMesh(ShotHullAsset.Object);
+	}
+
+	// --- the scars -------------------------------------------------------
+	// One instanced mesh, attached to the box so the holes ride with her. A
+	// flattened cylinder is a disc; MI_DarkWood is the ship's own dark timber,
+	// and near-black lit wood is what a hole in oak is at fighting range - no
+	// new material, nothing that can be crushed to black by exposure.
+	ShotHoles = CreateDefaultSubobject<UInstancedStaticMeshComponent>(TEXT("ShotHoles"));
+	ShotHoles->SetupAttachment(HullCollision);
+	ShotHoles->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	ShotHoles->SetGenerateOverlapEvents(false);
+	ShotHoles->SetCastShadow(false);
+	ShotHoles->bReceivesDecals = false;
+	ShotHoles->SetMobility(EComponentMobility::Movable);
+	static ConstructorHelpers::FObjectFinder<UStaticMesh> HoleMesh(
+		TEXT("/Engine/BasicShapes/Cylinder.Cylinder"));
+	if (HoleMesh.Succeeded())
+	{
+		ShotHoles->SetStaticMesh(HoleMesh.Object);
+	}
+	static ConstructorHelpers::FObjectFinder<UMaterialInterface> HoleMat(
+		TEXT("/Game/Materials/MI_DarkWood.MI_DarkWood"));
+	if (HoleMat.Succeeded())
+	{
+		ShotHoles->SetMaterial(0, HoleMat.Object);
 	}
 
 	// --- the rig, as something a shot can find --------------------------
@@ -415,6 +441,11 @@ void AShipPawn::BeginPlay()
 	if (FParse::Value(FCommandLine::Get(), TEXT("ShipFlash="), Flag))
 	{
 		bMuzzleFlash = Flag != 0;
+	}
+	Flag = 1;
+	if (FParse::Value(FCommandLine::Get(), TEXT("ShipHoles="), Flag))
+	{
+		bShotHoles = Flag != 0;
 	}
 	// RangeBias makes the guns fire long by a few percent. It was calibrated
 	// when the shot was laid on where the target WAS, so part of what it was
@@ -1244,6 +1275,11 @@ int32 AShipPawn::GetGunsRemaining(bool bStarboard) const
 	return Count;
 }
 
+int32 AShipPawn::GetHolesLive() const
+{
+	return ShotHoles ? ShotHoles->GetInstanceCount() : 0;
+}
+
 bool AShipPawn::IsRigVolume(const UPrimitiveComponent* Comp) const
 {
 	// In the .cpp, not the header: the header only forward-declares
@@ -1353,6 +1389,8 @@ float AShipPawn::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent,
 		// each hit against the hull's real sections from Scripts/ship.py.
 		LastHitDirLocal = GetActorTransform().InverseTransformVectorNoScale(
 			Point.ShotDirection.GetSafeNormal());
+		LastHitNormalLocal = GetActorTransform().InverseTransformVectorNoScale(
+			Point.HitInfo.ImpactNormal.GetSafeNormal());
 		bHasLastHit = true;
 		Struck = Point.HitInfo.Component.Get();
 	}
@@ -1364,6 +1402,29 @@ float AShipPawn::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent,
 	// Men, as well as timber. A grounding blow kills nobody: the ground does
 	// not throw splinters, and bGroundingBlow already tags the log for it.
 	const bool bShot = !bGroundingBlow;
+
+	// THE SCAR, for a ball that went into timber: hull, guns or rudder, never
+	// the rig (a rig hit's point is inside a box in the air), never a grounding
+	// blow (its point is synthetic), never a scuttle. Placed 2 cm proud of the
+	// surface along its normal so it draws over the planking rather than
+	// fighting it. Counted here, at the one place every timber hit passes.
+	if (bShot && bShotHoles && ShotHoles && bHasLastHit
+		&& Zone != EShipZone::ForeRig && Zone != EShipZone::MainRig
+		&& !bScuttling && !LastHitNormalLocal.IsNearlyZero())
+	{
+		if (ShotHoles->GetInstanceCount() >= MaxShotHoles)
+		{
+			ShotHoles->RemoveInstance(0);
+			++HolesCulled;
+		}
+		const FVector N = LastHitNormalLocal.GetSafeNormal();
+		const FQuat Face = FRotationMatrix::MakeFromZ(N).ToQuat();
+		const float D = ShotHoleCm / 100.f;   // the engine cylinder is 100 cm across
+		ShotHoles->AddInstance(FTransform(Face, LastHitLocal + N * 2.f,
+			FVector(D, D, 0.02f)), false);
+		++HolesAdded;
+	}
+
 	switch (Zone)
 	{
 	case EShipZone::ForeRig:
