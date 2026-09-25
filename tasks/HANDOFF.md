@@ -75,12 +75,13 @@ vânt în plante şi greement, `-Hour=` pentru ora din zi.
   din `OWNER_VERIFY` 38 (banda tunurilor nu mai contine tunurile).
 - **Porţile:**
   - `python tools/ci_checks.py` — fără motor, rulează şi în CI hosted
-  - `python tools/ci_measure.py` — 48 scenarii headless vs `tools/measurement_baseline.json`
+  - `python tools/ci_measure.py` — 54 scenarii headless vs `tools/measurement_baseline.json`
   - `python tools/ci_measure.py --record` — rescrie linia de bază, DELIBERAT, în
     acelaşi commit care o mişcă
   - `python tools/png_diff.py a.png b.png x0 y0 x1 y1` — compară o casetă
 - **Reproductibilitate:** `-UseFixedTimeStep -FPS=60 -ShipSeed=1` plus vântul, pe
   fiecare rulare. Fără toate patru, două rulări identice dau numere diferite.
+  Cu `-Port=1`, şi `-Ledger=0`: altfel a doua rulare pleacă din cartea primei.
 - **Capturi:** scoate `-NullRHI` şi adaugă `-ShipShots=20,21 -ShipShotCam=beam`.
   `-Ledger=0` RĂMÂNE: fără el, captura pleacă din cartea navei a owner-ului.
   Prima rulare după ce reconstruieşti un material arată starea VECHE — rulează
@@ -266,9 +267,14 @@ Livrat:
    test), si scrisa O DATA in `ASeaGameMode::EndPlay` - drumul iesirii unui
    jucator, pe care suita il parcurge prin `Exec quit`. Duce oameni, coca,
    ghiulele si LADA (bani pe uscat; in vistierie doar cand jucatorul e raider si
-   exista rada). Nava pierduta = 1780 din lada, la preturile portului. Suita:
-   `-Ledger=0` in PINNED, sase randuri `ledger_*` pe fisiere din `Saved/CI/`
-   copiate din `tools/books/`, garda octet-cu-octet pe cartea reala.
+   exista rada). Nava pierduta = 1780 din lada, la preturile portului. DOAR in
+   partide cu `-Port=1` si fara `-Shot=`/`-ShipHullTest=` (recenzia: fara rada
+   cartea doar uza nava). Cititor strict (`book=1`...`end=1`, numere de 1-9
+   cifre), recuperare din `.tmp`, pagina refuzata pusa deoparte. Rada vinde doar
+   partii pungii (`IsPurseSide`), si doctrina AI de port la fel. Suita:
+   `-Ledger=0` in PINNED, douasprezece randuri `ledger_*` pe fisiere din
+   `Saved/CI/` copiate din `tools/books/`, garda octet-cu-octet (care si
+   restaureaza) pe cartea reala.
    Designul a iesit dintr-un panel (3 designuri, 2 judecatori): tunurile si
    metalul purtate de carte sunt felia 2; campania respinsa de ambii, fiindca
    cheia ei era o suma a doua chei existente.
@@ -305,12 +311,9 @@ Urmatorul: de ales cu owner-ul. **Deschise si stiute:**
 - ~~Fumul de tun e parcat~~ **DEPARCAT 19.09 si PORNIT implicit.** Era
   subexpus, nu intunecat: culoare autorata la 0,78 intr-o scena cu punct alb
   5793 cd/m2. Reautorat in candele. Suita: zero diferente.
-- **Rada repara pe oricine e in cerc.** `RefitInPort` sare doar negustorii si
-  epavele: o nava a Coroanei care intra in rada jucatorului e reparata din punga
-  lui - si, de pe 25.09, din lada cartii. Niciun rand n-are jucatorul ca raider
-  cu port si un inamic langa port, deci n-a fost masurat niciodata. DE FACUT:
-  garda pe latura pungii (Player cand `RaiderSide` e gol, Crown altfel), cu un
-  rand care o exercita.
+- ~~**Rada repara pe oricine e in cerc.**~~ **INCHIS 25.09:** rada vinde doar
+  partii pungii, iar doctrina AI de port socoteste punga doar a partii ei;
+  randul `ledger_side` exercita ambele gărzi, separat.
 - Linia de bataie lasa urmaritorii pe un lider care a incetat sa navigheze, si
   commitul de impachetare n-a fost citit de nicio lentila.
 

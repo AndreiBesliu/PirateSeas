@@ -38,6 +38,12 @@ public:
 	 *  -LedgerBook=<path> reads and writes another file instead (the suite's
 	 *  fixtures, relative to the project).
 	 *
+	 *  ONLY IN A RUN WITH A ROADSTEAD (-Port=1). A carried loss can only be made
+	 *  good in port; a run without one would wear the ship down cruise after
+	 *  cruise with nothing to restore her, and make being sunk the free way
+	 *  back. And never in a run with -Shot= or -ShipHullTest=: those set her
+	 *  by hand, and a test's state is not the ship's.
+	 *
 	 *  Called by the player's hull from its own BeginPlay, after the lines that
 	 *  fill her and before the test flags, so a -Shot= still has the last word.
 	 *  It fits ONE hull per run: a replacement after a sinking is a new ship,
@@ -48,6 +54,14 @@ public:
 	int32 GetCruise() const { return BookCruises + 1; }
 	/** What the chest would hold if the cruise ended now. */
 	int32 GetChestOut() const;
+	/** Whose purse is it. The player's when there is no -RaiderSide=, the
+	 *  Crown's (an AI raider and her consorts) when there is. The roadstead
+	 *  sells only to that side, and only that side counts the coffers as its
+	 *  own: a Crown ship that sails into the player's port must not be refitted
+	 *  out of his chest, nor bear away for port because his chest is full. */
+	bool IsPurseSide(const AShipPawn* Ship) const;
+	/** -Port=N>0. One reading, shared by the port itself and the book. */
+	static bool PortRequested();
 
 	int32 GetVictories() const { return Victories; }
 
@@ -350,6 +364,20 @@ private:
 	EBookSlot BookSlot = EBookSlot::Off;
 	bool bBookRead = false;
 	FString BookPath;
+	/** Why the book is shut, or "open": pinned (-Ledger=0), noport, testflag. */
+	FString BookWhy = TEXT("pinned");
+	/** False when a file was there and could not be read: nothing is written
+	 *  over a book this run could not see. */
+	bool bBookWritable = true;
+	/** A page that was not a book, moved to <book>.rejected before the quit
+	 *  writes a new one - kept, not destroyed. */
+	bool bBookSetAside = false;
+	/** book.txt missing and book.txt.tmp whole: the last quit died between
+	 *  writing the new page and putting it in place. */
+	bool bBookRecovered = false;
+	/** Hulls the roadstead refused because they were not on the purse's side,
+	 *  once each. */
+	TSet<FName> RefusedSide;
 	bool bBookLoaded = false;
 	/** False for a first cruise, a refused book, or a book written with no
 	 *  ship afloat: then the first hull sails as she was built. */

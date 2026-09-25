@@ -764,7 +764,9 @@ void AShipAIController::Tick(float DeltaSeconds)
 		// What is in the coffers decides whether the trip is worth making.
 		const ASeaGameMode* Sea = GetWorld()
 			? GetWorld()->GetAuthGameMode<ASeaGameMode>() : nullptr;
-		const int32 Coffers = Sea ? Sea->GetCoffers() : 0;
+		// Only the purse's own side counts it as money: a Crown ship must not
+		// break off to spend a chest that is the player's.
+		const int32 Coffers = (Sea && Sea->IsPurseSide(Me)) ? Sea->GetCoffers() : 0;
 		const bool bDry = Me->HasMagazine()
 			&& Me->GetShot() < RefitBelowShot * Me->GetShotMax();
 		const bool bWants = (Me->GetHandsShort() >= RefitWhenShort

@@ -1032,12 +1032,13 @@ def check_ledger():
     """THE SHIP'S BOOK, held against paper.
 
     Three kinds of proof, and none of them is the game agreeing with itself:
-      - the suite can never open a player's book: the pin, no flag that
-        FParse::Value's substring search would read as the switch, every other
-        launcher pinned too, and in the recorded rows "default" never appears;
-      - every book row's numbers are worked out HERE, before looking at the
-        row, from the fixture file and the price list read out of the headers -
-        a second arithmetic, in another language, over the same inputs;
+      - the suite can never open a player's book: the pin, no flag the engine
+        would read as the switch, every other launcher pinned, and in the
+        recorded rows the player's slot never appears;
+      - every book row's numbers - including which rows must leave the book
+        SHUT and why - are worked out HERE, before looking at the row, from the
+        row's own flags, the fixture file and the price list read out of the
+        headers: a second arithmetic, in another language, over the same inputs;
       - the pair differs in the ledger_* family and nothing else, and the
         cycle row opens with exactly what the spend row closed with: the only
         proof that crosses a process boundary, which is the feature.
@@ -1050,46 +1051,67 @@ def check_ledger():
         fail("cannot import ci_measure: %s" % e)
         return
 
-    # ---- the lines are read, and a second CLOSE is counted as one
-    close = ("LogTemp: Display: LEDGERLOG CLOSE slot=given reason=quit written=1 roundtrip=1 "
-             "cruise=4 ship=1 hands=48 hull=600 shot=40 chest=600 wrecks=0 wreckCharge=0 "
-             "refused=0 rejected=0\n")
-    opened = ("LogTemp: Display: LEDGERLOG OPEN ship=ShipPawn_0 loaded=1 rejected=0 cruise=4 "
-              "hands=48/60 hull=600/1000 shot=40/40 chest=600 wrecks=0 clamped=0\n")
-    got = ci_measure.measure("fixture", opened + close)
-    want = {"ledger_closes": 1, "ledger_slot": 1, "ledger_written": 1, "ledger_hands_in": 48,
-            "ledger_hull_in": 600, "ledger_chest_out": 600, "ledger_cruise": 4}
-    bad = {k: got.get(k) for k in want if got.get(k) != want[k]}
+    # ---- the lines are read field by field. Every number distinct, so two
+    # regex groups swapped cannot read as right.
+    close = ("LogTemp: Display: LEDGERLOG CLOSE slot=given why=open reason=quit written=1 roundtrip=1 "
+             "cruise=4 ship=1 hands=47 hull=611 shot=39 chest=602 wrecks=3 wreckCharge=17 "
+             "refused=2 rejected=5 setAside=1 recovered=1\n")
+    opened = ("LogTemp: Display: LEDGERLOG OPEN ship=ShipPawn_0 loaded=1 rejected=0 cruise=6 "
+              "hands=44/60 hull=622/1000 shot=33/40 chest=605 wrecks=7 clamped=8\n")
+    lost = "LogTemp: Display: LEDGERLOG ShipPawn_0 lost: a new hull costs 1780, the chest paid 999\n"
+    side = "LogTemp: Display: PORTLOG SIDE refused=4\n"
+    got = ci_measure.measure("fixture", opened + close + lost + side)
+    want = {"ledger_closes": 1, "ledger_slot": 1, "ledger_why": 0, "ledger_written": 1,
+            "ledger_roundtrip": 1, "ledger_cruise_out": 4, "ledger_ship_out": 1,
+            "ledger_hands_out": 47, "ledger_hull_out": 611, "ledger_shot_out": 39,
+            "ledger_chest_out": 602, "ledger_wrecks_out": 3, "ledger_wreck_charge": 17,
+            "ledger_refused": 2, "ledger_rejected": 5, "ledger_set_aside": 1,
+            "ledger_recovered": 1, "ledger_loaded": 1, "ledger_cruise": 6,
+            "ledger_hands_in": 44, "ledger_hull_in": 622, "ledger_shot_in": 33,
+            "ledger_chest_in": 605, "ledger_wrecks_in": 7, "ledger_clamped": 8,
+            "ledger_ship_cost": 1780, "ledger_paid": 999, "refit_refused_side": 4}
+    bad = {k: (got.get(k), v) for k, v in want.items() if got.get(k) != v}
     if bad:
-        fail("the book's lines are not read: %r" % bad)
+        fail("the book's lines are not read field by field (got, want): %r" % bad)
     twice = ci_measure.measure("fixture", close + "LogTemp: Warning: LEDGERLOG CLOSE again - refused\n")
     if twice.get("ledger_closes") != 2:
         fail("a second CLOSE line is not counted: ledger_closes=%r" % twice.get("ledger_closes"))
-    off = ci_measure.measure("fixture", "LogTemp: Display: LEDGERLOG CLOSE slot=off reason=quit "
-                             "written=0 roundtrip=0 cruise=0 ship=0 hands=0 hull=0 shot=0 chest=0 "
-                             "wrecks=0 wreckCharge=0 refused=0 rejected=0\n")
-    if off.get("ledger_slot") != 0 or "ledger_hands_out" in off:
-        fail("a closed book's line reads as an open one: %r" % off)
+    for word, code in (("pinned", 1), ("noport", 2), ("testflag", 3)):
+        off = ci_measure.measure("fixture", "LogTemp: Display: LEDGERLOG CLOSE slot=off why=%s reason=quit "
+                                 "written=0 roundtrip=0 cruise=0 ship=0 hands=0 hull=0 shot=0 chest=0 "
+                                 "wrecks=0 wreckCharge=0 refused=0 rejected=0 setAside=0 recovered=0\n" % word)
+        if off.get("ledger_slot") != 0 or off.get("ledger_why") != code or "ledger_hands_out" in off:
+            fail("a book shut for '%s' reads as something else: %r" % (word, off))
 
-    # ---- the pin, and nothing that would read as it
+    # ---- the pin, and nothing the engine would read as it. FParse::Value
+    # finds a name wherever the character before it is not a letter or a digit
+    # (Strifind, CString.h): "-ShipLedger=" is safe, "x_Ledger=" or a path
+    # ".../Ledger=" is not. The check mirrors exactly that.
     if "-Ledger=0" not in ci_measure.PINNED:
         fail("PINNED has no -Ledger=0: every suite row would open the owner's own book")
     flags = [("PINNED", a) for a in ci_measure.PINNED]
     flags += [(n, a) for n, fl in ci_measure.SCENARIOS.items() for a in fl]
     for where, a in flags:
-        if "ledger=" in a.lower() and a != "-Ledger=0":
-            fail("%s: %s contains 'ledger=' - FParse::Value is a substring search "
-                 "and the game would read it as the book's switch" % (where, a))
-        if a.lower().startswith("-ledgerbook=") and not a.split("=", 1)[1].startswith("Saved/CI/"):
-            fail("%s: %s opens a book outside Saved/CI/" % (where, a))
-    # Every OTHER way this project starts the game. ci_checks is left out
-    # because this very scan names the string it looks for.
+        low = a.lower()
+        for hit in re.finditer("ledger=", low):
+            if a == "-Ledger=0" and hit.start() == 1:
+                continue
+            if hit.start() == 0 or not low[hit.start() - 1].isalnum():
+                fail("%s: %s would be read by the engine as the book's switch" % (where, a))
+        if low.startswith("-ledgerbook="):
+            path = a.split("=", 1)[1]
+            if not path.startswith("Saved/CI/") or ".." in path:
+                fail("%s: %s opens a book outside Saved/CI/" % (where, a))
+    # Every OTHER script that starts the game. It sees a "-game" argument in a
+    # .py/.ps1 under Scripts/ or tools/ - not recipes written in the docs,
+    # which README and HANDOFF carry -Ledger=0 in by hand. ci_checks is left
+    # out because this very scan names the string it looks for.
     for folder, exts in (("Scripts", (".ps1", ".py")), ("tools", (".py",))):
         for fn in sorted(os.listdir(os.path.join(ROOT, folder))):
             if not fn.endswith(exts) or fn == "ci_checks.py":
                 continue
             text = io.open(os.path.join(ROOT, folder, fn), encoding="utf-8", errors="replace").read()
-            if '"-game"' in text and "-Ledger=0" not in text:
+            if re.search(r"""["']-game["']""", text) and "-Ledger=0" not in text:
                 fail("%s/%s starts the game without -Ledger=0: it would read and "
                      "write the owner's book" % (folder, fn))
 
@@ -1113,29 +1135,45 @@ def check_ledger():
         return
 
     def page(name):
-        """The fixture, read the way EnsureBookRead reads it: key=value lines,
-        a book only with book=1, a ship only with all three of its lines."""
+        """The fixture, read by the RULES the game's reader states - book=1,
+        end=1, every number one to nine digits, a ship all-or-nothing - and
+        written again here, not imported from anywhere."""
         kv = {}
         for line in io.open(os.path.join(ROOT, "tools", "books", name), encoding="utf-8"):
             if "=" in line:
                 k, v = line.strip().split("=", 1)
                 kv[k.strip().lower()] = v.strip()
-        return kv
+        num = lambda k: kv.get(k, "").isdigit() and 1 <= len(kv[k]) <= 9
+        ship = [k for k in ("hands", "hull", "shot") if k in kv]
+        ok_ = (kv.get("book") == "1" and kv.get("end") == "1"
+               and all(num(k) for k in ("cruises", "wrecks", "chest"))
+               and len(ship) in (0, 3) and all(num(k) for k in ship))
+        return kv if ok_ else None
 
     FRESH = {"ledger_hands_in": HANDS, "ledger_hull_in": HULL, "ledger_shot_in": SHOT}
 
     def opened_from(kv):
-        """What OPEN must show for a book: each value cut to the hull."""
-        if kv.get("book") != "1":
+        """What OPEN must show: a refused page sails as built; a book, each
+        value cut to what the hull holds."""
+        if kv is None:
             return dict(FRESH, ledger_loaded=0, ledger_chest_in=0, ledger_cruise=1,
                         ledger_wrecks_in=0, ledger_clamped=0)
         h, v, sh = int(kv["hands"]), float(kv["hull"]), int(kv["shot"])
         ch, cv, cs = min(max(h, 0), HANDS), min(max(v, 1), HULL), min(max(sh, 0), SHOT)
         return {"ledger_loaded": 1, "ledger_hands_in": ch, "ledger_hull_in": cv,
-                "ledger_shot_in": cs, "ledger_chest_in": int(kv.get("chest", 0)),
-                "ledger_cruise": int(kv.get("cruises", 0)) + 1,
-                "ledger_wrecks_in": int(kv.get("wrecks", 0)),
+                "ledger_shot_in": cs, "ledger_chest_in": int(kv["chest"]),
+                "ledger_cruise": int(kv["cruises"]) + 1, "ledger_wrecks_in": int(kv["wrecks"]),
                 "ledger_clamped": (ch != h) + (cv != v) + (cs != sh)}
+
+    def shut_because(fl):
+        """The game's rule, stated again: which rows must leave the book shut."""
+        if not any(a.startswith("-LedgerBook=") for a in fl):
+            return 1                                    # pinned
+        if not any(a.startswith("-Port=") and a != "-Port=0" for a in fl):
+            return 2                                    # no roadstead
+        if any(a.startswith(("-Shot=", "-ShipHullTest=")) for a in fl):
+            return 3                                    # a test flag
+        return 0
 
     base_path = os.path.join(ROOT, "tools", "measurement_baseline.json")
     if not os.path.exists(base_path):
@@ -1148,21 +1186,25 @@ def check_ledger():
         fail("the book's rows are not in the baseline: %s" % ", ".join(missing))
         return
 
-    # ---- every row: one close; the player's slot never; books only where asked
+    # ---- every row: one close; the player's slot never; open or shut by rule
     for name, row in sorted(rows.items()):
-        flags_of = ci_measure.SCENARIOS.get(name, [])
-        has_book = any(a.startswith("-LedgerBook=") for a in flags_of)
+        fl = ci_measure.SCENARIOS.get(name, [])
+        why = shut_because(fl)
         if row.get("ledger_closes") != 1:
             fail("%s: ledger_closes=%r - the quit path that writes the book ran %s"
                  % (name, row.get("ledger_closes"), "never" if not row.get("ledger_closes") else "more than once"))
         if row.get("ledger_slot") == 2:
             fail("%s opened the PLAYER's book (slot=default) under a measurement" % name)
-        if has_book and (row.get("ledger_slot"), row.get("ledger_written"), row.get("ledger_roundtrip")) != (1, 1, 1):
-            fail("%s: a book row that did not open, write and read back its book: slot=%r written=%r roundtrip=%r"
-                 % (name, row.get("ledger_slot"), row.get("ledger_written"), row.get("ledger_roundtrip")))
-        if not has_book and (row.get("ledger_slot"), row.get("ledger_written")) != (0, 0):
-            fail("%s: no book was asked for, yet slot=%r written=%r"
+        if row.get("ledger_why") != why:
+            fail("%s: the book is %s by the game (why=%r) but %s by the rule (why=%r)"
+                 % (name, "open" if row.get("ledger_why") == 0 else "shut", row.get("ledger_why"),
+                    "open" if why == 0 else "shut", why))
+        if why and (row.get("ledger_slot"), row.get("ledger_written")) != (0, 0):
+            fail("%s: a shut book was opened or written: slot=%r written=%r"
                  % (name, row.get("ledger_slot"), row.get("ledger_written")))
+        if row.get("refit_refused_side", 0) and name != "ledger_side":
+            fail("%s: the roadstead refused %d hull(s) of the wrong side - a row that never "
+                 "asked for it" % (name, row["refit_refused_side"]))
 
     def expect(name, want):
         row = rows[name]
@@ -1172,11 +1214,24 @@ def check_ledger():
         else:
             ok("%s: %d numbers match the paper arithmetic" % (name, len(want)))
 
-    # ---- OPEN, for every row that opens a fixture (or none)
-    for name, fixture in ci_measure.BOOKS.items():
-        expect(name, opened_from(page(fixture)) if fixture else
-               dict(FRESH, ledger_loaded=0, ledger_chest_in=0, ledger_cruise=1, ledger_clamped=0))
-    expect("ledger_bad", {"ledger_rejected": 1})
+    WRITES = {"ledger_slot": 1, "ledger_written": 1, "ledger_roundtrip": 1}
+
+    # ---- OPEN, and a book that does nothing closes as it opened
+    for name in ("ledger_fresh", "ledger_carry", "ledger_tmp"):
+        fixture = ci_measure.BOOKS[name][0]
+        o = opened_from(page(fixture)) if fixture else opened_from(None)
+        closed = {"ledger_hands_out": o["ledger_hands_in"], "ledger_hull_out": o["ledger_hull_in"],
+                  "ledger_shot_out": o["ledger_shot_in"], "ledger_chest_out": o["ledger_chest_in"],
+                  "ledger_cruise_out": o["ledger_cruise"], "ledger_wrecks_out": o["ledger_wrecks_in"],
+                  "ledger_ship_out": 1}
+        expect(name, dict(o, **closed, **WRITES))
+    expect("ledger_tmp", {"ledger_recovered": 1})
+
+    # ---- three refusals, each for exactly one reason: set aside, sail as built
+    for name in ("ledger_bad", "ledger_torn", "ledger_garbage"):
+        if page(ci_measure.BOOKS[name][0]) is not None:
+            fail("%s: its fixture reads as a book by the stated rules - it cannot prove a refusal" % name)
+        expect(name, dict(opened_from(None), ledger_rejected=1, ledger_set_aside=1, **WRITES))
 
     # ---- the port buys in its own order, out of the chest
     sp = opened_from(page("spend.book"))
@@ -1187,34 +1242,40 @@ def check_ledger():
     if spent > sp["ledger_chest_in"]:
         fail("spend.book no longer affords a whole refit; the arithmetic below assumes it does")
     ticks = -(-buy_shot // SHOT_TICK) + buy_hands + -(-buy_hull // HULL_TICK)
-    expect("ledger_spend", {"refit_spent": spent, "refit_shot_bought": buy_shot,
-                            "refit_hands_bought": buy_hands, "refit_hull_bought": buy_hull,
-                            "refit_seconds": ticks * 0.5,
-                            "ledger_chest_out": sp["ledger_chest_in"] - spent,
-                            "ledger_hands_out": HANDS, "ledger_hull_out": HULL,
-                            "ledger_shot_out": SHOT, "ledger_cruise_out": sp["ledger_cruise"]})
+    expect("ledger_spend", dict(sp, refit_spent=spent, refit_shot_bought=buy_shot,
+                                refit_hands_bought=buy_hands, refit_hull_bought=buy_hull,
+                                refit_seconds=ticks * 0.5,
+                                ledger_chest_out=sp["ledger_chest_in"] - spent,
+                                ledger_hands_out=HANDS, ledger_hull_out=HULL,
+                                ledger_shot_out=SHOT, ledger_cruise_out=sp["ledger_cruise"], **WRITES))
 
     # ---- the next cruise opens with what the last one closed with
-    s_row, c_row = rows["ledger_spend"], rows["ledger_cycle"]
-    carried = {"ledger_hands_in": s_row.get("ledger_hands_out"),
-               "ledger_hull_in": s_row.get("ledger_hull_out"),
-               "ledger_shot_in": s_row.get("ledger_shot_out"),
-               "ledger_chest_in": s_row.get("ledger_chest_out"),
-               "ledger_cruise": (s_row.get("ledger_cruise_out") or 0) + 1,
-               "ledger_loaded": 1}
-    expect("ledger_cycle", carried)
+    s_row = rows["ledger_spend"]
+    expect("ledger_cycle", {"ledger_hands_in": s_row.get("ledger_hands_out"),
+                            "ledger_hull_in": s_row.get("ledger_hull_out"),
+                            "ledger_shot_in": s_row.get("ledger_shot_out"),
+                            "ledger_chest_in": s_row.get("ledger_chest_out"),
+                            "ledger_cruise": (s_row.get("ledger_cruise_out") or 0) + 1,
+                            "ledger_loaded": 1})
 
     # ---- a lost ship: a new hull at the port's prices, as far as the chest goes
     wr = opened_from(page("wreck.book"))
     cost = HULL * HULL_COST + HANDS * HAND_COST + SHOT * SHOT_COST
     paid = min(cost, wr["ledger_chest_in"])
-    expect("ledger_wreck", {"ledger_refused": 1, "ledger_wreck_charge": paid,
-                            "ledger_chest_out": wr["ledger_chest_in"] - paid,
-                            "ledger_wrecks_out": wr["ledger_wrecks_in"] + 1,
-                            "ledger_ship_out": 1, "ledger_hands_out": HANDS,
-                            "ledger_hull_out": HULL, "ledger_shot_out": SHOT})
-    if wr["ledger_clamped"] == 0:
-        fail("wreck.book asks for nothing the hull cannot hold, so the clamp is not exercised")
+    if paid == cost:
+        fail("wreck.book's chest covers a whole new hull, so 'as far as the chest reaches' is never tested")
+    if wr["ledger_hull_in"] == HULL:
+        fail("wreck.book's hull is the as-built one, so a replacement wrongly fitted from it would not show")
+    expect("ledger_wreck", dict(wr, ledger_refused=1, ledger_ship_cost=cost, ledger_paid=paid,
+                                ledger_wreck_charge=paid, ledger_chest_out=wr["ledger_chest_in"] - paid,
+                                ledger_wrecks_out=wr["ledger_wrecks_in"] + 1, ledger_ship_out=1,
+                                ledger_hands_out=HANDS, ledger_hull_out=HULL, ledger_shot_out=SHOT,
+                                **WRITES))
+
+    # ---- the purse's side: the port refuses her, her captain does not count it
+    sd = opened_from(page("spend.book"))
+    expect("ledger_side", {"refit_refused_side": 1, "refit_spent": 0, "port_ticks_max": 0,
+                           "ledger_chest_out": sd["ledger_chest_in"], **WRITES})
 
     # ---- the pair: the book's family moves, nothing else does
     f_row, k_row = rows["ledger_fresh"], rows["ledger_carry"]
@@ -1226,7 +1287,6 @@ def check_ledger():
         fail("ledger_carry does not differ from ledger_fresh - the book fits nothing")
     elif not outside:
         ok("ledger_carry vs ledger_fresh: %d ledger_* keys move, nothing else" % len(moved))
-
 
 def main():
     print("PirateSeas checks - the ones that do not need Unreal\n")

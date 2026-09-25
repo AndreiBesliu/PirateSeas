@@ -85,9 +85,31 @@ namespace
 		}
 	};
 
-	/** key=value, one per line, and nothing cleverer. NOT FParse::Value over
-	 *  the text: that is a substring search, and "shot=" would be found inside
-	 *  any key that ever ended in it. A page without book=1 is not a book. The
+	/** A book's number: digits only, one to nine of them. Anything else - a
+	 *  sign, a decimal point, a word, a number that would overflow - makes the
+	 *  page not a book. The first reader took garbage as 0 and a ten-digit
+	 *  chest as whatever Atoi made of it. */
+	bool ReadBookInt(const FString* V, int32& Out)
+	{
+		if (!V || V->Len() < 1 || V->Len() > 9)
+		{
+			return false;
+		}
+		for (const TCHAR Ch : *V)
+		{
+			if (!FChar::IsDigit(Ch))
+			{
+				return false;
+			}
+		}
+		Out = FCString::Atoi(**V);
+		return true;
+	}
+
+	/** key=value, one per line, and nothing cleverer - not FParse::Value over
+	 *  the text, which finds a name wherever the character before it is not a
+	 *  letter or digit. A book is book=1 first and end=1 last (a page torn by a
+	 *  quit that died mid-write has no end), with every number well formed; the
 	 *  ship is all three of hands, hull and shot, or none of them. */
 	FBookPage ReadBookPage(const FString& Text)
 	{
@@ -104,25 +126,28 @@ namespace
 		}
 		FBookPage P;
 		const FString* Book = Kv.Find(TEXT("book"));
-		P.bOk = Book && *Book == TEXT("1");
-		if (!P.bOk)
+		const FString* End = Kv.Find(TEXT("end"));
+		if (!Book || *Book != TEXT("1") || !End || *End != TEXT("1")
+			|| !ReadBookInt(Kv.Find(TEXT("cruises")), P.Cruises)
+			|| !ReadBookInt(Kv.Find(TEXT("wrecks")), P.Wrecks)
+			|| !ReadBookInt(Kv.Find(TEXT("chest")), P.Chest))
 		{
-			return P;
+			return FBookPage();
 		}
-		auto Int = [&Kv](const TCHAR* K) { const FString* V = Kv.Find(K); return V ? FCString::Atoi(**V) : 0; };
-		P.Cruises = Int(TEXT("cruises"));
-		P.Wrecks = Int(TEXT("wrecks"));
-		P.Chest = Int(TEXT("chest"));
 		const FString* H = Kv.Find(TEXT("hands"));
 		const FString* V = Kv.Find(TEXT("hull"));
 		const FString* S = Kv.Find(TEXT("shot"));
-		P.bShip = H && V && S;
-		if (P.bShip)
+		if (H || V || S)
 		{
-			P.Hands = FCString::Atoi(**H);
-			P.Hull = FCString::Atof(**V);
-			P.Shot = FCString::Atoi(**S);
+			int32 Hull = 0;
+			if (!ReadBookInt(H, P.Hands) || !ReadBookInt(V, Hull) || !ReadBookInt(S, P.Shot))
+			{
+				return FBookPage();
+			}
+			P.Hull = (float)Hull;
+			P.bShip = true;
 		}
+		P.bOk = true;
 		return P;
 	}
 
@@ -134,7 +159,7 @@ namespace
 		{
 			T += FString::Printf(TEXT("hands=%d\nhull=%.0f\nshot=%d\n"), P.Hands, P.Hull, P.Shot);
 		}
-		return T;
+		return T + TEXT("end=1\n");
 	}
 
 	const TCHAR* BookSlotName(bool bOff, bool bGiven)
@@ -855,25 +880,70 @@ void ASeaGameMode::EnsureBookRead()
 	{
 		return;
 	}
-	FPaths::NormalizeFilename(BookPath);
-
-	if (!FPaths::FileExists(BookPath))
+	// ONLY WHERE A LOSS CAN BE MADE GOOD. The review walked the owner through
+	// his own list: every check on it runs without a port, the book opened
+	// anyway, and a magazine carried out of one test came back empty in the
+	// next with nothing on the sea able to refill it.
+	int32 TestShot = 0;
+	float TestHull = 0.f;
+	if (!PortRequested())
 	{
-		UE_LOG(LogTemp, Display, TEXT("LEDGERLOG no book at %s: a first cruise"),
-			*FPaths::ConvertRelativePathToFull(BookPath));
+		BookSlot = EBookSlot::Off;
+		BookWhy = TEXT("noport");
+		UE_LOG(LogTemp, Display, TEXT("LEDGERLOG shut: no roadstead in this run, nothing to carry a ship to"));
 		return;
 	}
+	if (FParse::Value(FCommandLine::Get(), TEXT("Shot="), TestShot)
+		|| FParse::Value(FCommandLine::Get(), TEXT("ShipHullTest="), TestHull))
+	{
+		BookSlot = EBookSlot::Off;
+		BookWhy = TEXT("testflag");
+		UE_LOG(LogTemp, Display, TEXT("LEDGERLOG shut: -Shot= or -ShipHullTest= sets the ship by hand, and a test is not a cruise"));
+		return;
+	}
+	BookWhy = TEXT("open");
+	FPaths::NormalizeFilename(BookPath);
+
+	// A QUIT THAT DIED MID-REPLACE. The writer puts the new page beside the
+	// book and then moves it over; on Windows the move deletes the old one
+	// first. Book gone and the new page whole beside it: that page is the book.
+	const FString Tmp = BookPath + TEXT(".tmp");
+	FString ReadFrom = BookPath;
+	if (!FPaths::FileExists(BookPath))
+	{
+		if (!FPaths::FileExists(Tmp))
+		{
+			UE_LOG(LogTemp, Display, TEXT("LEDGERLOG no book at %s: a first cruise"),
+				*FPaths::ConvertRelativePathToFull(BookPath));
+			return;
+		}
+		ReadFrom = Tmp;
+		bBookRecovered = true;
+		UE_LOG(LogTemp, Warning, TEXT("LEDGERLOG no book, but a whole page beside it: the last quit died replacing it, recovered"));
+	}
 	FString Text;
-	const FBookPage Page = FFileHelper::LoadFileToString(Text, *BookPath)
-		? ReadBookPage(Text) : FBookPage();
+	if (!FFileHelper::LoadFileToString(Text, *ReadFrom))
+	{
+		// UNREAD IS NOT REFUSED. Locked, or a disk that failed: the file stays
+		// exactly where it is, and nothing is written over it at the quit.
+		++BookRejected;
+		bBookWritable = false;
+		UE_LOG(LogTemp, Warning, TEXT("LEDGERLOG %s could not be read: left alone, and not written this run"),
+			*FPaths::ConvertRelativePathToFull(ReadFrom));
+		return;
+	}
+	const FBookPage Page = ReadBookPage(Text);
 	if (!Page.bOk)
 	{
-		// REFUSED WHOLE, never half-read: a page without book=1 is a file that
-		// happens to sit where the book should, and fitting a ship from it
-		// would be fitting her from noise. She sails as built, and it is said.
+		// REFUSED WHOLE, never half-read, and KEPT: moved aside to .rejected
+		// so the quit can write a good page without destroying the evidence of
+		// the bad one. If it cannot be moved, it is not written over either.
 		++BookRejected;
-		UE_LOG(LogTemp, Warning, TEXT("LEDGERLOG %s is not a book (no book=1): refused, she sails as built"),
-			*FPaths::ConvertRelativePathToFull(BookPath));
+		bBookSetAside = IFileManager::Get().Move(*(BookPath + TEXT(".rejected")), *ReadFrom, true, true);
+		bBookWritable = bBookSetAside;
+		UE_LOG(LogTemp, Warning, TEXT("LEDGERLOG %s is not a book: refused, %s, she sails as built"),
+			*FPaths::ConvertRelativePathToFull(ReadFrom),
+			bBookSetAside ? TEXT("set aside as .rejected") : TEXT("could not be set aside, and will not be written over"));
 		return;
 	}
 	bBookLoaded = true;
@@ -925,6 +995,23 @@ void ASeaGameMode::FitFromBook(AShipPawn* Ship)
 		*Ship->GetName(), bBookLoaded ? 1 : 0, BookRejected, GetCruise(),
 		Ship->GetHands(), Ship->GetHandsMax(), Ship->GetHullIntegrity(), Ship->GetMaxHullIntegrity(),
 		Ship->GetShot(), Ship->GetShotMax(), ChestIn, BookWrecks, BookClamped);
+}
+
+bool ASeaGameMode::PortRequested()
+{
+	int32 PortOn = 0;
+	return FParse::Value(FCommandLine::Get(), TEXT("Port="), PortOn) && PortOn > 0;
+}
+
+bool ASeaGameMode::IsPurseSide(const AShipPawn* Ship) const
+{
+	if (!Ship)
+	{
+		return false;
+	}
+	return RaiderSide.IsEmpty()
+		? Ship->GetAllegiance() == EShipAllegiance::Player
+		: Ship->GetAllegiance() == EShipAllegiance::Crown;
 }
 
 bool ASeaGameMode::IsChestInPurse() const
@@ -981,7 +1068,7 @@ void ASeaGameMode::CloseBook(EEndPlayReason::Type Reason)
 	FBookPage Out;
 	int32 Written = 0;
 	int32 Roundtrip = 0;
-	if (BookSlot != EBookSlot::Off
+	if (BookSlot != EBookSlot::Off && bBookWritable
 		&& (Reason == EEndPlayReason::Quit || Reason == EEndPlayReason::EndPlayInEditor))
 	{
 		Out.bOk = true;
@@ -996,7 +1083,9 @@ void ASeaGameMode::CloseBook(EEndPlayReason::Type Reason)
 		{
 			Out.bShip = true;
 			Out.Hands = Ship->GetHands();
-			Out.Hull = FMath::RoundToFloat(Ship->GetHullIntegrity());
+			// At least 1: she is afloat, and a hull of 0 in the book reads as a
+			// hand edit (the reader cuts it to 1 and counts the cut).
+			Out.Hull = FMath::Max(1.f, FMath::RoundToFloat(Ship->GetHullIntegrity()));
 			Out.Shot = Ship->GetShot();
 		}
 		// Beside it and then over it, so a quit that dies half-way through the
@@ -1022,10 +1111,10 @@ void ASeaGameMode::CloseBook(EEndPlayReason::Type Reason)
 		}
 	}
 	UE_LOG(LogTemp, Display,
-		TEXT("LEDGERLOG CLOSE slot=%s reason=%s written=%d roundtrip=%d cruise=%d ship=%d hands=%d hull=%.0f shot=%d chest=%d wrecks=%d wreckCharge=%d refused=%d rejected=%d"),
-		BookSlotName(BookSlot == EBookSlot::Off, BookSlot == EBookSlot::Given), Why, Written, Roundtrip,
+		TEXT("LEDGERLOG CLOSE slot=%s why=%s reason=%s written=%d roundtrip=%d cruise=%d ship=%d hands=%d hull=%.0f shot=%d chest=%d wrecks=%d wreckCharge=%d refused=%d rejected=%d setAside=%d recovered=%d"),
+		BookSlotName(BookSlot == EBookSlot::Off, BookSlot == EBookSlot::Given), *BookWhy, Why, Written, Roundtrip,
 		Out.Cruises, Out.bShip ? 1 : 0, Out.Hands, Out.Hull, Out.Shot, Out.Chest, Out.Wrecks,
-		WreckCharge, BookRefused, BookRejected);
+		WreckCharge, BookRefused, BookRejected, bBookSetAside ? 1 : 0, bBookRecovered ? 1 : 0);
 }
 
 void ASeaGameMode::BindShip(AShipPawn* Ship)
@@ -1463,8 +1552,7 @@ void ASeaGameMode::ReadConvoyFlags()
 
 void ASeaGameMode::ReadPortFlags()
 {
-	int32 PortOn = 0;
-	if (!FParse::Value(FCommandLine::Get(), TEXT("Port="), PortOn) || PortOn <= 0)
+	if (!PortRequested())
 	{
 		return;
 	}
@@ -1577,6 +1665,18 @@ void ASeaGameMode::RefitInPort()
 		}
 		if (FVector::Dist2D(Ship->GetActorLocation(), PortLocation) > PortRadiusCm)
 		{
+			continue;
+		}
+		// THE PURSE'S SIDE ONLY. It used to sell to any hull in the circle, so a
+		// Crown ship in the player's roadstead was refitted out of his money -
+		// and, since the book, out of his chest.
+		if (!IsPurseSide(Ship))
+		{
+			if (!RefusedSide.Contains(Ship->GetFName()))
+			{
+				RefusedSide.Add(Ship->GetFName());
+				UE_LOG(LogTemp, Display, TEXT("PORTLOG %s refused: not the purse's side"), *Ship->GetName());
+			}
 			continue;
 		}
 
@@ -2234,6 +2334,8 @@ void ASeaGameMode::QuitNow()
 	UE_LOG(LogTemp, Display,
 		TEXT("PORTLOG REFIT spent=%d coffers=%d handsBought=%d hullBought=%d shotBought=%d refitSeconds=%.1f"),
 		Spent, GetCoffers(), HandsBought, GetHullBought(), ShotBought, RefitSeconds);
+	// Always, a counted zero: hulls the roadstead would not sell to.
+	UE_LOG(LogTemp, Display, TEXT("PORTLOG SIDE refused=%d"), RefusedSide.Num());
 	UE_LOG(LogTemp, Display, TEXT("SEALOG quitting at t=%.1fs"),
 		GetWorld()->GetTimeSeconds());
 	if (GEngine)

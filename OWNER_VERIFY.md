@@ -32,7 +32,7 @@ avansul stins pentru toată lumea. Loviturile (cocă + greement) scad de la **11
 m, avansul valorează cam un sfert din ce nimereşte ea. Dacă vrei ca jucatorul
 să primească un ajutor de avans, spune; dacă nu, rămâne aşa.
 
-### Cinci lucruri de văzut, în ordinea asta
+### Opt lucruri de văzut, în ordinea asta
 
 1. **37 — aşchiile de la o lovitură.** Reparat pe 25.09: coca are coliziunea
    ei, ghiuleaua se opreşte pe lemn (0,00 m, măsurat pe 37 de lovituri). Ce nu
@@ -48,9 +48,10 @@ să primească un ajutor de avans, spune; dacă nu, rămâne aşa.
    Dacă citeşte a gaură sau a abţibild.
 7. **40 — sunetul.** Nou, 25.09: tun, lemn, greement, apă, sintetizate. Dacă
    sună a tun sau a tobă, şi dacă distanţele sunt bune.
-8. **41 — cartea navei.** Nou, 25.09, şi **pornită implicit**: de acum jocul
-   continuă de unde l-ai închis (nava rănită, oamenii lipsă, banii în ladă).
-   `-Ledger=0` pentru o partidă de la zero. Dacă se simte a miză sau a pedeapsă.
+8. **41 — cartea navei.** Nou, 25.09: într-o partidă **cu radă** (`-Port=1`)
+   jocul continuă de unde l-ai închis (nava rănită, oamenii lipsă, banii în
+   ladă). Fără radă nu se atinge nimic, deci punctele 1–7 de mai sus nu o
+   deschid. Dacă se simte a miză sau a pedeapsă.
 
 ### Restul
 
@@ -812,7 +813,8 @@ decizie sau ca o corvoada, nu pot sti.
 
 **Ce stiu deja si n-am ascuns:** preturile (20 pe om, 0,5 pe punct de coca) sunt
 alese ca sa aiba sens fata de o prada de 1200, nu masurate din ceva real. Punga
-nu supravietuieste rularii. Ghiulelele SE cumpara (2 bucata, si sunt primul
+nu supravietuieste rularii in partida asta: `-ShipHullTest=` tine cartea navei
+inchisa (punctul 41), deci COFFERS porneste de la 0. Ghiulelele SE cumpara (2 bucata, si sunt primul
 lucru cumparat la refit); nu se cumpara tunuri sau nave. Si rada e
 tot un cerc pe apa, nu un oras.
 
@@ -1092,17 +1094,24 @@ masura. Sunt PATRU numere de ales daca nu-ti place ceva: forma undei e in
 
 ## 41. Cartea navei: continui unde ai ramas
 
-**Atentie, e PORNITA IMPLICIT.** De acum orice pornire a jocului continua de unde
-a ramas cea dinainte: aceeasi nava, aceiasi oameni, aceleasi ghiulele, si banii
-de pe uscat intr-o lada. Panoul spune `CRUISE N  chest ashore M`.
+**Doar intr-o partida cu rada.** Cu `-Port=1`, fiecare pornire continua de unde a
+ramas cea dinainte: aceeasi nava, aceiasi oameni, aceleasi ghiulele, si banii de
+pe uscat intr-o lada. Panoul spune `CRUISE N  chest ashore M`. Fara `-Port=1`,
+sau cu `-Shot=` / `-ShipHullTest=`, cartea nu se citeste si nu se scrie -
+celelalte puncte din lista nu o ating.
 
-**Ce te uiti:** Joaca o partida cu port (`-Port=1`, sau cu un convoi), ia macar
-o prada si du-o in rada, apoi inchide jocul cu nava lovita. Porneste-l din nou.
-Apoi intra in rada si lasa portul sa te repare din lada.
+**Ce te uiti:** Porneste de doua ori cu ACELEASI flag-uri:
+`PirateSeas.exe -windowed -Convoy=2 -Port=1 -EnemyCount=0`. Prima data: ia o
+prada (tirul inalt in greement, apoi stai 20 s langa ea ca sa treaca oamenii),
+las-o sa ajunga in rada, dar tu NU intra, si inchide jocul dupa ce banii au
+ajuns (randul LANDED). A doua oara: verifica ca pornesti cu banii in lada
+(`CRUISE 2  chest ashore 1200`) si fara ghiulelele pe care le-ai tras, apoi
+intra in rada si lasa portul sa-ti umple magazia din lada.
 
-**Cum arata bine:** A doua pornire te pune pe aceeasi nava ranita, cu banii in
-lada; „ma opresc acum sau intai repar?" devine o intrebare. O nava pierduta te
-costa: lada scade cu pretul unei coci noi.
+**Cum arata bine:** A doua pornire te pune pe aceeasi nava, cu magazia cum ai
+lasat-o si banii in lada; in rada, COFFERS scade si magazia se umple. „Ma opresc
+acum sau intai repar?" devine o intrebare. (Oamenii plecati pe prada se intorc
+cand ea ajunge in rada, deci ei nu lipsesc.)
 
 **Cum arata prost:** Nu simti nimic - fiindca lada doar repara, progresul de azi
 e ca nu mai pierzi ce ai castigat, nu ca devii mai puternic (asta vine in felia
@@ -1110,18 +1119,17 @@ urmatoare: tunuri cumparate si purtate). Sau te enerveaza ca pornesti pe o coca
 sparta fara sa stii de ce - atunci randul din panou nu se vede destul. Sau 1780
 pentru o nava noua e prea aspru fata de o prada de 1200.
 
-**Doua lucruri de hotarat, daca vrei:** (1) cartea e deschisa implicit, cu
-`-Ledger=0` pentru o partida de la zero; daca preferi invers (inchisa implicit,
-deschisa cu un flag), e o linie. (2) Pretul navei pierdute: azi e pretul
-portului pentru o coca facuta intreaga de la zero (500 coca + 1200 oameni + 80
-ghiulele = 1780), fara niciun numar nou; se poate ieftini.
+**Doua lucruri de hotarat, daca vrei:** (1) cartea e deschisa implicit in orice
+partida cu rada, cu `-Ledger=0` pentru una de la zero; daca preferi invers
+(inchisa implicit, deschisa cu un flag), e o linie. (2) Pretul navei pierdute:
+azi e pretul portului pentru o coca facuta intreaga de la zero (500 coca + 1200
+oameni + 80 ghiulele = 1780), fara niciun numar nou; se poate ieftini.
 
 **Pentru o partida de la zero:** `-Ledger=0` (nu citeste si nu scrie nimic), sau
 sterge `Saved\Ledger\book.txt` - langa jocul impachetat e
 `Packaged\Windows\PirateSeas\Saved\Ledger\book.txt`.
 
 **De ce nu pot eu:** pot masura ca fiecare cifra trece dintr-o rulare in alta
-(sase randuri, fiecare calculat pe hartie de poarta), ca suita nu-ti atinge
-cartea si ca jocul impachetat o scrie si o citeste inapoi. Nu pot simti daca a
-porni pe o nava ranita e o miza sau o pedeapsa - asta e jocul, nu cifra.
-
+(douasprezece randuri, fiecare calculat pe hartie de poarta), ca suita nu-ti
+atinge cartea si ca jocul impachetat o scrie si o citeste inapoi. Nu pot simti
+daca a porni pe o nava ranita e o miza sau o pedeapsa - asta e jocul, nu cifra.

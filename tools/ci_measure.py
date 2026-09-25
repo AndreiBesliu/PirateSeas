@@ -66,13 +66,17 @@ PINNED = ["-game", "-NullRHI", "-unattended", "-nosound",
 # The book rows' files, under Saved/ (ignored by git) and relative to the
 # project, which is how the game resolves -LedgerBook=. A fixture from
 # tools/books is COPIED in before the row runs, because the game writes back to
-# the file it read and the fixture is tracked. None means "must not exist": the
-# first cruise. ledger_cycle is absent on purpose - it reads what ledger_spend
-# wrote, which is the whole point of it.
+# the file it read and the fixture is tracked: (fixture, where it lands). None
+# means "nothing there": the first cruise. ".book.tmp" puts the page where a
+# quit that died mid-replace would have left it. ledger_cycle is absent on
+# purpose - it reads what ledger_spend wrote, which is the whole point of it.
 BOOK_DIR = os.path.join(ROOT, "Saved", "CI")
-BOOKS = {"ledger_fresh": None, "ledger_carry": "veteran.book",
-         "ledger_spend": "spend.book", "ledger_wreck": "wreck.book",
-         "ledger_bad": "bad.book"}
+BOOKS = {"ledger_fresh": (None, ".book"), "ledger_carry": ("veteran.book", ".book"),
+         "ledger_spend": ("spend.book", ".book"), "ledger_wreck": ("wreck.book", ".book"),
+         "ledger_bad": ("bad.book", ".book"), "ledger_torn": ("torn.book", ".book"),
+         "ledger_garbage": ("garbage.book", ".book"), "ledger_tmp": ("veteran.book", ".book.tmp"),
+         "ledger_noport": ("veteran.book", ".book"), "ledger_testflag": ("veteran.book", ".book"),
+         "ledger_side": ("spend.book", ".book")}
 # The owner's own book. The suite must leave it byte for byte as it found it.
 REAL_BOOK = os.path.join(ROOT, "Saved", "Ledger", "book.txt")
 LEDGER_BASE = ["-WindBearing=120", "-WindSpeed=12", "-EnemyCount=0"]
@@ -433,43 +437,64 @@ SCENARIOS = {
                  "-EnemyY=1500", "-ShipFireTest=8", "-ShipQuitAfter=45",
                  "-ShipLead=0"],
 
-    # THE SHIP'S BOOK. Six rows, forty seconds of open sea with nobody else on
-    # it, so the only thing that can differ between them is what the book put
-    # aboard.
+    # THE SHIP'S BOOK. Open sea with nobody else on it, a roadstead somewhere
+    # downwind (the book only opens where a loss can be made good), so the
+    # only thing that can differ between these rows is what the book did.
     #
     # ledger_carry against ledger_fresh is the PAIR: a veteran's book (48
-    # hands, hull 600, a full magazine, 600 ashore, three cruises behind her)
-    # against a first cruise. They must differ in ledger_* and in nothing else:
-    # 48 is exactly the gun crew, so gun_crew_min stays 1.00; the magazine is
-    # full, so own_shot_left does not move; and with no roadstead the chest is
-    # not in the coffers, so refit_coffers_end stays 0.
-    "ledger_fresh": LEDGER_BASE + ["-ShipQuitAfter=40",
+    # hands, hull 600, a full magazine, nothing ashore, three cruises behind
+    # her) against a first cruise. They must differ in ledger_* and in nothing
+    # else: 48 is exactly the gun crew, so gun_crew_min stays 1.00; the
+    # magazine is full, so own_shot_left does not move; and an empty chest
+    # keeps refit_coffers_end at 0.
+    "ledger_fresh": LEDGER_BASE + ["-Port=1", "-ShipQuitAfter=40",
                                    "-LedgerBook=Saved/CI/ledger_fresh.book"],
-    "ledger_carry": LEDGER_BASE + ["-ShipQuitAfter=40",
+    "ledger_carry": LEDGER_BASE + ["-Port=1", "-ShipQuitAfter=40",
                                    "-LedgerBook=Saved/CI/ledger_carry.book"],
-    # THE DECISION: the same kind of book, ten rounds short, with the roadstead
-    # put where she starts. The port buys in its own order - shot, then men,
-    # then hull - out of the chest, and every number is on paper before the
-    # run: 10x2 + 12x20 + 400x0.5 = 460 spent, 140 left, 2+12+20 ticks = 17 s.
+    # THE DECISION: a hurt ship, ten rounds short, 600 ashore, the roadstead
+    # where she starts. The port buys in its own order - shot, then men, then
+    # hull - out of the chest: 10x2 + 12x20 + 400x0.5 = 460, 140 left, 2+12+20
+    # ticks = 17 s. Worked out on paper by the gate before it reads the row.
     "ledger_spend": LEDGER_BASE + ["-Port=1", "-PortX=0", "-PortY=0",
                                    "-ShipQuitAfter=40",
                                    "-LedgerBook=Saved/CI/ledger_spend.book"],
     # AND THE NEXT CRUISE: the file ledger_spend wrote, read by a new process.
-    # What it opens with must be what ledger_spend closed with - the one
-    # proof that crosses a process boundary, which is the whole feature.
-    "ledger_cycle": LEDGER_BASE + ["-ShipQuitAfter=40",
+    "ledger_cycle": LEDGER_BASE + ["-Port=1", "-ShipQuitAfter=40",
                                    "-LedgerBook=Saved/CI/ledger_spend.book"],
-    # A LOST SHIP. A book asking for more than the hull holds (72 men, hull
-    # 1500, 45 rounds: three cuts), then the ship scuttled at t=6: her
-    # replacement is refused the book, the chest pays a new hull at the port's
-    # prices (1000x0.5 + 60x20 + 40x2 = 1780 of 2000), and the book closes on
-    # the replacement.
-    "ledger_wreck": LEDGER_BASE + ["-ShipSinkTest=6", "-ShipQuitAfter=75",
+    # A LOST SHIP. A book asking for 72 men and 45 rounds (two cuts) on a hull
+    # of 500; scuttled at t=6. The replacement must NOT be fitted - and she
+    # would show it, closing on hull 500 instead of 1000. A new hull costs
+    # 1000x0.5 + 60x20 + 40x2 = 1780 and the chest holds 1000: it pays 1000,
+    # and no more.
+    "ledger_wreck": LEDGER_BASE + ["-Port=1", "-ShipSinkTest=6", "-ShipQuitAfter=75",
                                    "-LedgerBook=Saved/CI/ledger_wreck.book"],
-    # A FILE THAT IS NOT A BOOK: ship lines but no book=1. Refused whole; she
-    # sails as built.
-    "ledger_bad": LEDGER_BASE + ["-ShipQuitAfter=40",
+    # THREE PAGES THAT ARE NOT BOOKS, each wrong in exactly one way, so each
+    # of the reader's three refusals has a row that only it can catch: no
+    # book=1, no end=1 (torn by a dying quit), a number that is not one.
+    "ledger_bad": LEDGER_BASE + ["-Port=1", "-ShipQuitAfter=10",
                                  "-LedgerBook=Saved/CI/ledger_bad.book"],
+    "ledger_torn": LEDGER_BASE + ["-Port=1", "-ShipQuitAfter=10",
+                                  "-LedgerBook=Saved/CI/ledger_torn.book"],
+    "ledger_garbage": LEDGER_BASE + ["-Port=1", "-ShipQuitAfter=10",
+                                     "-LedgerBook=Saved/CI/ledger_garbage.book"],
+    # A QUIT THAT DIED MID-REPLACE: no book, a whole page beside it.
+    "ledger_tmp": LEDGER_BASE + ["-Port=1", "-ShipQuitAfter=10",
+                                 "-LedgerBook=Saved/CI/ledger_tmp.book"],
+    # TWO RUNS THAT MUST LEAVE THE BOOK SHUT: no roadstead, and a test flag
+    # that sets the ship by hand. Neither reads it, neither writes it.
+    "ledger_noport": LEDGER_BASE + ["-ShipQuitAfter=10",
+                                    "-LedgerBook=Saved/CI/ledger_noport.book"],
+    "ledger_testflag": LEDGER_BASE + ["-Port=1", "-Shot=20", "-ShipQuitAfter=10",
+                                      "-LedgerBook=Saved/CI/ledger_testflag.book"],
+    # THE PURSE'S SIDE. The player's chest (600) in the purse, and a Crown
+    # ship, hurt to 60% and willing to refit, born inside the player's
+    # roadstead. The port must not sell to her (refit_spent 0, one hull
+    # refused) and her captain must not count the chest as hers
+    # (port_ticks_max 0) - two guards, one row, two separate numbers.
+    "ledger_side": ["-WindBearing=120", "-WindSpeed=12", "-EnemyCount=1",
+                    "-EnemyX=60000", "-EnemyY=20000", "-EnemyHull=600", "-AIRefit=1",
+                    "-Port=1", "-PortX=60000", "-PortY=20000", "-ShipQuitAfter=30",
+                    "-LedgerBook=Saved/CI/ledger_side.book"],
 
     # THE GUNS LAID BY HAND. Three rows around one idea, and each pair says a
     # different thing.
@@ -595,13 +620,14 @@ def run(name, flags):
     # own book, read before so it can be compared after.
     if name in BOOKS:
         os.makedirs(BOOK_DIR, exist_ok=True)
+        fixture, lands = BOOKS[name]
         target = os.path.join(BOOK_DIR, name + ".book")
-        for leftover in (target, target + ".tmp"):
+        for leftover in (target, target + ".tmp", target + ".rejected"):
             if os.path.exists(leftover):
                 os.remove(leftover)
-        if BOOKS[name]:
-            src = os.path.join(ROOT, "tools", "books", BOOKS[name])
-            io.open(target, "wb").write(io.open(src, "rb").read())
+        if fixture:
+            src = os.path.join(ROOT, "tools", "books", fixture)
+            io.open(os.path.join(BOOK_DIR, name + lands), "wb").write(io.open(src, "rb").read())
     real_before = io.open(REAL_BOOK, "rb").read() if os.path.exists(REAL_BOOK) else None
 
     args = [EDITOR, UPROJECT] + PINNED + flags
@@ -609,10 +635,16 @@ def run(name, flags):
 
     real_after = io.open(REAL_BOOK, "rb").read() if os.path.exists(REAL_BOOK) else None
     if real_after != real_before:
+        # PUT IT BACK before saying so: the guard exists for the owner's save,
+        # and a guard that reports the damage and keeps it is half a guard.
+        if real_before is None:
+            os.remove(REAL_BOOK)
+        else:
+            io.open(REAL_BOOK, "wb").write(real_before)
         raise RuntimeError(
-            "%s: the owner's own book (Saved/Ledger/book.txt) is not what it was "
-            "before this row ran. The suite read or wrote a player's save - "
-            "-Ledger=0 in PINNED is not being honoured." % name)
+            "%s: the owner's own book (Saved/Ledger/book.txt) was not what it was "
+            "before this row ran (put back as it was). The suite read or wrote a "
+            "player's save - -Ledger=0 in PINNED is not being honoured." % name)
     # THE EXIT CODE IS WORTH SOMETHING AGAIN. For most of this project's life
     # the editor exited 1 on every single run, because the Water plugin's
     # collision profile was missing from DefaultEngine.ini - a plugin adds it
@@ -1181,24 +1213,37 @@ def measure(name, text):
     # for exactly one: none means the player's quit path was never walked, two
     # means the book was written twice.
     m["ledger_closes"] = len(re.findall(r"LEDGERLOG CLOSE ", text))
-    lc = re.search(r"LEDGERLOG CLOSE slot=(\w+) reason=\w+ written=(\d+) roundtrip=(\d+) "
+    lc = re.search(r"LEDGERLOG CLOSE slot=(\w+) why=(\w+) reason=\w+ written=(\d+) roundtrip=(\d+) "
                    r"cruise=(\d+) ship=(\d+) hands=(\d+) hull=(\d+) shot=(\d+) chest=(\d+) "
-                   r"wrecks=(\d+) wreckCharge=(\d+) refused=(\d+) rejected=(\d+)", text)
+                   r"wrecks=(\d+) wreckCharge=(\d+) refused=(\d+) rejected=(\d+) "
+                   r"setAside=(\d+) recovered=(\d+)", text)
     if lc:
         m["ledger_slot"] = {"off": 0, "given": 1, "default": 2}.get(lc.group(1), 9)
-        m["ledger_written"] = int(lc.group(2))
-        m["ledger_roundtrip"] = int(lc.group(3))
+        # Why it is shut: 0 open, 1 pinned (-Ledger=0), 2 no roadstead, 3 a
+        # test flag. 9 is a word this reader does not know.
+        m["ledger_why"] = {"open": 0, "pinned": 1, "noport": 2, "testflag": 3}.get(lc.group(2), 9)
+        m["ledger_written"] = int(lc.group(3))
+        m["ledger_roundtrip"] = int(lc.group(4))
         if lc.group(1) != "off":
-            m["ledger_cruise_out"] = int(lc.group(4))
-            m["ledger_ship_out"] = int(lc.group(5))
-            m["ledger_hands_out"] = int(lc.group(6))
-            m["ledger_hull_out"] = int(lc.group(7))
-            m["ledger_shot_out"] = int(lc.group(8))
-            m["ledger_chest_out"] = int(lc.group(9))
-            m["ledger_wrecks_out"] = int(lc.group(10))
-            m["ledger_wreck_charge"] = int(lc.group(11))
-            m["ledger_refused"] = int(lc.group(12))
-            m["ledger_rejected"] = int(lc.group(13))
+            m["ledger_cruise_out"] = int(lc.group(5))
+            m["ledger_ship_out"] = int(lc.group(6))
+            m["ledger_hands_out"] = int(lc.group(7))
+            m["ledger_hull_out"] = int(lc.group(8))
+            m["ledger_shot_out"] = int(lc.group(9))
+            m["ledger_chest_out"] = int(lc.group(10))
+            m["ledger_wrecks_out"] = int(lc.group(11))
+            m["ledger_wreck_charge"] = int(lc.group(12))
+            m["ledger_refused"] = int(lc.group(13))
+            m["ledger_rejected"] = int(lc.group(14))
+            m["ledger_set_aside"] = int(lc.group(15))
+            m["ledger_recovered"] = int(lc.group(16))
+    lost = re.findall(r"LEDGERLOG \S+ lost: a new hull costs (\d+), the chest paid (\d+)", text)
+    if lost:
+        m["ledger_ship_cost"] = max(int(c) for c, _ in lost)
+        m["ledger_paid"] = sum(int(p) for _, p in lost)
+    side = re.search(r"PORTLOG SIDE refused=(\d+)", text)
+    if side:
+        m["refit_refused_side"] = int(side.group(1))
     lo = re.search(r"LEDGERLOG OPEN ship=\S+ loaded=(\d+) rejected=\d+ cruise=(\d+) "
                    r"hands=(\d+)/\d+ hull=(\d+)/\d+ shot=(\d+)/\d+ chest=(\d+) "
                    r"wrecks=(\d+) clamped=(\d+)", text)

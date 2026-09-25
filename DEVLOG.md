@@ -4769,3 +4769,61 @@ Ce nu pot: sa simt daca a porni pe o nava ranita e miza sau pedeapsa -
 
 **Task Completed** (commit + pachet verificat prin rulare, mai jos).
 
+## 25.09.2026 - Ce a gasit recenzia in cartea navei
+
+**Task Started.** Prompt: "continua" (recenzia adversariala a feliei, 5 lentile,
+29 de constatari, 29 de verificatori, 3,98M tokeni - anuntasem 2,3M). Model:
+Opus 5.5.
+
+**27 din 29 confirmate; cele doua mari sunt de design, nu de cod.** (1) Cartea
+era pornita implicit, dar lansarea implicita n-are rada - singurul loc care
+reface nava. Recenzia a parcurs lista owner-ului: fiecare verificare ruleaza
+fara port, deci o magazie golita intr-un test pleca goala in urmatorul, iar a fi
+scufundat devenea singurul drum inapoi, si era gratis. (2) Rețetele cu
+`-Shot=3` / `-Shot=0` / `-ShipHullTest=` scriau starea testului in cartea
+owner-ului. Nicio poarta nu putea vedea asta: suita masura exact ce construisem,
+pe randuri alese de mine, toate cu rada. **Reparat ca regula:** cartea se
+deschide doar cu `-Port=1` si fara flag-urile care pun nava de mana; o partida
+fara rada e un exercitiu si n-o atinge.
+
+**Restul, pe rand:** cititorul lua gunoiul drept 0, un numar de zece cifre drept
+ce facea Atoi din el, si o pagina rupta drept carte - acum `book=1` primul,
+`end=1` ultimul, numere de 1-9 cifre, nava toata sau deloc. Scrierea „alaturi,
+apoi peste" nu era atomica pe Windows (mutarea sterge intai cartea veche) -
+cititorul recupereaza acum pagina `.tmp` cand cartea lipseste. O carte refuzata
+era suprascrisa la iesire - acum e pusa deoparte (`.rejected`), iar una care nu
+poate fi citita deloc nu mai e scrisa. Rada vindea oricui intra in cerc, iar
+doctrina AI de port socotea punga drept a oricui: o nava a Coroanei se repara
+din lada jucatorului si pleca spre port ca s-o cheltuie - acum amandoua intreaba
+de partea cui e punga (`IsPurseSide`); **niciun rand existent nu s-a miscat**,
+deci garda n-a schimbat nimic din ce era masurat. `ledger_wreck` nu putea arata
+refuzul (cartea taiata era identica cu nava noua) - acum coca e 500 si se vede;
+si nu testa „cat ajunge lada" (2000 acoperea 1780) - acum 1000. Poarta nu
+verifica pe hartie ca o nava ranita se scrie ranita - acum da. Garda cartii
+reale doar raporta paguba - acum o si repara.
+
+**Unde recenzia, si eu inainte ei, am gresit.** Panelul de design, eu si un
+verificator am spus ca `FParse::Value` e o cautare de subsir. Nu e: `Strifind`
+cere ca potrivirea sa nu fie precedata de litera sau cifra (CString.h:692) -
+dovada era deja in linia de baza, `own_shot_max=40` pe `magazine_short`, care
+poarta `-EnemyShot=4`. Citisem un strat si am crezut panelul. Codul, poarta si
+docs spun acum regula exacta; poarta o oglindeste (`-X_Ledger=` e refuzat,
+`-ShipLedger=` nu).
+
+**Masurat.** 12 randuri ale cartii (erau 6), fiecare calculat pe hartie de
+poarta - inclusiv CARE randuri trebuie sa lase cartea inchisa si de ce, dedus
+din flag-urile randului. Suita: 54 de scenarii, 9 MOVED toate pe randurile
+cartii si explicate (fixturi noi; `ledger_cycle` are acum rada, deci lada 140
+apare in `refit_coffers_end`; `ledger_bad` iese la 10 s), 0 GONE, niciun rand
+existent miscat. Randurile cartii identice intre doua rulari.
+
+**Mutatii: 21 din 21 prinse** - 14 in C++ (zavorul, `book=1`, `end=1`, cifrele,
+taierea, scrierea din EndPlay, costul navei, cererea cartii, regula radei,
+regula flag-ului de test, recuperarea `.tmp`, punerea deoparte, garda radei,
+garda doctrinei AI), 5 statice (pinul, un lansator, o carte in afara
+`Saved/CI`, un flag citit de motor drept comutator, o cale cu `..`), garda
+cartii reale si restaurarea ei. Neexercitat si spus: podeaua de coca 1 la scriere
+(o coca vie sub 0,5 e prea rara ca s-o construiesc intr-un rand).
+
+**Task Completed** (commit + pachet verificat prin rulare, mai jos).
+

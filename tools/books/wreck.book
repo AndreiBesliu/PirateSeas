@@ -1,7 +1,8 @@
 book=1
 cruises=5
 wrecks=1
-chest=2000
+chest=1000
 hands=72
-hull=1500
+hull=500
 shot=45
+end=1

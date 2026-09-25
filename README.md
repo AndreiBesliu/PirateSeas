@@ -955,11 +955,21 @@ numărată ca oprită.
 
 ## Cartea navei: ce e la bord la sfarsit e la bord la inceput
 
-**Pana pe 25.09 nimic nu trecea dintr-o rulare in alta.** Acum trece: la iesire
-jocul scrie `Saved/Ledger/book.txt` - cati oameni ai, cata coca, cate ghiulele,
-si LADA, banii de pe uscat - iar la pornire prima ta nava pleaca asa. Nava
-lovita ieri e lovita azi; banii castigati ieri sunt in lada azi. In panou,
-randul `CRUISE 4  chest ashore 600` spune pe a cata croaziera esti.
+**Pana pe 25.09 nimic nu trecea dintr-o rulare in alta.** Acum trece, intr-o
+partida CU RADA: la iesire jocul scrie `Saved/Ledger/book.txt` - cati oameni
+ai, cata coca, cate ghiulele, si LADA, banii de pe uscat - iar la pornirea
+urmatoarei partide cu rada prima ta nava pleaca asa. Nava lovita ieri e lovita
+azi; banii castigati ieri sunt in lada azi. In panou, randul
+`CRUISE 4  chest ashore 600` spune pe a cata croaziera esti.
+
+**Doar unde o pierdere se poate repara.** Cartea se deschide numai cu `-Port=1`
+(singur sau cu un convoi). O partida fara rada e un exercitiu: n-o citeste si
+n-o scrie. Prima versiune o deschidea oriunde, si recenzia a aratat ce facea
+asta: fiecare verificare din `OWNER_VERIFY` ruleaza fara port, deci o magazie
+golita intr-un test pleca goala in urmatorul, fara nimic pe mare care s-o
+umple - iar a fi scufundat devenea singurul drum inapoi, si era gratis. Tot
+inchisa sta cartea intr-o partida cu `-Shot=` sau `-ShipHullTest=`: flag-urile
+alea pun nava de mana, si starea unui test nu e a navei.
 
 **Decizia pe care o creeaza.** Pana acum sfarsitul rularii stergea tot, deci nu
 era nimic de hotarat: cheltuiai. Acum a intra in rada inainte sa te opresti e o
@@ -969,49 +979,78 @@ sparta si lada plina. Lada se cheltuie doar in rada, ca banii din prazi.
 
 **O nava pierduta se plateste.** Inlocuitoarea e o coca noua, cumparata
 intreaga la preturile portului: 1000 x 0,5 + 60 x 20 + 40 x 2 = **1780**, din
-lada, cat ajunge - fara datorii. Fara regula asta a fi scufundat era cel mai
-ieftin refit din joc. Cartea potriveste O SINGURA coca pe rulare, prima;
-inlocuitoarea nu mosteneste ranile celei vechi.
+lada, cat ajunge - fara datorii. Cartea potriveste O SINGURA coca pe rulare,
+prima; inlocuitoarea nu mosteneste ranile celei vechi.
+
+**Rada vinde doar partii careia ii apartine punga.** Jucatorului cand nu e
+`-RaiderSide=`, Coroanei (raider-ul AI si consortii lui) cand e. Inainte vindea
+oricui intra in cerc: o nava a Coroanei in rada jucatorului se repara din banii
+lui - si, de la carte incoace, din lada lui - iar capitanul ei, cu `-AIRefit=1`,
+socotea lada jucatorului drept a lui si pleca spre port s-o cheltuie. Ambele
+intreaba acum de partea cui e punga (`PORTLOG SIDE refused=` la iesire).
 
 **Unde se scrie, si de ce acolo.** In `EndPlay` al modului de joc, nu in
 `QuitNow`: `QuitNow` e armat doar de `-ShipQuitAfter`, iar un jucator inchide
 fereastra. `QuitNow` se termina cu `Exec quit`, care ajunge in acelasi
 `EndPlay(Quit)` prin `PreExit`-ul motorului - deci fiecare rand al suitei
 parcurge exact drumul iesirii unui jucator, si poarta cere o singura linie
-`LEDGERLOG CLOSE` pe fiecare rand. Scrisa alaturi si apoi mutata peste, ca o
-iesire moarta la jumatate sa lase cartea veche intreaga; recitita prin acelasi
-cititor pe care il foloseste pornirea (`roundtrip=1`).
+`LEDGERLOG CLOSE` pe fiecare rand. Pagina noua se scrie alaturi (`.tmp`) si se
+muta peste; pe Windows mutarea sterge intai cartea veche, deci o iesire moarta
+exact atunci lasa doar pagina noua - si cititorul o recupereaza
+(`recovered=1`). O pagina rupta de o iesire moarta in timpul scrierii n-are
+`end=1` si e refuzata. Un proces omorat (nu inchis) nu scrie nimic: cartea
+ramane cea de la iesirea dinainte.
+
+**Ce e o carte.** `book=1` primul, `end=1` ultimul, fiecare numar din una pana
+la noua cifre, iar nava - oameni, coca, ghiulele - toata sau deloc. Orice
+altceva e refuzat intreg, niciodata citit pe jumatate: nava pleaca asa cum a
+fost construita, iar pagina refuzata e mutata la `book.txt.rejected`, pastrata,
+inainte ca iesirea sa scrie una buna. O carte care nu poate fi citita deloc
+(blocata, disc stricat) nu e suprascrisa.
 
 **Suita nu-ti atinge niciodata cartea.** `-Ledger=0` e in flag-urile fixate ale
 fiecarui rand; randurile cartii deschid fisiere de proba cu `-LedgerBook=` sub
-`Saved/CI/`. Poarta refuza orice flag care contine `ledger=` (`FParse::Value`
-cauta subsiruri), orice lansator al jocului fara `-Ledger=0` si `slot=default`
-pe orice rand; iar suita compara octet cu octet `Saved/Ledger/book.txt` inainte
-si dupa fiecare rand.
+`Saved/CI/`. `FParse::Value` gaseste un nume oriunde caracterul dinaintea lui
+nu e litera sau cifra (`Strifind`), deci `-ShipLedger=` e sigur, dar `x_Ledger=`
+nu - poarta refuza exact forma asta, orice script `.py`/`.ps1` din `Scripts/`
+si `tools/` care porneste jocul fara `-Ledger=0`, si `slot=default` pe orice
+rand. Iar suita compara octet cu octet `Saved/Ledger/book.txt` inainte si dupa
+fiecare rand, si daca s-a schimbat il pune la loc inainte sa cada.
 
-**Masurat, sase randuri**, fiecare cifra calculata de poarta pe hartie inainte
-sa se uite la rand - din fisierul de proba si din preturile citite din headere:
+**Masurat, douasprezece randuri**, fiecare cifra - inclusiv care randuri trebuie
+sa lase cartea INCHISA, si de ce - calculata de poarta pe hartie inainte sa se
+uite la rand, din flag-urile randului, din fisierul de proba si din preturile
+citite din headere:
 - `ledger_carry` / `ledger_fresh` - perechea: o carte de veteran (48 de oameni,
-  coca 600, 600 in lada, a patra croaziera) contra primei croaziere. Difera in
-  noua chei `ledger_*` si in nimic altceva: 48 e exact echipajul tunurilor, deci
-  `gun_crew_min` ramane 1,00; fara rada, lada nu intra in vistierie.
-- `ledger_spend` - aceeasi carte, cu zece ghiulele lipsa si rada pusa unde
-  pornesti: 10x2 + 12x20 + 400x0,5 = **460** cheltuiti, **140** ramasi, 2+12+20
-  de tic-uri = **17,0 s**.
+  coca 600, a patra croaziera) contra primei croaziere. Difera in sapte chei
+  `ledger_*` si in nimic altceva.
+- `ledger_spend` - 600 in lada, zece ghiulele lipsa si rada unde pornesti:
+  10x2 + 12x20 + 400x0,5 = **460** cheltuiti, **140** ramasi, 2+12+20 de tic-uri
+  = **17,0 s**.
 - `ledger_cycle` - fisierul scris de `ledger_spend`, citit de alt proces: pleaca
-  cu exact ce a inchis celalalt (60 / 1000 / 40 / 140, croaziera 5). Singura
-  proba care trece granita dintre procese - adica tot rostul cartii.
-- `ledger_wreck` - o carte care cere 72 de oameni, coca 1500 si 45 de ghiulele
-  (trei taieri la ce incape), nava scufundata la t=6: inlocuitoarea e refuzata,
-  lada plateste 1780 din 2000, cartea se inchide pe inlocuitoare.
-- `ledger_bad` - un fisier fara `book=1`: refuzat intreg, nava pleaca asa cum a
-  fost construita.
+  cu exact ce a inchis celalalt. Singura proba care trece granita dintre
+  procese - adica tot rostul cartii.
+- `ledger_wreck` - o carte care cere 72 de oameni si 45 de ghiulele (doua taieri)
+  pe o coca de 500, nava scufundata la t=6: inlocuitoarea e refuzata si se vede
+  (se inchide pe coca 1000, nu 500), o coca noua costa 1780 si lada are 1000 -
+  plateste 1000, nu mai mult.
+- `ledger_bad` / `ledger_torn` / `ledger_garbage` - trei pagini care nu sunt
+  carti, fiecare gresita intr-un singur fel (fara `book=1`, fara `end=1`, un
+  numar care nu e numar): refuzate, puse deoparte, nava pleaca asa cum a fost
+  construita.
+- `ledger_tmp` - cartea lipsa si pagina noua intreaga alaturi: recuperata.
+- `ledger_noport` / `ledger_testflag` - fara rada, si cu `-Shot=20`: cartea
+  ramane inchisa, necitita si nescrisa.
+- `ledger_side` - lada jucatorului in punga si o nava a Coroanei, ranita si
+  dispusa sa se refaca, nascuta in rada lui: portul o refuza (`refit_spent` 0),
+  capitanul ei nu socoteste lada (`port_ticks_max` 0).
 
 **Ce nu face inca:** portul nu vinde nimic peste „ca noua" - lada poate doar
 repara, deci progresul de azi e ca nu mai pierzi ce ai castigat, nu ca devii mai
 puternic; asta e felia urmatoare (tunuri si metal cumparate in port si purtate
 de carte). Oamenii plecati intr-o prada inca pe mare la iesire nu sunt in carte:
-nu sunt la bord. O partida de la zero: `-Ledger=0`, sau sterge fisierul.
+nu sunt la bord. Tunurile scoase din afet, greementul si carma nu sunt in carte.
+O partida de la zero: `-Ledger=0`, sau sterge fisierul.
 
 ## Echipajul
 
@@ -1133,7 +1172,9 @@ UnrealEditor-Cmd.exe PirateSeas.uproject -game -NullRHI -unattended -nosound <fl
 ```
 
 **Ca să compari două rulări, ai nevoie de trei flag-uri în plus:**
-`-UseFixedTimeStep -FPS=60 -ShipSeed=1`. Fără ele rulările NU se repetă. Măsurat:
+`-UseFixedTimeStep -FPS=60 -ShipSeed=1` - şi, într-o partidă cu `-Port=1`,
+`-Ledger=0`, altfel a doua rulare pleacă din cartea scrisă de prima. Fără ele
+rulările NU se repetă. Măsurat:
 două rulări cu exact aceleași flag-uri și exact același cod au dat 5 și apoi 8
 lovituri în greement. Cu pas fix, cele două loguri sunt identice bit cu bit
 până la prima salvă și divergeau exact acolo — la singurul hazard din proiect,
@@ -1199,7 +1240,7 @@ pereche de rulări citea împrăștiere și credea că citește semnal.
 | `-ShipSplinters=0` | stinge aschiile de la o lovitura in cocca (implicit APRINSE) |
 | `-ShipHoles=0` | stinge urmele loviturilor de pe cocca (implicit APRINSE) |
 | `-ShipSound=0` | stinge cele patru sunete de tir (implicit APRINSE) |
-| `-Ledger=0` | cartea navei inchisa pentru o rulare: nu se citeste si nu se scrie (implicit DESCHISA, `Saved/Ledger/book.txt`) |
+| `-Ledger=0` | cartea navei inchisa pentru o rulare: nu se citeste si nu se scrie (implicit DESCHISA in orice partida cu `-Port=1` si fara `-Shot=`/`-ShipHullTest=`; `Saved/Ledger/book.txt`) |
 | `-LedgerBook=<cale>` | citeste si scrie alt fisier in locul cartii, relativ la proiect (suita: sub `Saved/CI/`) |
 | `-ShipGunBand=LO,HI` | banda de inaltime (cm, fata de linia de plutire) in care o lovitura scoate un tun din afet, pentru toate navele (implicit 0,240; `OWNER_VERIFY` 38) |
 | `-WindBearing=N` | fixează DIRECȚIA vântului, altfel „mal sub vânt" nu e reproductibil |
