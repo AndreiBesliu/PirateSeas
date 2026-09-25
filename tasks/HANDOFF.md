@@ -53,6 +53,13 @@ vânt în plante şi greement, `-Hour=` pentru ora din zi.
   `Packaged\Windows\PirateSeas.exe`, ia ACELEAŞI flag-uri ca editorul, şi îşi
   scrie logul la `Packaged\Windows\PirateSeas\Saved\Logs\`. `Packaged/` e în
   `.gitignore`.
+- **Coca pe care o loveste ghiuleaua** (25.09): `Scripts/ship.py` exporta si
+  `SM_PirateHull.fbx` (pielea inchisa a cocii, cu parapet). Dupa orice
+  schimbare a cocii: Blender → `run_py.ps1 -Script reimport_hull.py` (o data;
+  moare dupa import, e normal) → `run_py.ps1 -Script hull_collision.py` (seteaza
+  complex-as-simple si RECITESTE de pe disc; linia `HULLCOL after ...
+  trace_flag=CTF_USE_COMPLEX_AS_SIMPLE` e proba). Fara pasul al treilea coca
+  nu are coliziune si jocul raporteaza „0 lovituri", nu „lipseste coliziunea".
 - **Probe (nu porti):** `python tools/probe_hull_hits.py [--band=LO,HI]` - continua
   fiecare lovitura de pe cutia de coliziune pana la lemnul din `ship.py` si
   reclasifica zona. Ruleaza motorul, cateva minute. Scrisa 25.09 pentru decizia

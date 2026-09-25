@@ -22,7 +22,9 @@ give at the timber, and the zone a band about the guns' actual height gives.
 
 Written 25.09 to answer one question before building anything: does the box
 matter for more than where the splinters appear? Measured over the seven
-distinct fights in the suite (41 hull-zone hits):
+distinct fights in the suite (41 hull-zone hits), BEFORE the hull got its own
+collision the same day - with AShipPawn::HullShot in, every hit is on the
+timber and this prints 0.00 m, which is what it is kept for:
 
   - 0 of 41 were false: every ball's line would have met timber;
   - the timber was 1.7 m (guns zone) to 3.4 m (hull zone) past the box face on

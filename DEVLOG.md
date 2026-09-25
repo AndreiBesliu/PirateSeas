@@ -4402,3 +4402,67 @@ arhiva. Nimic sters - doar reordonat.
 
 **Task Completed.**
 
+## 25.09.2026 - Ghiuleaua se opreste pe lemn, nu pe cutie
+
+**Task Started.** Prompt: "continua". Model: Fable 5.1.
+
+Firul lasat deschis in `OWNER_VERIFY` 37 si masurat dimineata: o ghiulea se
+oprea pe cutia de coliziune a navei (1550 x 520 x 350), cu lemnul la 1,7-3,4 m
+in spate in medie si 7 m la capete. Cutia ramane radacina - plutirea actioneaza
+pe radacina - dar ghiuleaua nu mai are treaba cu ea.
+
+### Pe aceeasi cale ca greementul
+
+Boxele de greement sunt QueryOnly, `ECC_Vehicle`, ignora orice canal, si
+sweep-ul ghiulelei le gaseste dupa tipul obiectului - deci sweep-urile pe tip nu
+consulta matricea de raspunsuri. Pielea cocii a intrat cu aceeasi reteta:
+`AShipPawn::HullShot`, un `UStaticMeshComponent` niciodata desenat, cu asset-ul
+`SM_PirateHull` (pielea inchisa a cocii, lofata din ACELEASI sectiuni ca nava
+vizibila, cu parapet), marcat „coliziune complexa drept simpla". Cutia ignora
+`ECC_PhysicsBody` din constructor - exact linia pe care o avea deja o epava, ca
+sa nu opreasca niciun tir. `ACannonBall::StrikeShip` e acum singurul sfarsit al
+unei lovituri in nava, atins din sweep (greement SAU coca, deosebite intreband
+nava `IsRigVolume`) si din `OnHit` (contacte fizice, niciunul cu nave de acum).
+
+### Doua drumuri gresite, prinse de instrument
+
+1. **Importatorul a aruncat tacut sase felii convexe `UCX_`.** Asset-ul a venit
+   cu `convex_elems=0`; jocul ar fi raportat „0 lovituri", nu „lipseste
+   coliziunea". Functiile depreciate de numarat coliziunea intorc -1 in
+   commandlet, iar subsistemul e `None` acolo. Si scriptul de import nu poate
+   verifica nimic dupa import - commandlet-ul moare in `import_asset_tasks`,
+   cum consemneaza si `reimport_ship.py`. Deci steagul si citirea lui inapoi
+   sunt ALT script, `hull_collision.py`, care salveaza si reciteste de pe disc.
+2. **Prima piele s-a inchis la copastie, fara parapet:** 37 de lovituri unde
+   cutia avea 41. Parapetul e lemn, si e exact banda in care sunt taiate
+   gurile de tun. Adaugat; etanseitatea se numara in Blender (fete per muchie:
+   0 muchii deschise, 1247 fete).
+
+### Masurat
+
+- Proba: **0,00 m** intre punctul raportat si lemn, la fiecare lovitura din
+  sapte lupte. Inainte, mediana 2,70 m.
+- Suita, 38 de scenarii, **59 de cifre miscate, toate explicate de o singura
+  propozitie:** in fiecare lupta mutata, exact o lovitura in cocca a devenit
+  exact un strop (-1/+1, echilibrat in toate 8). O ghiulea per lupta care se
+  oprea pe cutie zboara acum mai departe si cade in mare. `trail_laid` creste
+  (zboara mai mult), `casualties_max` scade (o lovitura mai putin), iar in
+  `crew_fight` `gun_crew_min` urca 0,54 -> 0,58 si apare un refuz uscat - toate
+  in aval de aceeasi ghiulea.
+- **Ce nu s-a miscat, si nu avea voie:** nicio cheie de ochire, magazie,
+  reincarcare sau salva. Tunurile au tras identic; s-a schimbat doar ce au
+  intalnit ghiulelele.
+- `chips_spawned == hull_hits` pe fiecare rand, in continuare.
+- Nava vizibila e neatinsa: `SM_PirateShip.uasset` n-a fost reimportat.
+
+**Nu mi se potriveste proba cu jocul pentru exact acea ghiulea per lupta:**
+proba a spus „0 linii false" cu un model mai generos (raza de 7,5 cm, puntea
+solida intre parapeti, sectiuni analitice), iar sweep-ul pe triunghiuri a lasat-o
+sa treaca. E o ghiulea razanta pe un capat; n-o vanez, fiindca bilantul -1/+1 e
+masuratoarea, si contradictia e consemnata in loc sa fie rationalizata.
+
+`OWNER_VERIFY` 37 e inchis; 38 (banda tunurilor) ramane a owner-ului, cu cifra
+actualizata: 7 din 37 dararii, toate de sub punte; 1 cu banda mutata.
+
+**Task Completed.**
+

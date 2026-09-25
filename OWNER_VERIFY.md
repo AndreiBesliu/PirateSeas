@@ -12,8 +12,8 @@ contează; restul e arhivă, etichetată ca atare la sfârşitul paginii.
 ### O decizie care e a ta
 
 **Banda de avarie a tunurilor — punctul 38.** Acum, 12 din 41 de lovituri în
-cocă scot un tun din afet, şi **toate 12 au lovit coca SUB punte**, între 21 şi
-152 cm deasupra apei — 0,6 până la 1,9 m sub tunul pe care l-au dărâmat. Panoul
+cocă scoteau un tun din afet, **toate 12 de sub punte** — şi după ce coca a
+primit coliziunea ei pe 25.09, tot **7 din 37**, tot de sub punte. Panoul
 GUNS îţi arată atunci un afet distrus de o ghiulea care a intrat la linia de
 plutire. Recomandarea mea e să mut banda unde sunt tunurile; asta face
 dărâmarea unui tun de vreo **douăsprezece ori mai rară**, şi de aceea nu o fac
@@ -29,9 +29,9 @@ n-o repet aici ca fapt; dacă vrei să hotărăşti pe ea, o re-măsor întâi.
 
 ### Cinci lucruri de văzut, în ordinea asta
 
-1. **37 — aşchiile de la o lovitură.** Singurul efect pe care îl ştiu stricat:
-   sar de pe cutia de coliziune, nu de pe scânduri. Măsurat azi: în medie cu
-   **1,7 până la 3,4 m** înaintea lemnului, maxim 7.
+1. **37 — aşchiile de la o lovitură.** Reparat pe 25.09: coca are coliziunea
+   ei, ghiuleaua se opreşte pe lemn (0,00 m, măsurat pe 37 de lovituri). Ce nu
+   pot vedea eu: dacă aşchiile ies din SCÂNDURĂ, la înălţimea la care a intrat.
 2. **36 — focul de la gura tunului.** `0,10 s` şi `60 000 cd/m²` sunt numere pe
    care le-am ales singur.
 3. **35 — panoul GUNS cu trei stări.** Două pătrăţele palide la 0,30 şi 0,12
@@ -942,7 +942,7 @@ si `flash_off`) si ca niciun foc nu supravietuieste varstei lui. Dar cat de scur
 e "scurt" si cat de tare e "tare" sunt judecati de ochi, si sunt exact cele doua
 numere pe care le-am ales singur.
 
-## 37. Aschiile de la o lovitura in cocca
+## 37. Aschiile de la o lovitura in cocca — REPARAT 25.09: sar de pe lemn
 
 **Ce te uiti:** Trage de aproape intr-o nava - `-EnemyX=3000` din linia de
 comanda ajuta - si uita-te la locul unde intra ghiuleaua, nu la tunul tau.
@@ -952,12 +952,14 @@ se rasuceste, cade si intra in apa. Trebuie sa se vada ca ai LOVIT: pana acum o
 ratare arunca o coloana de apa vizibila de la trei sute de metri, iar o lovitura
 nu producea nimic.
 
-**Cum arata prost:** Aschiile sar dintr-un loc care nu e bordajul - **si asta e
-capcana pe care o STIU si n-am reparat-o**: ghiuleaua se opreste pe cutia de
-coliziune a navei, care e o cutie dreptunghiulara, nu forma cocii. La mijloc
-cutia sta cam un metru in afara scandurilor; la prova, unde coca se subtiaza, in
-jur de cinci. Deci o lovitura spre prova arunca aschii din aer. Repararea
-inseamna o forma de coliziune care urmareste coca, si e o felie separata.
+**Cum arata prost:** Aschiile sar dintr-un loc care nu e bordajul. **Asta era
+capcana stiuta, si e reparata pe 25.09:** ghiuleaua se oprea pe cutia de
+coliziune a navei, o cutie dreptunghiulara - masurat, lemnul era in medie la 1,7
+pana la 3,4 m in spatele fetei cutiei, si pana la 7 m la capete. Acum se opreste
+pe o piele inchisa a cocii, lofata din aceleasi sectiuni ca nava vizibila, cu
+parapetul cu tot. Masurat dupa: 0,00 m intre punctul raportat si lemn, la fiecare
+lovitura din sapte lupte. Ce ramane de vazut cu ochiul e daca aschiile sar din
+SCANDURA - din bordaj, la inaltimea la care a intrat ghiuleaua.
 
 Sau: prea multe, prea mari, prea lente. Sau raman agatate in aer in loc sa cada.
 
@@ -987,10 +989,12 @@ Dar cate aschii arata a lovitura si cate arata a explozie e o judecata de ochi.
 
 **Variantele:**
 
-- **A — banda unde sunt tunurile** (200–350 cm) **şi lovitura socotită acolo
-  unde ghiuleaua atinge lemnul**, nu pe faţa cutiei. Pe aceleaşi 41: dărâmările
-  scad de la **12 la 1**. Pipurile de „afet distrus" vor apărea rar, dar vor
-  însemna exact ce spun. **Recomandarea mea.**
+- **A — banda unde sunt tunurile** (200–350 cm). Pe 25.09 lovitura se
+  socoteşte deja acolo unde ghiuleaua atinge lemnul (coca are coliziunea ei
+  acum), şi asta singură a dus dărâmările de la 12 la **7** din 37 — toate 7 tot
+  sub punte, între 68 şi 155 cm. Cu banda mutată scad la **1**. Pipurile de
+  „afet distrus" vor apărea rar, dar vor însemna exact ce spun. **Recomandarea
+  mea.**
 - **B — cum e acum.** Pierzi un tun la aproape o lovitură din trei în cocă, din
   ghiulele care intră la linia de plutire. Presiunea rămâne; motivul e fals.
 - **C — A, plus o comandă de tir „la puntea de tunuri".** Tu poţi deja ochi mai

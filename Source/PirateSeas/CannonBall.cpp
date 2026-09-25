@@ -193,19 +193,11 @@ void ACannonBall::Tick(float DeltaSeconds)
 				ReportAndDie(TEXT("land"), RigHit.ImpactPoint);
 				return;
 			}
-			if (Struck)
-			{
-				UGameplayStatics::ApplyPointDamage(Struck, ImpactDamage,
-					GetVelocity().GetSafeNormal(), RigHit,
-					IsValid(Shooter) ? Shooter->GetInstigatorController() : nullptr,
-					this, nullptr);
-				UE_LOG(LogTemp, Display,
-					TEXT("SHOTLOG rig by=%s shot=%d target=%s comp=%s"),
-					IsValid(Shooter) ? *Shooter->GetName() : TEXT("?"), ShotIndex,
-					*Struck->GetName(),
-					RigHit.Component.IsValid() ? *RigHit.Component->GetName() : TEXT("?"));
-			}
-			ReportAndDie(TEXT("rigged"), RigHit.ImpactPoint);
+			// Rig or hull: since 25.09 this one sweep finds BOTH, because the
+			// hull a ball meets (AShipPawn::HullShot) is a query-only volume of
+			// the same object type as the rig boxes. The ship says which it was;
+			// the ball must not guess from a name.
+			StrikeShip(Cast<AShipPawn>(Struck), RigHit);
 			return;
 		}
 	}
@@ -291,40 +283,73 @@ void ACannonBall::OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor,
 	// frame by the rig sweep and the contact notify both.
 	bSpent = true;
 
-	if (OtherActor)
-	{
-		// The shooter may be a wreck, or gone, by the time the ball lands.
-		const FVector Incoming = LastFlightVel.IsNearlyZero()
-			? GetVelocity() : LastFlightVel;
-		UGameplayStatics::ApplyPointDamage(OtherActor, ImpactDamage,
-			Incoming.GetSafeNormal(), Hit,
-			IsValid(Shooter) ? Shooter->GetInstigatorController() : nullptr,
-			this, nullptr);
-		UE_LOG(LogTemp, Display, TEXT("SHOTLOG hit by=%s shot=%d target=%s damage=%.0f"),
-			IsValid(Shooter) ? *Shooter->GetName() : TEXT("?"), ShotIndex,
-			*OtherActor->GetName(), ImpactDamage);
+	// Since 25.09 the hull box IGNORES the ball, so a physics contact with a
+	// ship no longer happens here: ships are found by the sweep in Tick. This
+	// stays as the ending for anything that still blocks the ball physically,
+	// and goes through the same strike so it cannot drift from the sweep.
+	StrikeShip(Cast<AShipPawn>(OtherActor), Hit);
+}
 
-		// AND SOMETHING TO SEE. Until 19.09 a hull hit produced this log line and
-		// a number on a bar, while a MISS threw up a column of water visible at
-		// three hundred metres - the one outcome the player is trying for was the
-		// one with nothing to look at.
-		//
-		// Ships only. Rock does not splinter, and a ball into a hillside already
-		// ends with its own reason string; oak coming out of an island would be
-		// the effect lying about what was hit.
-		if (bSplinters && Cast<AShipPawn>(OtherActor))
-		{
-			// The struck ship's way, so the burst stays with the hole, and the
-			// sea's height there, so the pieces end in the water rather than
-			// tumbling through it. Both are read HERE because this is the only
-			// place that knows which ship was hit.
-			AHullSplinters::Spawn(GetWorld(), Hit.ImpactPoint,
-				Hit.ImpactNormal, ShotIndex,
-				FVector(OtherActor->GetVelocity().X, OtherActor->GetVelocity().Y, 0.f),
-				SurfaceZAtDeath);
-		}
+void ACannonBall::StrikeShip(AShipPawn* Ship, const FHitResult& Hit)
+{
+	bSpent = true;
+	AActor* Struck = Hit.GetActor();
+	if (!Struck)
+	{
+		ReportAndDie(TEXT("impact"), Hit.ImpactPoint);
+		return;
 	}
 
+	// The way she was going IN. OnHit fires after the physics step that
+	// resolved a contact, when GetVelocity() is already the bounce; the sweep
+	// runs before physics, when it is not - LastFlightVel is right for both.
+	const FVector Incoming = LastFlightVel.IsNearlyZero()
+		? GetVelocity() : LastFlightVel;
+	// The shooter may be a wreck, or gone, by the time the ball lands.
+	UGameplayStatics::ApplyPointDamage(Struck, ImpactDamage,
+		Incoming.GetSafeNormal(), Hit,
+		IsValid(Shooter) ? Shooter->GetInstigatorController() : nullptr,
+		this, nullptr);
+
+	// ONE fact, two lines the whole suite is read from: "rig" is a mast or a
+	// yard, "hit" is timber. Decided by WHICH component was struck, asked of
+	// the ship, never by where the point is - a low shot that strays above the
+	// box top without touching a rig volume is honest hull damage.
+	const bool bRig = Ship && Ship->IsRigVolume(Hit.Component.Get());
+	if (bRig)
+	{
+		UE_LOG(LogTemp, Display,
+			TEXT("SHOTLOG rig by=%s shot=%d target=%s comp=%s"),
+			IsValid(Shooter) ? *Shooter->GetName() : TEXT("?"), ShotIndex,
+			*Struck->GetName(),
+			Hit.Component.IsValid() ? *Hit.Component->GetName() : TEXT("?"));
+		ReportAndDie(TEXT("rigged"), Hit.ImpactPoint);
+		return;
+	}
+
+	UE_LOG(LogTemp, Display, TEXT("SHOTLOG hit by=%s shot=%d target=%s damage=%.0f"),
+		IsValid(Shooter) ? *Shooter->GetName() : TEXT("?"), ShotIndex,
+		*Struck->GetName(), ImpactDamage);
+
+	// AND SOMETHING TO SEE. Until 19.09 a hull hit produced this log line and
+	// a number on a bar, while a MISS threw up a column of water visible at
+	// three hundred metres - the one outcome the player is trying for was the
+	// one with nothing to look at.
+	//
+	// Ships only. Rock does not splinter, and a ball into a hillside already
+	// ends with its own reason string; oak coming out of an island would be
+	// the effect lying about what was hit.
+	if (bSplinters && Ship)
+	{
+		// The struck ship's way, so the burst stays with the hole, and the
+		// sea's height there, so the pieces end in the water rather than
+		// tumbling through it. Both are read HERE because this is the only
+		// place that knows which ship was hit.
+		AHullSplinters::Spawn(GetWorld(), Hit.ImpactPoint,
+			Hit.ImpactNormal, ShotIndex,
+			FVector(Ship->GetVelocity().X, Ship->GetVelocity().Y, 0.f),
+			SurfaceZAtDeath);
+	}
 	ReportAndDie(TEXT("impact"), Hit.ImpactPoint);
 }
 

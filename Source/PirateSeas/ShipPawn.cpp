@@ -103,6 +103,12 @@ AShipPawn::AShipPawn()
 	// lift=0.43) and the contact carried the rest. Overlap keeps the water-body
 	// overlap semantics and lets the hull move through the sea.
 	HullCollision->SetCollisionResponseToChannel(ECC_WorldDynamic, ECR_Overlap);
+	// THE BALL PASSES THROUGH THE BOX. It used to stop here, on a face that
+	// stands a metre outboard of the planking amidships and five metres ahead
+	// of the stem; it now stops on HullShot, below, which the shot's sweep
+	// finds. A wreck already did this (EnterFoundering) so that a ship going
+	// down stops no shot - the same line, now for every ship from the start.
+	HullCollision->SetCollisionResponseToChannel(ECC_PhysicsBody, ECR_Ignore);
 	HullCollision->SetGenerateOverlapEvents(true);
 	// Every physical contact the hull makes is logged (throttled): without
 	// this a hull "floating" on something solid is indistinguishable from
@@ -144,6 +150,28 @@ AShipPawn::AShipPawn()
 	if (ShipMeshAsset.Succeeded())
 	{
 		HullMesh->SetStaticMesh(ShipMeshAsset.Object);
+	}
+
+	// --- the hull, as something a shot can find --------------------------
+	// Same recipe as the rig volumes below, for the same reasons: query-only
+	// so nothing welds into the simulating box, ECC_Vehicle so the shot's
+	// existing sweep finds it by object type, ignoring every channel because
+	// object-type sweeps do not consult the response matrix at all.
+	HullShot = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("HullShot"));
+	HullShot->SetupAttachment(HullCollision);
+	HullShot->SetVisibility(false);
+	HullShot->SetHiddenInGame(true);
+	HullShot->SetCastShadow(false);
+	HullShot->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	HullShot->SetCollisionObjectType(ECC_Vehicle);
+	HullShot->SetCollisionResponseToAllChannels(ECR_Ignore);
+	HullShot->SetGenerateOverlapEvents(false);
+	HullShot->CanCharacterStepUpOn = ECB_No;
+	static ConstructorHelpers::FObjectFinder<UStaticMesh> ShotHullAsset(
+		TEXT("/Game/Meshes/SM_PirateHull.SM_PirateHull"));
+	if (ShotHullAsset.Succeeded())
+	{
+		HullShot->SetStaticMesh(ShotHullAsset.Object);
 	}
 
 	// --- the rig, as something a shot can find --------------------------
@@ -1197,6 +1225,14 @@ int32 AShipPawn::GetGunsRemaining(bool bStarboard) const
 	return Count;
 }
 
+bool AShipPawn::IsRigVolume(const UPrimitiveComponent* Comp) const
+{
+	// In the .cpp, not the header: the header only forward-declares
+	// UBoxComponent, and comparing a UPrimitiveComponent* against it needs the
+	// complete type to find the upcast.
+	return Comp && (Comp == ForeRig.Get() || Comp == MainRig.Get());
+}
+
 EShipZone AShipPawn::ClassifyHit(const UPrimitiveComponent* Struck,
 	const FVector& HullLocal, int32& OutGun) const
 {
@@ -1799,6 +1835,12 @@ void AShipPawn::EnterFoundering(const TCHAR* Reason)
 		{
 			Volume->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 		}
+	}
+	// And the hull the shot sweeps for, or a wreck at the surface goes on
+	// stopping balls that the box has just been told to let through.
+	if (HullShot)
+	{
+		HullShot->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	}
 	const FRotator Rot = GetActorRotation();
 	UE_LOG(LogTemp, Display,

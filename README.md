@@ -334,6 +334,43 @@ parametrul funcţionează. Dar între 0,98 şi 1,06 diferenţa e **o singură
 lovitură din treizeci şi trei**, pe patru seminţe. Aia e împrăştiere, nu semnal,
 şi nu se calibrează nimic pe ea. Rămâne 1,04.
 
+## Coca pe care o loveste ghiuleaua
+
+**Pana pe 25.09 o ghiulea se oprea pe o CUTIE.** Radacina navei e o cutie de
+coliziune de 1550 x 520 x 350 cm - trebuie sa fie, fiindca plutirea actioneaza pe
+radacina - si tot pe ea se opreau si ghiulelele. Masurat cu
+`tools/probe_hull_hits.py`, pe cele sapte lupte distincte din suita: lemnul era
+in medie la **1,7 m** (zona tunurilor) pana la **3,4 m** (coca) in spatele fetei
+cutiei, si pana la **7 m** la capete, unde coca se subtiaza si cutia nu. Fiecare
+zona de avarie, fiecare manunchi de aschii si fiecare capat de dara era pus
+acolo.
+
+**Acum se opreste pe lemn.** `AShipPawn::HullShot` e pielea cocii - lofata din
+ACELEASI sectiuni ca nava vizibila (`Scripts/ship.py`, `build_shot_hull`),
+inchisa, cu parapet, niciodata desenata - folosita ca „coliziune complexa drept
+simpla": coliziunea E triunghiurile ei. Intra pe aceeasi cale ca greementul:
+QueryOnly, `ECC_Vehicle`, gasita de sweep-ul ghiulelei, fara niciun canal nou de
+configurat. Cutia ramane radacina si IGNORA ghiuleaua - exact ce facea deja o
+epava, ca sa nu opreasca niciun tir.
+
+Masurat dupa: **0,00 m** intre punctul raportat si lemn, la fiecare lovitura.
+
+**Doua lucruri care au mers prost pe drum, si merita stiute:**
+
+- Prima versiune a exportat sase felii convexe `UCX_*` pentru importator, care
+  le-a aruncat TACUT: asset-ul a venit cu `convex_elems=0`. Jocul ar fi raportat
+  „0 lovituri", nu „lipseste coliziunea". Scriptul de import nu poate verifica
+  nimic dupa import (commandlet-ul moare acolo), deci verificarea e alt script,
+  `Scripts/hull_collision.py`, care seteaza steagul, salveaza si RECITESTE de pe
+  disc.
+- A doua versiune s-a inchis la copastie, fara parapet: 37 de lovituri unde
+  cutia avea 41. Parapetul e lemn, si e exact banda in care sunt taiate gurile
+  de tun.
+
+Cifra din aceeasi proba care e a owner-ului, nu a mea: **7 din 37 de lovituri
+scot un tun din afet, si toate 7 au intrat sub punte** - banda de avarie a
+tunurilor e `[0, 240]` de cand gurile erau la 120. `OWNER_VERIFY` 38.
+
 ## Unde lovești contează
 
 O ghiulea nu mai scade pur și simplu un număr. Contează unde intră.

@@ -481,6 +481,12 @@ public:
 	 *  only say HOW MANY are left and the pips claim to say WHICH. */
 	bool IsGunDown(bool bStarboard, int32 Gun) const;
 
+	/** Whether a struck component is one of her rig volumes. The shot's sweep
+	 *  finds rigs and the hull through one query, and has to tell them apart
+	 *  to log "rig" against "hit" - the two lines every gunnery number is read
+	 *  from. Asked of the ship rather than guessed from a name. */
+	bool IsRigVolume(const UPrimitiveComponent* Comp) const;
+
 	/** How many carriages on that side are standing AND loaded - which is how
 	 *  many will actually go if the order is given now, magazine permitting. */
 	int32 GetGunsReady(bool bStarboard) const;
@@ -536,6 +542,21 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Ship")
 	TObjectPtr<UStaticMeshComponent> HullMesh;
+
+	/** THE HULL AS A CANNONBALL MEETS IT. Six convex slabs lofted from the same
+	 *  sections as the visual hull (Scripts/ship.py build_shot_hull), never
+	 *  drawn, query-only, typed ECC_Vehicle like the rig volumes so the shot's
+	 *  sweep finds it by object type with no channel to configure.
+	 *
+	 *  Until 25.09 a ball stopped on HullCollision, a box 1550 x 520 x 350:
+	 *  measured over the suite's seven distinct fights, the timber sat 1.7 to
+	 *  3.4 m behind that face on average and 7 m at the ends, and every damage
+	 *  zone, splinter burst and trail end was placed on the box. The box stays
+	 *  the root - buoyancy acts on the root and the rig volumes are welded to
+	 *  nothing for the same reason this one is query-only - but it now IGNORES
+	 *  the ball, and the ball finds this instead. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Ship")
+	TObjectPtr<UStaticMeshComponent> HullShot;
 
 	/** One dynamic material per slot of the hull mesh, made on the first tick.
 	 *  They exist to carry the wind into the rig: the master bends masts, sails

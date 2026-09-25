@@ -478,6 +478,85 @@ def build_rig(m_wood, m_dark, m_sail, m_metal):
     return parts
 
 
+# ------------------------------------------------------------------ shot hull
+def build_shot_hull():
+    """The hull as a cannonball meets it: the lofted skin, CLOSED, and nothing
+    else - no masts, no cannon, no cordage. Exported to its own FBX and used
+    with "complex collision as simple", so the collision IS these triangles.
+
+    Until 25.09 a ball stopped on ShipPawn's collision BOX, 1550 x 520 x 350 cm,
+    and the timber sat 1.7 to 3.4 m behind that face on average, 7 m at the
+    ends (tools/probe_hull_hits.py).
+
+    Why the skin and not convex pieces: the first version of this function
+    lofted six convex slabs named UCX_* for the importer to take as simple
+    collision, and the importer silently dropped them - the asset came back
+    with convex_elems=0, which the game would have read as "0 hits", not as
+    "no collision". A trimesh needs no import convention at all: one flag on
+    the asset, set and read back by Scripts/hull_collision.py.
+
+    CLOSED matters. A sweep against a one-sided surface only stops at faces it
+    meets from the front, so an open top would let a plunging ball fall into
+    the hull and out through the far side unseen. Transom, bow cap and a deck
+    lid at the gunwale close it; the lid is not planar (that is the sheer) and
+    Blender triangulates it on export, which is all collision needs."""
+    m = new_mat("M_ShotHull", (0.5, 0.5, 0.5, 1), 0.9)
+    bm = bmesh.new()
+    grid_s, grid_p = [], []
+    for i in range(NS + 1):
+        t = i / NS
+        x = station_x(t)
+        cs, cp = [], []
+        for j in range(NR + 1):
+            y, z = section_point(t, j / NR)
+            cs.append(bm.verts.new((x, y, z)))
+            cp.append(bm.verts.new((x, -y, z)))
+        grid_s.append(cs)
+        grid_p.append(cp)
+    bm.verts.ensure_lookup_table()
+    for i in range(NS):
+        for j in range(NR):
+            bm.faces.new((grid_s[i][j], grid_s[i + 1][j],
+                          grid_s[i + 1][j + 1], grid_s[i][j + 1]))
+            bm.faces.new((grid_p[i][j], grid_p[i][j + 1],
+                          grid_p[i + 1][j + 1], grid_p[i + 1][j]))
+    # keel seam, as the visual hull
+    for i in range(NS):
+        bm.faces.new((grid_s[i][0], grid_p[i][0],
+                      grid_p[i + 1][0], grid_s[i + 1][0]))
+    # transom and bow cap
+    stern_ring = ([grid_s[0][j] for j in range(NR + 1)]
+                  + [grid_p[0][j] for j in range(NR, -1, -1)])
+    bm.faces.new(stern_ring[::-1])
+    bow_ring = ([grid_s[NS][j] for j in range(NR + 1)]
+                + [grid_p[NS][j] for j in range(NR, -1, -1)])
+    bm.faces.new(bow_ring)
+    # THE BULWARK, or a ball between the deck and the rail sails over the
+    # hull. Measured on the first version, which closed at the gunwale: 37 hits
+    # where the box had 41, the four missing ones all at bulwark height - and
+    # that is exactly the band the gun ports are cut in. Same wall as the
+    # visual rail (build_hull): from the gunwale up BULWARK, drawn in 1.5%.
+    top_s, top_p = [], []
+    for i in range(NS + 1):
+        t = i / NS
+        x = station_x(t)
+        y, z = section_point(t, 1.0)
+        top_s.append(bm.verts.new((x, y * 0.985, z + BULWARK)))
+        top_p.append(bm.verts.new((x, -y * 0.985, z + BULWARK)))
+    bm.verts.ensure_lookup_table()
+    for i in range(NS):
+        bm.faces.new((grid_s[i][NR], grid_s[i + 1][NR], top_s[i + 1], top_s[i]))
+        bm.faces.new((grid_p[i][NR], top_p[i], top_p[i + 1], grid_p[i + 1][NR]))
+    # close the bulwark's ends against the transom and the bow cap
+    bm.faces.new((grid_s[0][NR], top_s[0], top_p[0], grid_p[0][NR]))
+    bm.faces.new((grid_s[NS][NR], grid_p[NS][NR], top_p[NS], top_s[NS]))
+    # the lid, at the TOP of the bulwark: starboard aft to bow, port bow to aft
+    lid = top_s + top_p[::-1]
+    bm.faces.new(lid)
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    return obj_from_bm(bm, "SM_PirateHull", m, smooth=False)
+
+
 # ------------------------------------------------------------------ main
 def main():
     bpy.ops.wm.read_factory_settings(use_empty=True)
@@ -493,6 +572,8 @@ def main():
     hull, deck, rail = build_hull(m_hull, m_deck)
     parts = build_rig(m_wood, m_dark, m_sail, m_metal)
     parts.append(build_cordage(m_rope))
+
+    shot_hull = build_shot_hull()
 
     everything = [hull, deck, rail] + parts
     for o in everything:
@@ -557,6 +638,33 @@ def main():
                              apply_scale_options="FBX_SCALE_NONE",
                              object_types={"MESH"}, mesh_smooth_type="FACE",
                              add_leaf_bones=False, bake_space_transform=False)
+    # The shot hull, in its own file, so the visual ship's FBX carries exactly
+    # what it did and the importer cannot mistake the collision skin for a
+    # part of the ship.
+    bpy.ops.object.select_all(action="DESELECT")
+    shot_hull.select_set(True)
+    bpy.context.view_layer.objects.active = shot_hull
+    bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+    hull_fbx = os.path.join(OUT, "SM_PirateHull.fbx")
+    bpy.ops.export_scene.fbx(filepath=hull_fbx, use_selection=True,
+                             apply_unit_scale=True, global_scale=1.0,
+                             apply_scale_options="FBX_SCALE_NONE",
+                             object_types={"MESH"}, mesh_smooth_type="FACE",
+                             add_leaf_bones=False, bake_space_transform=False)
+    # CLOSED, counted: every edge of a watertight mesh has exactly two faces.
+    # Printed rather than asserted so a change to the loft shows up as a number
+    # in the log and not as a silent hole in the collision.
+    me = shot_hull.data
+    edge_faces = {}
+    for poly in me.polygons:
+        for k in poly.edge_keys:
+            edge_faces[k] = edge_faces.get(k, 0) + 1
+    open_edges = sum(1 for n in edge_faces.values() if n != 2)
+    print("SHOT_HULL faces=%d open_edges=%d" % (len(me.polygons), open_edges))
+    bpy.ops.object.select_all(action="DESELECT")
+    ship.select_set(True)
+    bpy.context.view_layer.objects.active = ship
+
     glb = os.path.join(OUT, "SM_PirateShip.glb")
     bpy.ops.export_scene.gltf(filepath=glb, export_format="GLB",
                               use_selection=True, export_apply=True)

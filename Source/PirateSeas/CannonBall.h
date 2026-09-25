@@ -58,6 +58,14 @@ private:
 		UPrimitiveComponent* OtherComp, FVector NormalImpulse,
 		const FHitResult& Hit);
 
+	/** The one ending for a ball that met a ship - or anything else with a hit
+	 *  result - reached from the sweep in Tick (rig volumes AND the hull since
+	 *  25.09) and from OnHit (physics contacts, none of which are ships any
+	 *  more). Decides rig against timber by asking the ship which component was
+	 *  struck, applies the damage with the INCOMING direction, logs the one line
+	 *  the suite reads, throws the splinters, and dies. Ship may be null. */
+	void StrikeShip(class AShipPawn* Ship, const FHitResult& Hit);
+
 	void ReportAndDie(const TCHAR* Reason, const FVector& Where);
 
 	/** A ball that simply burns its fuse used to end in silence, so the shots
