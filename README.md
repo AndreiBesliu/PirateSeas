@@ -948,10 +948,70 @@ care a coborât pavilionul, natural, e **272 m** — de trei ori distanţa de
 acostare. Adică fără doctrină nu s-ar lua NICIODATĂ o pradă, şi asta nu se putea
 şti presupunând.
 
-**Ce NU face încă:** punga nu cumpără nimic şi nu supravieţuieşte rulării, prada
+**Ce NU face încă:** punga nu cumpără nimic şi nu supravieţuieşte rulării (ambele rezolvate de atunci: refitul în port, apoi cartea navei pe 25.09), prada
 nu se duce nicăieri (rămâne pe loc, cu oamenii tăi la bord), oamenii nu se mai
 întorc niciodată, iar o navă scufundată după ce a coborât pavilionul rămâne
 numărată ca oprită.
+
+## Cartea navei: ce e la bord la sfarsit e la bord la inceput
+
+**Pana pe 25.09 nimic nu trecea dintr-o rulare in alta.** Acum trece: la iesire
+jocul scrie `Saved/Ledger/book.txt` - cati oameni ai, cata coca, cate ghiulele,
+si LADA, banii de pe uscat - iar la pornire prima ta nava pleaca asa. Nava
+lovita ieri e lovita azi; banii castigati ieri sunt in lada azi. In panou,
+randul `CRUISE 4  chest ashore 600` spune pe a cata croaziera esti.
+
+**Decizia pe care o creeaza.** Pana acum sfarsitul rularii stergea tot, deci nu
+era nimic de hotarat: cheltuiai. Acum a intra in rada inainte sa te opresti e o
+alegere: portul te repara din lada, in ordinea lui (ghiulele, oameni, coca; un
+minut pentru o coca facuta praf), sau pleci, si data viitoare incepi cu coca
+sparta si lada plina. Lada se cheltuie doar in rada, ca banii din prazi.
+
+**O nava pierduta se plateste.** Inlocuitoarea e o coca noua, cumparata
+intreaga la preturile portului: 1000 x 0,5 + 60 x 20 + 40 x 2 = **1780**, din
+lada, cat ajunge - fara datorii. Fara regula asta a fi scufundat era cel mai
+ieftin refit din joc. Cartea potriveste O SINGURA coca pe rulare, prima;
+inlocuitoarea nu mosteneste ranile celei vechi.
+
+**Unde se scrie, si de ce acolo.** In `EndPlay` al modului de joc, nu in
+`QuitNow`: `QuitNow` e armat doar de `-ShipQuitAfter`, iar un jucator inchide
+fereastra. `QuitNow` se termina cu `Exec quit`, care ajunge in acelasi
+`EndPlay(Quit)` prin `PreExit`-ul motorului - deci fiecare rand al suitei
+parcurge exact drumul iesirii unui jucator, si poarta cere o singura linie
+`LEDGERLOG CLOSE` pe fiecare rand. Scrisa alaturi si apoi mutata peste, ca o
+iesire moarta la jumatate sa lase cartea veche intreaga; recitita prin acelasi
+cititor pe care il foloseste pornirea (`roundtrip=1`).
+
+**Suita nu-ti atinge niciodata cartea.** `-Ledger=0` e in flag-urile fixate ale
+fiecarui rand; randurile cartii deschid fisiere de proba cu `-LedgerBook=` sub
+`Saved/CI/`. Poarta refuza orice flag care contine `ledger=` (`FParse::Value`
+cauta subsiruri), orice lansator al jocului fara `-Ledger=0` si `slot=default`
+pe orice rand; iar suita compara octet cu octet `Saved/Ledger/book.txt` inainte
+si dupa fiecare rand.
+
+**Masurat, sase randuri**, fiecare cifra calculata de poarta pe hartie inainte
+sa se uite la rand - din fisierul de proba si din preturile citite din headere:
+- `ledger_carry` / `ledger_fresh` - perechea: o carte de veteran (48 de oameni,
+  coca 600, 600 in lada, a patra croaziera) contra primei croaziere. Difera in
+  noua chei `ledger_*` si in nimic altceva: 48 e exact echipajul tunurilor, deci
+  `gun_crew_min` ramane 1,00; fara rada, lada nu intra in vistierie.
+- `ledger_spend` - aceeasi carte, cu zece ghiulele lipsa si rada pusa unde
+  pornesti: 10x2 + 12x20 + 400x0,5 = **460** cheltuiti, **140** ramasi, 2+12+20
+  de tic-uri = **17,0 s**.
+- `ledger_cycle` - fisierul scris de `ledger_spend`, citit de alt proces: pleaca
+  cu exact ce a inchis celalalt (60 / 1000 / 40 / 140, croaziera 5). Singura
+  proba care trece granita dintre procese - adica tot rostul cartii.
+- `ledger_wreck` - o carte care cere 72 de oameni, coca 1500 si 45 de ghiulele
+  (trei taieri la ce incape), nava scufundata la t=6: inlocuitoarea e refuzata,
+  lada plateste 1780 din 2000, cartea se inchide pe inlocuitoare.
+- `ledger_bad` - un fisier fara `book=1`: refuzat intreg, nava pleaca asa cum a
+  fost construita.
+
+**Ce nu face inca:** portul nu vinde nimic peste „ca noua" - lada poate doar
+repara, deci progresul de azi e ca nu mai pierzi ce ai castigat, nu ca devii mai
+puternic; asta e felia urmatoare (tunuri si metal cumparate in port si purtate
+de carte). Oamenii plecati intr-o prada inca pe mare la iesire nu sunt in carte:
+nu sunt la bord. O partida de la zero: `-Ledger=0`, sau sterge fisierul.
 
 ## Echipajul
 
@@ -1139,6 +1199,8 @@ pereche de rulări citea împrăștiere și credea că citește semnal.
 | `-ShipSplinters=0` | stinge aschiile de la o lovitura in cocca (implicit APRINSE) |
 | `-ShipHoles=0` | stinge urmele loviturilor de pe cocca (implicit APRINSE) |
 | `-ShipSound=0` | stinge cele patru sunete de tir (implicit APRINSE) |
+| `-Ledger=0` | cartea navei inchisa pentru o rulare: nu se citeste si nu se scrie (implicit DESCHISA, `Saved/Ledger/book.txt`) |
+| `-LedgerBook=<cale>` | citeste si scrie alt fisier in locul cartii, relativ la proiect (suita: sub `Saved/CI/`) |
 | `-ShipGunBand=LO,HI` | banda de inaltime (cm, fata de linia de plutire) in care o lovitura scoate un tun din afet, pentru toate navele (implicit 0,240; `OWNER_VERIFY` 38) |
 | `-WindBearing=N` | fixează DIRECȚIA vântului, altfel „mal sub vânt" nu e reproductibil |
 | `-WindSpeed=N` | fixează și TĂRIA lui; fără asta două treceri peste același unghi sunt luate pe vreme diferită |
@@ -1425,8 +1487,9 @@ toată nava, fiindcă `ObjectBounds` întorcea zero pentru mesh-ul ăla.
 - echipajul e o singură rezervă împărțită între tunuri și reparații: manevra
   velelor nu e încă o stație, coca nu se repară pe mare, nimeni nu se
   recrutează și nimeni nu se plătește
-- punga cumpara oameni, coca SI ghiulele, dar NU tunuri, nu nave mai bune, si
-  nimic nu trece dintr-o rulare in alta - nu exista salvare
+- punga cumpara oameni, coca SI ghiulele, dar NU tunuri si nu nave mai bune;
+  cartea navei (25.09) duce starea si lada dintr-o rulare in alta, dar lada nu
+  cumpara nimic peste „ca noua"
 - preturile sunt alese ca sa se raporteze la valoarea unei prazi, nu masurate
   din ceva real
 - nimeni nu recapturează o pradă care merge singură spre radă

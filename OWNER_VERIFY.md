@@ -5,7 +5,7 @@ arată bine și de ce nu pot eu.
 
 ## Prima pagină — citește doar asta (25.09)
 
-Lista are 40 de puncte și de şase zile n-a fost atinsă. Nu-ţi cer să o parcurgi.
+Lista are 41 de puncte și de şase zile n-a fost atinsă. Nu-ţi cer să o parcurgi.
 **Mai jos sunt singurele lucruri care contează acum**, în ordinea în care
 contează; restul e arhivă, etichetată ca atare la sfârşitul paginii.
 
@@ -48,6 +48,9 @@ să primească un ajutor de avans, spune; dacă nu, rămâne aşa.
    Dacă citeşte a gaură sau a abţibild.
 7. **40 — sunetul.** Nou, 25.09: tun, lemn, greement, apă, sintetizate. Dacă
    sună a tun sau a tobă, şi dacă distanţele sunt bune.
+8. **41 — cartea navei.** Nou, 25.09, şi **pornită implicit**: de acum jocul
+   continuă de unde l-ai închis (nava rănită, oamenii lipsă, banii în ladă).
+   `-Ledger=0` pentru o partidă de la zero. Dacă se simte a miză sau a pedeapsă.
 
 ### Restul
 
@@ -1086,4 +1089,39 @@ suita ruleaza fara audio, iar eu n-am urechi: daca un zgomot filtrat cu samanta
 fixa suna a tun de 24 de livre e singurul lucru din felia asta pe care nu-l pot
 masura. Sunt PATRU numere de ales daca nu-ti place ceva: forma undei e in
 `Scripts/sounds.py`, razele in `Scripts/import_sounds.py`.
+
+## 41. Cartea navei: continui unde ai ramas
+
+**Atentie, e PORNITA IMPLICIT.** De acum orice pornire a jocului continua de unde
+a ramas cea dinainte: aceeasi nava, aceiasi oameni, aceleasi ghiulele, si banii
+de pe uscat intr-o lada. Panoul spune `CRUISE N  chest ashore M`.
+
+**Ce te uiti:** Joaca o partida cu port (`-Port=1`, sau cu un convoi), ia macar
+o prada si du-o in rada, apoi inchide jocul cu nava lovita. Porneste-l din nou.
+Apoi intra in rada si lasa portul sa te repare din lada.
+
+**Cum arata bine:** A doua pornire te pune pe aceeasi nava ranita, cu banii in
+lada; „ma opresc acum sau intai repar?" devine o intrebare. O nava pierduta te
+costa: lada scade cu pretul unei coci noi.
+
+**Cum arata prost:** Nu simti nimic - fiindca lada doar repara, progresul de azi
+e ca nu mai pierzi ce ai castigat, nu ca devii mai puternic (asta vine in felia
+urmatoare: tunuri cumparate si purtate). Sau te enerveaza ca pornesti pe o coca
+sparta fara sa stii de ce - atunci randul din panou nu se vede destul. Sau 1780
+pentru o nava noua e prea aspru fata de o prada de 1200.
+
+**Doua lucruri de hotarat, daca vrei:** (1) cartea e deschisa implicit, cu
+`-Ledger=0` pentru o partida de la zero; daca preferi invers (inchisa implicit,
+deschisa cu un flag), e o linie. (2) Pretul navei pierdute: azi e pretul
+portului pentru o coca facuta intreaga de la zero (500 coca + 1200 oameni + 80
+ghiulele = 1780), fara niciun numar nou; se poate ieftini.
+
+**Pentru o partida de la zero:** `-Ledger=0` (nu citeste si nu scrie nimic), sau
+sterge `Saved\Ledger\book.txt` - langa jocul impachetat e
+`Packaged\Windows\PirateSeas\Saved\Ledger\book.txt`.
+
+**De ce nu pot eu:** pot masura ca fiecare cifra trece dintr-o rulare in alta
+(sase randuri, fiecare calculat pe hartie de poarta), ca suita nu-ti atinge
+cartea si ca jocul impachetat o scrie si o citeste inapoi. Nu pot simti daca a
+porni pe o nava ranita e o miza sau o pedeapsa - asta e jocul, nu cifra.
 

@@ -4710,3 +4710,62 @@ rezultatul importului se verifica acum.
 
 **Task Completed.**
 
+## 25.09.2026 - Progresia, felia 1: cartea navei
+
+**Task Started.** Prompt: "continua" (dupa pauza ceruta de owner, "fa o pauza
+cand poti"). Model: panelul de design pe Fable 5.1, constructia pe Opus 5.5.
+
+**Designul, de doua ori.** Un panel (3 designeri, 2 judecatori, 1,43M tokeni) a
+propus: cartea navei (starea de la bord trece in croaziera urmatoare), metal
+greu (tunuri cumparate in port, purtate), campania (Coroana escaladeaza).
+Judecatorii s-au impartit intre primele doua; campania a cazut la amandoi -
+cheia perechii ei era `clamp(2 + prizes_landed + convoy_sunk)`, exact
+redenumirea afina care a pierdut si data trecuta. Dupa pauza am refacut
+rationamentul de la zero, in cod: `EndPlay(Quit)` chiar ruleaza pe calea de
+iesire (GameEngine.cpp:1357), `FParse::Value` chiar e subsir (`Strifind`), nimic
+din `Source/` nu scria pe disc, jucatorul n-are tasta de iesire. Decizia mea:
+**cartea intai**, fiindca e substratul oricarei progresii (fara salvare, un tun
+cumparat moare la iesire) si fiindca riscul slice-ului - discul si izolarea
+suitei - traieste acolo. Tunurile purtate de carte sunt felia 2.
+
+**Ce s-a construit.** `Saved/Ledger/book.txt`, `key=value` pe linie (nu
+`FParse` peste text: subsir). Citita O DATA, la prima coca a jucatorului
+(`FitFromBook` chemat din `AShipPawn::BeginPlay` dupa umplere, inainte de
+`-Shot=`/`-ShipHullTest=`); o inlocuitoare dupa scufundare e refuzata si
+numarata. Scrisa O DATA in `ASeaGameMode::EndPlay`, langa si apoi mutata peste,
+recitita prin acelasi cititor (`roundtrip`). Lada = bani pe uscat; in vistierie
+doar cand jucatorul e raider si exista rada (altfel `refit_coffers_end` s-ar fi
+miscat pe o pereche fara port). O nava pierduta costa o coca noua la preturile
+portului, 1780, cat ajunge lada - fara regula asta scufundarea era cel mai
+ieftin refit. Panou: `CRUISE N  chest ashore M`. Pornita IMPLICIT (ca fumul,
+focul si sunetul); `-Ledger=0` o inchide, `-LedgerBook=` deschide alt fisier.
+
+**Izolarea, in trei straturi.** `-Ledger=0` in PINNED; poarta refuza orice flag
+care contine `ledger=`, orice lansator fara `-Ledger=0` (doua scripturi
+PowerShell il n-aveau) si `slot=default` pe orice rand; suita compara octet cu
+octet `Saved/Ledger/book.txt` inainte si dupa fiecare rand.
+
+**Masurat.** Sase randuri noi, fiecare cifra calculata de poarta pe hartie din
+fixtura si din preturile citite din headere: perechea `ledger_carry`/
+`ledger_fresh` misca 9 chei `ledger_*` si nimic altceva; `ledger_spend` 460
+cheltuiti, 140 ramasi, 17,0 s; `ledger_cycle` pleaca exact cu ce a inchis
+`ledger_spend` (alt proces); `ledger_wreck` 3 taieri, 1 refuz, 1780 din 2000;
+`ledger_bad` refuzat intreg. Suita: 0 MOVED, 0 GONE, 174 NEW (42 x 4 chei + 6
+randuri); randurile cartii identice intre doua rulari.
+
+**Mutatii: 10 din 10 prinse**, fiecare aplicata (asertat), construita, rulata pe
+randul ei si judecata de poarta reala, apoi restaurata cu `cmp`: zavorul scos,
+antetul `book=1` ignorat, fara taiere la oameni, `EndPlay` fara scriere, nava
+pierduta gratis, coca nu cere cartea; PINNED fara pin, un lansator fara pin, o
+carte in afara `Saved/CI`; si garda cartii reale, declansata cu o carte falsa si
+pinul scos in proces.
+
+**Deschis, notat in HANDOFF:** rada repara pe oricine e in cerc - o nava a
+Coroanei in rada jucatorului se repara din punga lui (acum si din lada).
+Nemasurat de niciun rand; felie separata.
+
+Ce nu pot: sa simt daca a porni pe o nava ranita e miza sau pedeapsa -
+`OWNER_VERIFY` 41, cu doua decizii ale lui (implicit pornita; pretul navei).
+
+**Task Completed** (commit + pachet verificat prin rulare, mai jos).
+

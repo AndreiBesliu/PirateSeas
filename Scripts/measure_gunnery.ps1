@@ -20,7 +20,7 @@ $cases = @(
 foreach ($c in $cases) {
   $b = 0; $h = 0; $hull = 0; $shots = 0; $leadSum = 0.0; $leadN = 0
   foreach ($s in $Seeds) {
-    $a = @($proj,"-game","-NullRHI","-unattended","-nosound","-UseFixedTimeStep","-FPS=60",
+    $a = @($proj,"-game","-NullRHI","-unattended","-nosound","-UseFixedTimeStep","-FPS=60","-Ledger=0",
            "-ShipSeed=$s","-WindBearing=120","-WindSpeed=11","-EnemyCount=2",
            "-EnemyX=20000","-EnemyY=8000","-ShipQuitAfter=$Seconds") + $c.args
     & $ue $a | Out-Null

@@ -25,6 +25,29 @@ public:
 
 	virtual void BeginPlay() override;
 	virtual void SetPlayerDefaults(APawn* PlayerPawn) override;
+	/** Where the ship's book is WRITTEN. Not QuitNow: that is armed only by
+	 *  -ShipQuitAfter, and a player closes the window. QuitNow ends in
+	 *  `Exec quit`, which reaches this same EndPlay(Quit) through the engine's
+	 *  PreExit - so every suite row walks the path a player's quit walks. */
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+
+	/** THE SHIP'S BOOK. What was aboard the player's ship at the end of the last
+	 *  cruise - hands, hull, shot - is aboard at the start of this one, and the
+	 *  money ashore (the chest) is still ashore. One file, read once, written
+	 *  once, at Saved/Ledger/book.txt; -Ledger=0 leaves it closed for a run, and
+	 *  -LedgerBook=<path> reads and writes another file instead (the suite's
+	 *  fixtures, relative to the project).
+	 *
+	 *  Called by the player's hull from its own BeginPlay, after the lines that
+	 *  fill her and before the test flags, so a -Shot= still has the last word.
+	 *  It fits ONE hull per run: a replacement after a sinking is a new ship,
+	 *  bought, and a second hull asking is refused and counted. */
+	void FitFromBook(AShipPawn* Ship);
+	bool IsBookOn() const { return BookSlot != EBookSlot::Off; }
+	/** This run's cruise, counting from one. */
+	int32 GetCruise() const { return BookCruises + 1; }
+	/** What the chest would hold if the cruise ended now. */
+	int32 GetChestOut() const;
 
 	int32 GetVictories() const { return Victories; }
 
@@ -105,7 +128,7 @@ public:
 	 *  Both cumulative, so neither can be read backwards, and what is actually
 	 *  in the coffers is the difference. */
 	int32 GetSpent() const { return Spent; }
-	int32 GetCoffers() const { return Landed - Spent; }
+	int32 GetCoffers() const;
 	int32 GetHandsBought() const { return HandsBought; }
 	int32 GetShotBought() const { return ShotBought; }
 	int32 GetHullBought() const { return FMath::RoundToInt(HullBought); }
@@ -312,6 +335,43 @@ protected:
 	float BeatMarginDeg = 22.f;
 
 private:
+	/** The book's state. Resolved once, on first use: which file (or none),
+	 *  and what it said. */
+	enum class EBookSlot : uint8 { Off, Given, Default };
+	void EnsureBookRead();
+	void CloseBook(EEndPlayReason::Type Reason);
+	/** The chest counts as money in the roadstead only where the player owns
+	 *  the purse and there IS a roadstead. With -RaiderSide= the purse is an AI
+	 *  captain's, and a chest on a shore with no port buys nothing. */
+	bool IsChestInPurse() const;
+	/** A new hull, bought whole from the port's own price list: every point of
+	 *  hull, every berth filled, a full magazine. */
+	int32 NewShipCost(const AShipPawn* Ship) const;
+	EBookSlot BookSlot = EBookSlot::Off;
+	bool bBookRead = false;
+	FString BookPath;
+	bool bBookLoaded = false;
+	/** False for a first cruise, a refused book, or a book written with no
+	 *  ship afloat: then the first hull sails as she was built. */
+	bool bBookShip = false;
+	int32 BookHands = 0;
+	float BookHull = 0.f;
+	int32 BookShot = 0;
+	int32 BookCruises = 0;
+	int32 BookWrecks = 0;
+	int32 ChestIn = 0;
+	bool bBookFitted = false;
+	FString BookFittedTo;
+	bool bBookClosed = false;
+	/** Never counters, printed on the CLOSE line: a second hull asking to be
+	 *  fitted, a file that was not a book, values cut to what the hull holds. */
+	int32 BookRefused = 0;
+	int32 BookRejected = 0;
+	int32 BookClamped = 0;
+	int32 WrecksThisRun = 0;
+	/** What lost ships cost, cumulative. Never more than the chest held. */
+	int32 WreckCharge = 0;
+
 	/** Puts a whole squadron on the water, formed abeam. */
 	UFUNCTION()
 	void SpawnSquadron();

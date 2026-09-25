@@ -1028,6 +1028,206 @@ LogTemp: Display: SHIPLOG ShipPawn_0 sink=foundering draught=120
            "pursuit lines")
 
 
+def check_ledger():
+    """THE SHIP'S BOOK, held against paper.
+
+    Three kinds of proof, and none of them is the game agreeing with itself:
+      - the suite can never open a player's book: the pin, no flag that
+        FParse::Value's substring search would read as the switch, every other
+        launcher pinned too, and in the recorded rows "default" never appears;
+      - every book row's numbers are worked out HERE, before looking at the
+        row, from the fixture file and the price list read out of the headers -
+        a second arithmetic, in another language, over the same inputs;
+      - the pair differs in the ledger_* family and nothing else, and the
+        cycle row opens with exactly what the spend row closed with: the only
+        proof that crosses a process boundary, which is the feature.
+    """
+    import re
+    sys.path.insert(0, os.path.join(ROOT, "tools"))
+    try:
+        import ci_measure
+    except Exception as e:
+        fail("cannot import ci_measure: %s" % e)
+        return
+
+    # ---- the lines are read, and a second CLOSE is counted as one
+    close = ("LogTemp: Display: LEDGERLOG CLOSE slot=given reason=quit written=1 roundtrip=1 "
+             "cruise=4 ship=1 hands=48 hull=600 shot=40 chest=600 wrecks=0 wreckCharge=0 "
+             "refused=0 rejected=0\n")
+    opened = ("LogTemp: Display: LEDGERLOG OPEN ship=ShipPawn_0 loaded=1 rejected=0 cruise=4 "
+              "hands=48/60 hull=600/1000 shot=40/40 chest=600 wrecks=0 clamped=0\n")
+    got = ci_measure.measure("fixture", opened + close)
+    want = {"ledger_closes": 1, "ledger_slot": 1, "ledger_written": 1, "ledger_hands_in": 48,
+            "ledger_hull_in": 600, "ledger_chest_out": 600, "ledger_cruise": 4}
+    bad = {k: got.get(k) for k in want if got.get(k) != want[k]}
+    if bad:
+        fail("the book's lines are not read: %r" % bad)
+    twice = ci_measure.measure("fixture", close + "LogTemp: Warning: LEDGERLOG CLOSE again - refused\n")
+    if twice.get("ledger_closes") != 2:
+        fail("a second CLOSE line is not counted: ledger_closes=%r" % twice.get("ledger_closes"))
+    off = ci_measure.measure("fixture", "LogTemp: Display: LEDGERLOG CLOSE slot=off reason=quit "
+                             "written=0 roundtrip=0 cruise=0 ship=0 hands=0 hull=0 shot=0 chest=0 "
+                             "wrecks=0 wreckCharge=0 refused=0 rejected=0\n")
+    if off.get("ledger_slot") != 0 or "ledger_hands_out" in off:
+        fail("a closed book's line reads as an open one: %r" % off)
+
+    # ---- the pin, and nothing that would read as it
+    if "-Ledger=0" not in ci_measure.PINNED:
+        fail("PINNED has no -Ledger=0: every suite row would open the owner's own book")
+    flags = [("PINNED", a) for a in ci_measure.PINNED]
+    flags += [(n, a) for n, fl in ci_measure.SCENARIOS.items() for a in fl]
+    for where, a in flags:
+        if "ledger=" in a.lower() and a != "-Ledger=0":
+            fail("%s: %s contains 'ledger=' - FParse::Value is a substring search "
+                 "and the game would read it as the book's switch" % (where, a))
+        if a.lower().startswith("-ledgerbook=") and not a.split("=", 1)[1].startswith("Saved/CI/"):
+            fail("%s: %s opens a book outside Saved/CI/" % (where, a))
+    # Every OTHER way this project starts the game. ci_checks is left out
+    # because this very scan names the string it looks for.
+    for folder, exts in (("Scripts", (".ps1", ".py")), ("tools", (".py",))):
+        for fn in sorted(os.listdir(os.path.join(ROOT, folder))):
+            if not fn.endswith(exts) or fn == "ci_checks.py":
+                continue
+            text = io.open(os.path.join(ROOT, folder, fn), encoding="utf-8", errors="replace").read()
+            if '"-game"' in text and "-Ledger=0" not in text:
+                fail("%s/%s starts the game without -Ledger=0: it would read and "
+                     "write the owner's book" % (folder, fn))
+
+    # ---- the price list and the hull, read out of the headers
+    def const(header, pattern):
+        src = io.open(os.path.join(ROOT, "Source", "PirateSeas", header), encoding="utf-8").read()
+        mm = re.search(pattern, src)
+        if not mm:
+            fail("cannot read %r out of %s - the paper arithmetic has no inputs" % (pattern, header))
+            return None
+        return float(mm.group(1))
+    HANDS = const("ShipPawn.h", r"int32 HandsMax = (\d+);")
+    HULL = const("ShipPawn.h", r"float MaxHullIntegrity = ([\d.]+)f;")
+    SHOT = const("ShipPawn.h", r"int32 ShotMax = (\d+);")
+    HAND_COST = const("SeaGameMode.h", r"int32 HandCost = (\d+);")
+    HULL_COST = const("SeaGameMode.h", r"float HullPointCost = ([\d.]+)f;")
+    SHOT_COST = const("SeaGameMode.h", r"int32 ShotCost = (\d+);")
+    HULL_TICK = const("SeaGameMode.h", r"float HullPointsPerTick = ([\d.]+)f;")
+    SHOT_TICK = const("SeaGameMode.h", r"int32 ShotPerTick = (\d+);")
+    if None in (HANDS, HULL, SHOT, HAND_COST, HULL_COST, SHOT_COST, HULL_TICK, SHOT_TICK):
+        return
+
+    def page(name):
+        """The fixture, read the way EnsureBookRead reads it: key=value lines,
+        a book only with book=1, a ship only with all three of its lines."""
+        kv = {}
+        for line in io.open(os.path.join(ROOT, "tools", "books", name), encoding="utf-8"):
+            if "=" in line:
+                k, v = line.strip().split("=", 1)
+                kv[k.strip().lower()] = v.strip()
+        return kv
+
+    FRESH = {"ledger_hands_in": HANDS, "ledger_hull_in": HULL, "ledger_shot_in": SHOT}
+
+    def opened_from(kv):
+        """What OPEN must show for a book: each value cut to the hull."""
+        if kv.get("book") != "1":
+            return dict(FRESH, ledger_loaded=0, ledger_chest_in=0, ledger_cruise=1,
+                        ledger_wrecks_in=0, ledger_clamped=0)
+        h, v, sh = int(kv["hands"]), float(kv["hull"]), int(kv["shot"])
+        ch, cv, cs = min(max(h, 0), HANDS), min(max(v, 1), HULL), min(max(sh, 0), SHOT)
+        return {"ledger_loaded": 1, "ledger_hands_in": ch, "ledger_hull_in": cv,
+                "ledger_shot_in": cs, "ledger_chest_in": int(kv.get("chest", 0)),
+                "ledger_cruise": int(kv.get("cruises", 0)) + 1,
+                "ledger_wrecks_in": int(kv.get("wrecks", 0)),
+                "ledger_clamped": (ch != h) + (cv != v) + (cs != sh)}
+
+    base_path = os.path.join(ROOT, "tools", "measurement_baseline.json")
+    if not os.path.exists(base_path):
+        note("no baseline - the book's rows are not checked, which is NOT a pass")
+        return
+    rows = json.loads(io.open(base_path, encoding="utf-8-sig").read())
+    wanted_rows = list(ci_measure.BOOKS) + ["ledger_cycle"]
+    missing = [n for n in wanted_rows if n not in rows]
+    if missing:
+        fail("the book's rows are not in the baseline: %s" % ", ".join(missing))
+        return
+
+    # ---- every row: one close; the player's slot never; books only where asked
+    for name, row in sorted(rows.items()):
+        flags_of = ci_measure.SCENARIOS.get(name, [])
+        has_book = any(a.startswith("-LedgerBook=") for a in flags_of)
+        if row.get("ledger_closes") != 1:
+            fail("%s: ledger_closes=%r - the quit path that writes the book ran %s"
+                 % (name, row.get("ledger_closes"), "never" if not row.get("ledger_closes") else "more than once"))
+        if row.get("ledger_slot") == 2:
+            fail("%s opened the PLAYER's book (slot=default) under a measurement" % name)
+        if has_book and (row.get("ledger_slot"), row.get("ledger_written"), row.get("ledger_roundtrip")) != (1, 1, 1):
+            fail("%s: a book row that did not open, write and read back its book: slot=%r written=%r roundtrip=%r"
+                 % (name, row.get("ledger_slot"), row.get("ledger_written"), row.get("ledger_roundtrip")))
+        if not has_book and (row.get("ledger_slot"), row.get("ledger_written")) != (0, 0):
+            fail("%s: no book was asked for, yet slot=%r written=%r"
+                 % (name, row.get("ledger_slot"), row.get("ledger_written")))
+
+    def expect(name, want):
+        row = rows[name]
+        wrong = {k: (row.get(k), v) for k, v in want.items() if row.get(k) != v}
+        if wrong:
+            fail("%s against paper (got, want): %r" % (name, wrong))
+        else:
+            ok("%s: %d numbers match the paper arithmetic" % (name, len(want)))
+
+    # ---- OPEN, for every row that opens a fixture (or none)
+    for name, fixture in ci_measure.BOOKS.items():
+        expect(name, opened_from(page(fixture)) if fixture else
+               dict(FRESH, ledger_loaded=0, ledger_chest_in=0, ledger_cruise=1, ledger_clamped=0))
+    expect("ledger_bad", {"ledger_rejected": 1})
+
+    # ---- the port buys in its own order, out of the chest
+    sp = opened_from(page("spend.book"))
+    buy_shot = SHOT - sp["ledger_shot_in"]
+    buy_hands = HANDS - sp["ledger_hands_in"]
+    buy_hull = HULL - sp["ledger_hull_in"]
+    spent = buy_shot * SHOT_COST + buy_hands * HAND_COST + buy_hull * HULL_COST
+    if spent > sp["ledger_chest_in"]:
+        fail("spend.book no longer affords a whole refit; the arithmetic below assumes it does")
+    ticks = -(-buy_shot // SHOT_TICK) + buy_hands + -(-buy_hull // HULL_TICK)
+    expect("ledger_spend", {"refit_spent": spent, "refit_shot_bought": buy_shot,
+                            "refit_hands_bought": buy_hands, "refit_hull_bought": buy_hull,
+                            "refit_seconds": ticks * 0.5,
+                            "ledger_chest_out": sp["ledger_chest_in"] - spent,
+                            "ledger_hands_out": HANDS, "ledger_hull_out": HULL,
+                            "ledger_shot_out": SHOT, "ledger_cruise_out": sp["ledger_cruise"]})
+
+    # ---- the next cruise opens with what the last one closed with
+    s_row, c_row = rows["ledger_spend"], rows["ledger_cycle"]
+    carried = {"ledger_hands_in": s_row.get("ledger_hands_out"),
+               "ledger_hull_in": s_row.get("ledger_hull_out"),
+               "ledger_shot_in": s_row.get("ledger_shot_out"),
+               "ledger_chest_in": s_row.get("ledger_chest_out"),
+               "ledger_cruise": (s_row.get("ledger_cruise_out") or 0) + 1,
+               "ledger_loaded": 1}
+    expect("ledger_cycle", carried)
+
+    # ---- a lost ship: a new hull at the port's prices, as far as the chest goes
+    wr = opened_from(page("wreck.book"))
+    cost = HULL * HULL_COST + HANDS * HAND_COST + SHOT * SHOT_COST
+    paid = min(cost, wr["ledger_chest_in"])
+    expect("ledger_wreck", {"ledger_refused": 1, "ledger_wreck_charge": paid,
+                            "ledger_chest_out": wr["ledger_chest_in"] - paid,
+                            "ledger_wrecks_out": wr["ledger_wrecks_in"] + 1,
+                            "ledger_ship_out": 1, "ledger_hands_out": HANDS,
+                            "ledger_hull_out": HULL, "ledger_shot_out": SHOT})
+    if wr["ledger_clamped"] == 0:
+        fail("wreck.book asks for nothing the hull cannot hold, so the clamp is not exercised")
+
+    # ---- the pair: the book's family moves, nothing else does
+    f_row, k_row = rows["ledger_fresh"], rows["ledger_carry"]
+    moved = sorted(k for k in set(f_row) | set(k_row) if f_row.get(k) != k_row.get(k))
+    outside = [k for k in moved if not k.startswith("ledger_")]
+    if outside:
+        fail("ledger_carry moves keys outside the book's family: %s" % outside)
+    if not moved:
+        fail("ledger_carry does not differ from ledger_fresh - the book fits nothing")
+    elif not outside:
+        ok("ledger_carry vs ledger_fresh: %d ledger_* keys move, nothing else" % len(moved))
+
+
 def main():
     print("PirateSeas checks - the ones that do not need Unreal\n")
     files = tracked_files()
@@ -1035,6 +1235,7 @@ def main():
     check_textures()
     check_docs()
     check_comparison()
+    check_ledger()
     print("")
     if NOTES:
         print("%d check(s) SKIPPED - a skip is not a pass:" % len(NOTES))

@@ -690,6 +690,15 @@ void AShipPawn::BeginPlay()
 	// have looked exactly like the feature working.
 	Shot = ShotMax;
 
+	// THE SHIP'S BOOK. What was aboard at the end of the last cruise is aboard
+	// now, if this is the player's first hull of the run. HERE: after the three
+	// lines that fill her (Hands, HullIntegrity, Shot) and before the test
+	// flags below, so -Shot= and -ShipHullTest= still have the last word.
+	if (ASeaGameMode* Sea = GetWorld() ? GetWorld()->GetAuthGameMode<ASeaGameMode>() : nullptr)
+	{
+		Sea->FitFromBook(this);
+	}
+
 	// -Shot=N gives the PLAYER a magazine of N rounds, -EnemyShot=N a Crown
 	// ship one; either at 0 makes that ship's magazine bottomless, which is how
 	// the behaviour from before the default can still be measured against it.
@@ -1645,6 +1654,22 @@ bool AShipPawn::DetachPrizeCrew(int32 Count)
 		TEXT("CREWLOG %s sent %d hands away to a prize, %d/%d left aboard (%d away in all)"),
 		*GetName(), Count, Hands, HandsMax, HandsInPrizes);
 	return true;
+}
+
+int32 AShipPawn::FitFromBook(int32 InHands, float InHull, int32 InShot)
+{
+	// Each value cut to what THIS hull holds, and each cut counted: 72 men on a
+	// 60-berth ship is a book from another ship or a hand-edited one, and either
+	// way it must show. Hull at least 1 - the writer never records a sunk hull,
+	// so a zero can only be an edit, and a ship cannot start the cruise sunk.
+	const int32 H = FMath::Clamp(InHands, 0, HandsMax);
+	const float V = FMath::Clamp(InHull, 1.f, MaxHullIntegrity);
+	const int32 S = FMath::Clamp(InShot, 0, ShotMax);
+	const int32 Cut = (H != InHands ? 1 : 0) + (V != InHull ? 1 : 0) + (S != InShot ? 1 : 0);
+	Hands = H;
+	HullIntegrity = V;
+	Shot = S;
+	return Cut;
 }
 
 bool AShipPawn::LoadShot(int32 Rounds)

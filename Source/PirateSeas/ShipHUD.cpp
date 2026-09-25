@@ -347,6 +347,14 @@ void AShipHUD::DrawGuns(AShipPawn* Ship)
 				FString::Printf(TEXT("SQUADRON  %d of %d afloat"), Afloat, Total),
 				Afloat > 1 ? Warn : Faint));
 		}
+		// The book, when there is one: which cruise this is and what is ashore.
+		// A player who opens the game on a hurt ship has to be able to see WHY.
+		if (Sea->IsBookOn())
+		{
+			Extra.Add(TPair<FString, FLinearColor>(
+				FString::Printf(TEXT("CRUISE %d  chest ashore %d"), Sea->GetCruise(), Sea->GetChestOut()),
+				Sea->GetChestOut() > 0 ? Good : Faint));
+		}
 		// The mission, when there is one. A raider who cannot see the tally
 		// cannot decide whether the next merchant is worth the beat.
 		if (Sea->GetConvoySize() > 0)

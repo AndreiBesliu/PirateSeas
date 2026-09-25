@@ -8,7 +8,7 @@ $log  = "C:\Users\besli\Documents\Unreal Projects\PirateSeas\Saved\Logs\PirateSe
 foreach ($bias in @("0.98","1.00","1.02","1.04","1.06")) {
   $b = 0; $h = 0
   foreach ($s in $Seeds) {
-    & $ue @($proj,"-game","-NullRHI","-unattended","-nosound","-UseFixedTimeStep","-FPS=60",
+    & $ue @($proj,"-game","-NullRHI","-unattended","-nosound","-UseFixedTimeStep","-FPS=60","-Ledger=0",
             "-ShipSeed=$s","-WindBearing=120","-WindSpeed=11","-EnemyCount=2",
             "-EnemyX=20000","-EnemyY=8000","-ShipQuitAfter=$Seconds",
             "-ShipInheritVel=1","-ShipLead=1","-ShipRangeBias=$bias") | Out-Null

@@ -17,7 +17,10 @@
 #include "OceanSurface.h"
 #include "GameFramework/PlayerController.h"
 #include "Misc/CommandLine.h"
+#include "Misc/FileHelper.h"
 #include "Misc/Parse.h"
+#include "Misc/Paths.h"
+#include "HAL/FileManager.h"
 #include "ShipHUD.h"
 #include "Engine/DirectionalLight.h"
 #include "Components/DirectionalLightComponent.h"
@@ -59,6 +62,85 @@ ASeaGameMode::ASeaGameMode()
 	EnemyShipClass = AEnemyShipPawn::StaticClass();
 	MerchantShipClass = AMerchantShipPawn::StaticClass();
 	HUDClass = AShipHUD::StaticClass();
+}
+
+namespace
+{
+	/** One page of the ship's book, as written or as read. */
+	struct FBookPage
+	{
+		bool bOk = false;
+		bool bShip = false;
+		int32 Hands = 0;
+		float Hull = 0.f;
+		int32 Shot = 0;
+		int32 Cruises = 0;
+		int32 Wrecks = 0;
+		int32 Chest = 0;
+
+		bool operator==(const FBookPage& O) const
+		{
+			return bOk == O.bOk && bShip == O.bShip && Hands == O.Hands && Hull == O.Hull
+				&& Shot == O.Shot && Cruises == O.Cruises && Wrecks == O.Wrecks && Chest == O.Chest;
+		}
+	};
+
+	/** key=value, one per line, and nothing cleverer. NOT FParse::Value over
+	 *  the text: that is a substring search, and "shot=" would be found inside
+	 *  any key that ever ended in it. A page without book=1 is not a book. The
+	 *  ship is all three of hands, hull and shot, or none of them. */
+	FBookPage ReadBookPage(const FString& Text)
+	{
+		TMap<FString, FString> Kv;
+		TArray<FString> Lines;
+		Text.ParseIntoArrayLines(Lines);
+		for (const FString& Raw : Lines)
+		{
+			FString Key, Value;
+			if (Raw.TrimStartAndEnd().Split(TEXT("="), &Key, &Value))
+			{
+				Kv.Add(Key.TrimStartAndEnd().ToLower(), Value.TrimStartAndEnd());
+			}
+		}
+		FBookPage P;
+		const FString* Book = Kv.Find(TEXT("book"));
+		P.bOk = Book && *Book == TEXT("1");
+		if (!P.bOk)
+		{
+			return P;
+		}
+		auto Int = [&Kv](const TCHAR* K) { const FString* V = Kv.Find(K); return V ? FCString::Atoi(**V) : 0; };
+		P.Cruises = Int(TEXT("cruises"));
+		P.Wrecks = Int(TEXT("wrecks"));
+		P.Chest = Int(TEXT("chest"));
+		const FString* H = Kv.Find(TEXT("hands"));
+		const FString* V = Kv.Find(TEXT("hull"));
+		const FString* S = Kv.Find(TEXT("shot"));
+		P.bShip = H && V && S;
+		if (P.bShip)
+		{
+			P.Hands = FCString::Atoi(**H);
+			P.Hull = FCString::Atof(**V);
+			P.Shot = FCString::Atoi(**S);
+		}
+		return P;
+	}
+
+	FString WriteBookPage(const FBookPage& P)
+	{
+		FString T = FString::Printf(TEXT("book=1\ncruises=%d\nwrecks=%d\nchest=%d\n"),
+			P.Cruises, P.Wrecks, P.Chest);
+		if (P.bShip)
+		{
+			T += FString::Printf(TEXT("hands=%d\nhull=%.0f\nshot=%d\n"), P.Hands, P.Hull, P.Shot);
+		}
+		return T;
+	}
+
+	const TCHAR* BookSlotName(bool bOff, bool bGiven)
+	{
+		return bOff ? TEXT("off") : (bGiven ? TEXT("given") : TEXT("default"));
+	}
 }
 
 int32 ASeaGameMode::SoundRequests[4] = { 0, 0, 0, 0 };
@@ -740,6 +822,212 @@ void ASeaGameMode::SetPlayerDefaults(APawn* PlayerPawn)
 	}
 }
 
+void ASeaGameMode::EnsureBookRead()
+{
+	if (bBookRead)
+	{
+		return;
+	}
+	bBookRead = true;
+
+	// WHICH FILE. -LedgerBook= first, because the suite pins -Ledger=0 on every
+	// row and its own book rows still have to open one; then -Ledger=0; then the
+	// slot every player gets. The name is said out loud on every row, and the
+	// gate refuses "default" anywhere in the suite: a renamed flag would
+	// otherwise open the owner's own book under a measurement.
+	FString Given;
+	int32 On = 1;
+	if (FParse::Value(FCommandLine::Get(), TEXT("LedgerBook="), Given) && !Given.IsEmpty())
+	{
+		BookSlot = EBookSlot::Given;
+		BookPath = FPaths::IsRelative(Given) ? FPaths::Combine(FPaths::ProjectDir(), Given) : Given;
+	}
+	else if (FParse::Value(FCommandLine::Get(), TEXT("Ledger="), On) && On == 0)
+	{
+		BookSlot = EBookSlot::Off;
+	}
+	else
+	{
+		BookSlot = EBookSlot::Default;
+		BookPath = FPaths::Combine(FPaths::ProjectSavedDir(), TEXT("Ledger"), TEXT("book.txt"));
+	}
+	if (BookSlot == EBookSlot::Off)
+	{
+		return;
+	}
+	FPaths::NormalizeFilename(BookPath);
+
+	if (!FPaths::FileExists(BookPath))
+	{
+		UE_LOG(LogTemp, Display, TEXT("LEDGERLOG no book at %s: a first cruise"),
+			*FPaths::ConvertRelativePathToFull(BookPath));
+		return;
+	}
+	FString Text;
+	const FBookPage Page = FFileHelper::LoadFileToString(Text, *BookPath)
+		? ReadBookPage(Text) : FBookPage();
+	if (!Page.bOk)
+	{
+		// REFUSED WHOLE, never half-read: a page without book=1 is a file that
+		// happens to sit where the book should, and fitting a ship from it
+		// would be fitting her from noise. She sails as built, and it is said.
+		++BookRejected;
+		UE_LOG(LogTemp, Warning, TEXT("LEDGERLOG %s is not a book (no book=1): refused, she sails as built"),
+			*FPaths::ConvertRelativePathToFull(BookPath));
+		return;
+	}
+	bBookLoaded = true;
+	bBookShip = Page.bShip;
+	BookHands = Page.Hands;
+	BookHull = Page.Hull;
+	BookShot = Page.Shot;
+	BookCruises = FMath::Max(0, Page.Cruises);
+	BookWrecks = FMath::Max(0, Page.Wrecks);
+	ChestIn = FMath::Max(0, Page.Chest);
+}
+
+void ASeaGameMode::FitFromBook(AShipPawn* Ship)
+{
+	// The player's hull and nobody else's. Allegiance, not IsPlayerControlled:
+	// a replacement runs BeginPlay inside SpawnActor, before it is possessed,
+	// and would read as a stranger - which is exactly the hull the latch below
+	// has to see.
+	if (!Ship || Ship->GetAllegiance() != EShipAllegiance::Player)
+	{
+		return;
+	}
+	EnsureBookRead();
+	if (BookSlot == EBookSlot::Off)
+	{
+		return;
+	}
+	if (bBookFitted)
+	{
+		// A NEW SHIP IS A NEW SHIP. The book fitted the hull that started the
+		// cruise; a replacement after a sinking was bought whole (see
+		// HandleShipSunk) and must not inherit the old one's wounds or stores.
+		++BookRefused;
+		UE_LOG(LogTemp, Display, TEXT("LEDGERLOG %s refused: the book fitted %s, one hull per run"),
+			*Ship->GetName(), *BookFittedTo);
+		return;
+	}
+	bBookFitted = true;
+	BookFittedTo = Ship->GetName();
+	if (bBookLoaded && bBookShip)
+	{
+		BookClamped = Ship->FitFromBook(BookHands, BookHull, BookShot);
+	}
+	// READ BACK OFF THE HULL, not off the page: the page is what was asked, the
+	// hull is what she got. The -EnemyHull lesson - a value written and then
+	// quietly overwritten reads fine in the line that wrote it.
+	UE_LOG(LogTemp, Display,
+		TEXT("LEDGERLOG OPEN ship=%s loaded=%d rejected=%d cruise=%d hands=%d/%d hull=%.0f/%.0f shot=%d/%d chest=%d wrecks=%d clamped=%d"),
+		*Ship->GetName(), bBookLoaded ? 1 : 0, BookRejected, GetCruise(),
+		Ship->GetHands(), Ship->GetHandsMax(), Ship->GetHullIntegrity(), Ship->GetMaxHullIntegrity(),
+		Ship->GetShot(), Ship->GetShotMax(), ChestIn, BookWrecks, BookClamped);
+}
+
+bool ASeaGameMode::IsChestInPurse() const
+{
+	return BookSlot != EBookSlot::Off && bHasPort && RaiderSide.IsEmpty();
+}
+
+int32 ASeaGameMode::GetCoffers() const
+{
+	// Prize money landed, less what it bought; and, where the player owns the
+	// purse and there is a roadstead, the chest the book brought ashore less
+	// what lost ships have cost. Never below zero: every purchase is checked
+	// against this, and a negative would buy negative hull.
+	int32 C = Landed - Spent;
+	if (IsChestInPurse())
+	{
+		C += ChestIn - WreckCharge;
+	}
+	return FMath::Max(0, C);
+}
+
+int32 ASeaGameMode::GetChestOut() const
+{
+	return IsChestInPurse() ? GetCoffers() : FMath::Max(0, ChestIn - WreckCharge);
+}
+
+int32 ASeaGameMode::NewShipCost(const AShipPawn* Ship) const
+{
+	return FMath::RoundToInt(Ship->GetMaxHullIntegrity() * HullPointCost)
+		+ Ship->GetHandsMax() * HandCost + Ship->GetShotMax() * ShotCost;
+}
+
+void ASeaGameMode::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	CloseBook(EndPlayReason);
+	Super::EndPlay(EndPlayReason);
+}
+
+void ASeaGameMode::CloseBook(EEndPlayReason::Type Reason)
+{
+	EnsureBookRead();
+	if (bBookClosed)
+	{
+		// Said on a line of the same shape, so a second close is counted as
+		// one: the gate asks for exactly one CLOSE per run.
+		UE_LOG(LogTemp, Warning, TEXT("LEDGERLOG CLOSE again - refused, the book is written once per run"));
+		return;
+	}
+	bBookClosed = true;
+
+	const TCHAR* Why = Reason == EEndPlayReason::Quit ? TEXT("quit")
+		: Reason == EEndPlayReason::EndPlayInEditor ? TEXT("editor")
+		: Reason == EEndPlayReason::LevelTransition ? TEXT("travel") : TEXT("other");
+	FBookPage Out;
+	int32 Written = 0;
+	int32 Roundtrip = 0;
+	if (BookSlot != EBookSlot::Off
+		&& (Reason == EEndPlayReason::Quit || Reason == EEndPlayReason::EndPlayInEditor))
+	{
+		Out.bOk = true;
+		Out.Cruises = GetCruise();
+		Out.Wrecks = BookWrecks + WrecksThisRun;
+		Out.Chest = GetChestOut();
+		// THE SHIP AFLOAT NOW, or none. A hull on her way down at the quit is
+		// not a ship to carry: the next cruise starts in her replacement, which
+		// the chest already paid for when she went.
+		const AShipPawn* Ship = PlayerShip.Get();
+		if (IsValid(Ship) && !Ship->IsSunk())
+		{
+			Out.bShip = true;
+			Out.Hands = Ship->GetHands();
+			Out.Hull = FMath::RoundToFloat(Ship->GetHullIntegrity());
+			Out.Shot = Ship->GetShot();
+		}
+		// Beside it and then over it, so a quit that dies half-way through the
+		// write leaves the last good book standing rather than half of a new one.
+		const FString Tmp = BookPath + TEXT(".tmp");
+		IFileManager::Get().MakeDirectory(*FPaths::GetPath(BookPath), true);
+		if (FFileHelper::SaveStringToFile(WriteBookPage(Out), *Tmp)
+			&& IFileManager::Get().Move(*BookPath, *Tmp, true, true))
+		{
+			Written = 1;
+			// READ BACK THROUGH THE SAME READER the next cruise will use. The
+			// writer and the reader prove each other on every row that writes.
+			FString Back;
+			if (FFileHelper::LoadFileToString(Back, *BookPath) && ReadBookPage(Back) == Out)
+			{
+				Roundtrip = 1;
+			}
+		}
+		else
+		{
+			UE_LOG(LogTemp, Error, TEXT("LEDGERLOG could not write %s"),
+				*FPaths::ConvertRelativePathToFull(BookPath));
+		}
+	}
+	UE_LOG(LogTemp, Display,
+		TEXT("LEDGERLOG CLOSE slot=%s reason=%s written=%d roundtrip=%d cruise=%d ship=%d hands=%d hull=%.0f shot=%d chest=%d wrecks=%d wreckCharge=%d refused=%d rejected=%d"),
+		BookSlotName(BookSlot == EBookSlot::Off, BookSlot == EBookSlot::Given), Why, Written, Roundtrip,
+		Out.Cruises, Out.bShip ? 1 : 0, Out.Hands, Out.Hull, Out.Shot, Out.Chest, Out.Wrecks,
+		WreckCharge, BookRefused, BookRejected);
+}
+
 void ASeaGameMode::BindShip(AShipPawn* Ship)
 {
 	Ship->OnShipSunk.AddUObject(this, &ASeaGameMode::HandleShipSunk);
@@ -923,6 +1211,22 @@ void ASeaGameMode::HandleShipSunk(AShipPawn* Ship, AActor* Causer)
 		++Defeats;
 		UE_LOG(LogTemp, Display, TEXT("SEALOG DEFEAT ship=%s by=%s t=%.1f"),
 			*Ship->GetName(), *By, Now);
+		// A LOST SHIP IS PAID FOR, when there is a book to pay it from. The
+		// replacement is a new hull bought whole at the port's own prices, and
+		// the chest pays as far as it reaches - no debt. Without this, being
+		// sunk would be the cheapest refit in the game: a hurt ship carried in
+		// the book would come back whole for nothing.
+		EnsureBookRead();
+		if (BookSlot != EBookSlot::Off)
+		{
+			const int32 Cost = NewShipCost(Ship);
+			const int32 Paid = FMath::Min(Cost, GetChestOut());
+			WreckCharge += Paid;
+			++WrecksThisRun;
+			UE_LOG(LogTemp, Display,
+				TEXT("LEDGERLOG %s lost: a new hull costs %d, the chest paid %d"),
+				*Ship->GetName(), Cost, Paid);
+		}
 		GetWorldTimerManager().SetTimer(PlayerRespawnTimer, this,
 			&ASeaGameMode::TryRespawnPlayer, PlayerRespawnDelay, false);
 	}

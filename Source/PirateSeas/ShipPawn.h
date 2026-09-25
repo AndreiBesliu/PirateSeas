@@ -305,6 +305,10 @@ public:
 	/** Powder and shot bought in port. Returns true if there was room. */
 	bool LoadShot(int32 Rounds);
 
+	/** THE SHIP'S BOOK, applied: hands, hull and shot as the last cruise left
+	 *  them, each cut to what this hull can hold. Returns how many were cut. */
+	int32 FitFromBook(int32 InHands, float InHull, int32 InShot);
+
 	/** Timber and tar: hull integrity the SEA cannot give back. Returns how
 	 *  much was actually put in, which is less than asked for when she is
 	 *  nearly whole. */
