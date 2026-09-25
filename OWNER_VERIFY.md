@@ -13,7 +13,7 @@ contează; restul e arhivă, etichetată ca atare la sfârşitul paginii.
 
 **Banda de avarie a tunurilor — punctul 38.** Acum, 12 din 41 de lovituri în
 cocă scoteau un tun din afet, **toate 12 de sub punte** — şi după ce coca a
-primit coliziunea ei pe 25.09, tot **7 din 37**, tot de sub punte. Panoul
+primit coliziunea ei pe 25.09, **13 din 37**, tot toate de sub punte. Panoul
 GUNS îţi arată atunci un afet distrus de o ghiulea care a intrat la linia de
 plutire. Recomandarea mea e să mut banda unde sunt tunurile; asta face
 dărâmarea unui tun de vreo **douăsprezece ori mai rară**, şi de aceea nu o fac
@@ -973,12 +973,16 @@ Dar cate aschii arata a lovitura si cate arata a explozie e o judecata de ochi.
 **E o decizie, nu o verificare.**
 
 **Ce se întâmplă acum, măsurat pe 25.09** cu `tools/probe_hull_hits.py`, pe cele
-şapte lupte distincte din suită (41 de lovituri în cocă):
+şapte lupte distincte din suită, cu ghiuleaua oprindu-se pe lemn (37 de
+lovituri în cocă; pe cutia de dinainte erau 41 şi 12 dărâmări):
 
-- **12 din 41 scot un tun din afet** — şi **toate 12 au lovit coca sub punte**,
-  între 21 şi 152 cm deasupra apei. Puntea e pe la 210 cm, tunurile stau pe ea,
+- **13 din 37 scot un tun din afet** — şi **toate 13 au lovit coca sub punte**,
+  între 40 şi 155 cm deasupra apei. Puntea e pe la 210 cm, tunurile stau pe ea,
   ţevile sunt la 280. Adică fiecare tun „lovit" a fost scos de o ghiulea care a
-  intrat cu 0,6 până la 1,9 m MAI JOS de el.
+  intrat cu 0,6 până la 1,7 m MAI JOS de el.
+- (Prima versiune a acestui punct spunea 7. Era o poartă veche din clasificator,
+  `|Y| >= 380`, scrisă pentru faţa cutiei; pe lemn făcea două tunuri pe bord de
+  nelovit. O recenzie a prins-o; e scoasă.)
 - Banda în care o lovitură dărâmă un tun e `[0, 240]` cm. A fost pusă când
   gurile de tun erau la **120** — comentariul din cod o spune — iar pe 18.09 le-am
   urcat la 280 ca să nu mai tragă nava de la linia de plutire. Banda n-a urmat.
@@ -989,13 +993,12 @@ Dar cate aschii arata a lovitura si cate arata a explozie e o judecata de ochi.
 
 **Variantele:**
 
-- **A — banda unde sunt tunurile** (200–350 cm). Pe 25.09 lovitura se
-  socoteşte deja acolo unde ghiuleaua atinge lemnul (coca are coliziunea ei
-  acum), şi asta singură a dus dărâmările de la 12 la **7** din 37 — toate 7 tot
-  sub punte, între 68 şi 155 cm. Cu banda mutată scad la **1**. Pipurile de
+- **A — banda unde sunt tunurile** (200–350 cm). Lovitura se socoteşte deja
+  acolo unde ghiuleaua atinge lemnul (coca are coliziunea ei din 25.09): **13
+  din 37** dărâmări, toate sub punte. Cu banda mutată scad la **1**. Pipurile de
   „afet distrus" vor apărea rar, dar vor însemna exact ce spun. **Recomandarea
   mea.**
-- **B — cum e acum.** Pierzi un tun la aproape o lovitură din trei în cocă, din
+- **B — cum e acum.** Pierzi un tun la o lovitură din trei în cocă, din
   ghiulele care intră la linia de plutire. Presiunea rămâne; motivul e fals.
 - **C — A, plus o comandă de tir „la puntea de tunuri".** Tu poţi deja ochi mai
   sus cu rotiţa; căpitanul AI ar primi o a treia ţintă pe lângă „jos" şi „sus".

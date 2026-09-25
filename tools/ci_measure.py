@@ -864,6 +864,24 @@ def measure(name, text):
         m["smoke_culled"] = int(sm.group(3))
         m["smoke_stranded"] = int(sm.group(4))
 
+    # GUNS KNOCKED OUT ON THE ENEMY, counted from the zone lines. Added 25.09
+    # after a review showed the suite was blind here: a dead |Y| gate in
+    # ClassifyHit made two enemy guns per side impossible to dismount, and NOT
+    # ONE key moved, because guns_down_* measure the PLAYER's carriages and only
+    # -ShipGunsDownMask sets them. The player's shot lands on the enemy; this is
+    # the number that gate suppressed (7 where the timber says 13).
+    m["enemy_gun_hits"] = len(re.findall(
+        r"SHOTLOG zone guns target=EnemyShipPawn_\d+ ", text))
+
+    # WHETHER A BALL CAN FIND A HULL AT ALL. Every ship says at BeginPlay whether
+    # her collision skin carries complex-as-simple; the failure is otherwise
+    # silent (every hit becomes a splash). 1 only if EVERY hull says ok, 0 if
+    # any says NO-COLLISION or NO-MESH - a min over hulls is the right shape
+    # here because the claim is about the set: no ship may be transparent.
+    hulls = re.findall(r"SHIPLOG \S+ shothull=(\S+)", text)
+    if hulls:
+        m["shothull_ok"] = 1 if all(h == "ok" for h in hulls) else 0
+
     # THE MUZZLE FLASH. spawned is the proof it exists and the number
     # -ShipFlash=0 must take to zero; live is what was still burning at quit,
     # which at a tenth of a second is all but certainly nothing.

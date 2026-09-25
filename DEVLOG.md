@@ -4466,3 +4466,68 @@ actualizata: 7 din 37 dararii, toate de sub punte; 1 cu banda mutata.
 
 **Task Completed.**
 
+## 25.09.2026 - Ce a gasit recenzia in coliziunea cocii: o poarta moarta care a inviat
+
+**Task Started.** Prompt: "continua" (aceeasi sarcina). Model: Fable 5.1.
+
+Recenzie adversariala, 13 agenti: 3 confirmate (toate acelasi defect), 1
+disputata, 22 neverificate. Verificatorii au primit de data asta un camp
+`ground` - adevar / mecanism / domeniu - ca un „respins pe domeniu" sa nu mai
+treaca drept „fals", cum s-a intamplat pe 19.09 cu banda tunurilor.
+
+### `|Y| >= 380` era o constanta a cutiei
+
+`ClassifyHit` cerea `|Y| >= 380` inainte sa caute o gura de tun: „pe travers".
+Pe cutie, orice lovitura in bord avea |Y| = 520 - testul era cod mort. In clipa
+in care ghiuleaua a inceput sa se opreasca pe lemn, |Y| a devenit jumatatea de
+latime a cocii la statia aia: 371 cm cel mult in fereastra tunului 1, 333 in a
+tunului 4. **Doua tunuri pe bord deveneau de nelovit**, iar cifra „7 din 37" pe
+care o pusesem in fata owner-ului ca efect al plasarii pe lemn era poarta asta.
+Verificatorii au adus si dovada din log: `zone hull at=(412,306,40)` si
+`(505,290,72)` - in fereastra tunului 4, in banda, refuzate doar de |Y| < 380;
+pe cutie fusesera `guns gun=3`.
+
+Scoasa. Cu ea scoasa, proba da **13 din 37** dararii, toate de sub punte, intre
+40 si 155 cm; cu banda la 200-350, **1**. Aproape cifra cutiei (12 din 41):
+placarea pe lemn nu schimba aproape nimic la dararii, banda e tot ce conteaza.
+Cifrele din OWNER_VERIFY 38 sunt corectate, cu istoria lor.
+
+### Disputata: o coca fara coliziune e TACUTA
+
+Daca asset-ul pierde steagul (un reimport care reseteaza BodySetup, un asset
+lipsa din cook), cutia deja ignora ghiuleaua si fiecare lovitura devine strop -
+si logul citeste ca tir prost. Acum fiecare nava spune la BeginPlay
+`SHIPLOG ... shothull=ok|NO-COLLISION|NO-MESH`, iar `shothull_ok` e o cheie in
+suita: 1 doar daca TOATE cocile spun ok. Fixtura cu doua coci, una transparenta.
+
+### Marunte, dar adevarate
+
+- `hull_collision.py` pretindea ca reciteste de pe disc; `load_asset` intoarce
+  obiectul din memorie. Acum verifica rezultatul lui `save_asset`, varful pielii
+  (>= 480 cm: parapetul e acolo) si numarul de triunghiuri, iar adevarul de pe
+  disc e linia `before` a rularii urmatoare - se ruleaza de doua ori, ca
+  `reimport_ship.py`.
+- Comentariul lui `HullShot` descria „sase felii convexe" care nu mai exista.
+- Garda de directie din proba testa fata cutiei (|y| = 5,2) si devenise cod
+  mort; testeaza semnul, pe orice lovitura departe de axa.
+- Capacul pielii e un 94-gon neplan si il triangula IMPORTATORUL; acum
+  `use_triangles=True` la export, pe aceleasi varfuri pe care se numara
+  etanseitatea.
+- Capacul sta la varful parapetului, 1,15 m deasupra puntii: o ghiulea in
+  cadere pe punte se opreste la inaltimea copastiei. Aproximatie STIUTA, scrisa
+  in docstring, nu reparata: doar tirul in cadere o vede.
+- Cele 4 lovituri „pierdute" (41 -> 37): explicatia cea mai probabila din
+  recenzie e o ghiulea care cobora sub val in golul de 1,7-4,7 m dintre cutie
+  si scanduri - se oprea pe cutie, acum cade in mare inainte de lemn. Marea e
+  acolo; e corect. Bilantul -1/+1 per lupta e masuratoarea.
+
+**Suita, dupa scoaterea portii: 38 de scenarii, ZERO cifre miscate.** Doua
+tunuri pe bord au devenit din nou lovibile si nicio cheie n-a clipit - exact
+punctul orb pe care l-a numit recenzia: `guns_down_*` masoara tunurile
+JUCATORULUI. Cheie noua, `enemy_gun_hits`: 21 de lovituri in tunurile
+inamicului pe toata suita, 3 in fiecare lupta de tip `gunnery`, 0 inainte de
+azi in orice masuratoare. Si `shothull_ok` = 1 pe toate cele 38 de randuri.
+Baseline reinregistrat.
+
+**Task Completed.**
+

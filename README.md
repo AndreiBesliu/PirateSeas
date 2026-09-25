@@ -363,13 +363,25 @@ Masurat dupa: **0,00 m** intre punctul raportat si lemn, la fiecare lovitura.
   nimic dupa import (commandlet-ul moare acolo), deci verificarea e alt script,
   `Scripts/hull_collision.py`, care seteaza steagul, salveaza si RECITESTE de pe
   disc.
-- A doua versiune s-a inchis la copastie, fara parapet: 37 de lovituri unde
-  cutia avea 41. Parapetul e lemn, si e exact banda in care sunt taiate gurile
-  de tun.
+- A doua versiune s-a inchis la copastie, fara parapet. Parapetul e lemn, si
+  e exact banda in care sunt taiate gurile de tun; e in piele acum, iar
+  scriptul de coliziune refuza o piele al carei varf e sub copastie.
+- Tot 37 de lovituri unde cutia avea 41, si cu parapetul: in fiecare lupta
+  mutata din suita, exact o lovitura a devenit exact un strop (-1/+1). Cea mai
+  probabila explicatie, din recenzie: o ghiulea care cobora sub val in golul de
+  1,7-4,7 m dintre fata cutiei si scanduri se oprea pe cutie; acum cade in mare
+  inainte sa ajunga la lemn. Marea e acolo; e corect.
 
-Cifra din aceeasi proba care e a owner-ului, nu a mea: **7 din 37 de lovituri
-scot un tun din afet, si toate 7 au intrat sub punte** - banda de avarie a
+Cifra din aceeasi proba care e a owner-ului, nu a mea: **13 din 37 de lovituri
+scot un tun din afet, si toate 13 au intrat sub punte** - banda de avarie a
 tunurilor e `[0, 240]` de cand gurile erau la 120. `OWNER_VERIFY` 38.
+
+**Si o poarta moarta care a inviat.** Clasificatorul cerea `|Y| >= 380` inainte
+sa caute o gura de tun - „pe travers". Pe cutie, orice lovitura in bord avea
+|Y| = 520 si testul nu facea nimic. Pe lemn, |Y| e jumatatea de latime a cocii
+la statia aia: 371 cm cel mult in fereastra tunului 1, 333 in a tunului 4 -
+deci doua tunuri pe bord deveneau de nelovit, iar prima cifra pusa in fata
+owner-ului („7") era poarta asta, nu lemnul. O recenzie a prins-o; e scoasa.
 
 ## Unde lovești contează
 

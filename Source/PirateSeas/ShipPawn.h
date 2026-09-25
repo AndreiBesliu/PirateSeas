@@ -543,10 +543,13 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Ship")
 	TObjectPtr<UStaticMeshComponent> HullMesh;
 
-	/** THE HULL AS A CANNONBALL MEETS IT. Six convex slabs lofted from the same
-	 *  sections as the visual hull (Scripts/ship.py build_shot_hull), never
-	 *  drawn, query-only, typed ECC_Vehicle like the rig volumes so the shot's
-	 *  sweep finds it by object type with no channel to configure.
+	/** THE HULL AS A CANNONBALL MEETS IT. The closed skin of the hull, bulwark
+	 *  included, lofted from the same sections as the visual hull
+	 *  (Scripts/ship.py build_shot_hull) and used as "complex collision as
+	 *  simple" - the collision IS its triangles. Never drawn, query-only, typed
+	 *  ECC_Vehicle like the rig volumes so the shot's sweep finds it by object
+	 *  type with no channel to configure. (A first version used six convex
+	 *  UCX_ slabs; the importer dropped them silently.)
 	 *
 	 *  Until 25.09 a ball stopped on HullCollision, a box 1550 x 520 x 350:
 	 *  measured over the suite's seven distinct fights, the timber sat 1.7 to

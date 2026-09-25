@@ -1,5 +1,7 @@
 #include "ShipPawn.h"
 
+#include "PhysicsEngine/BodySetup.h"
+
 #include "AimIndicator.h"
 
 #include "Materials/MaterialInstanceDynamic.h"
@@ -49,8 +51,11 @@ namespace
 	/** Gun ports along one broadside, in hull space. Taken from the same
 	 *  positions the barrels were modelled at in Blender. */
 	const float GGunPortsX[] = { -600.f, -240.f, 120.f, 480.f };
-	// Clear of the hull collision box, whose half width is 520, so a fresh
-	// shot never starts life already touching the ship that fired it.
+	// Clear of the ship that fired it: her collision skin's bulwark reaches
+	// ~420 amidships and her own barrel mouths 568 (GGunMuzzleY), so a fresh
+	// shot never starts life inside her. (Until 25.09 the number was justified
+	// against the 520 half width of the collision box, which the ball now
+	// ignores; the box is still the root and still 520.)
 	const float GGunPortY = 640.f;
 	/** Gun-port height above the hull ORIGIN, and the hull origin is the
 	 *  waterline the Blender ship was drawn around (Scripts/ship.py: DRAFT 2.6 m
@@ -345,6 +350,20 @@ void AShipPawn::BeginPlay()
 	// and not in the constructor because a subclass sets HandsMax in ITS
 	// constructor, which runs after this class's.
 	Hands = HandsMax;
+
+	// SAID OUT LOUD: whether a ball can find this hull at all. HullShot only
+	// has query shapes if SM_PirateHull carries "complex as simple"; without it
+	// the skin is a mesh with no collision, the box already ignores the ball,
+	// and the failure mode is SILENT - every hit becomes a splash and the log
+	// reads as bad gunnery. A review named it; this line turns it into a number
+	// the suite can refuse (shothull_ok).
+	{
+		const UStaticMesh* Skin = HullShot ? HullShot->GetStaticMesh() : nullptr;
+		const UBodySetup* Body = Skin ? Skin->GetBodySetup() : nullptr;
+		const bool bOk = Body && Body->CollisionTraceFlag == CTF_UseComplexAsSimple;
+		UE_LOG(LogTemp, Display, TEXT("SHIPLOG %s shothull=%s"), *GetName(),
+			bOk ? TEXT("ok") : (Skin ? TEXT("NO-COLLISION") : TEXT("NO-MESH")));
+	}
 
 	// A MERCHANT HAS NO GUNS, so she must have no gun PORTS to lose either.
 	// AMerchantShipPawn's class comment says "No guns"; her constructor
@@ -1266,10 +1285,20 @@ EShipZone AShipPawn::ClassifyHit(const UPrimitiveComponent* Struck,
 		return EShipZone::Rudder;
 	}
 
-	// Through a gun port: out on the beam, at gun deck height, abreast of one
-	// of the four ports.
-	if (FMath::Abs(HullLocal.Y) >= 380.f &&
-		HullLocal.Z >= GunDeckLowCm && HullLocal.Z <= GunDeckHighCm)
+	// Through a gun port: at gun deck height, abreast of one of the four ports.
+	//
+	// There used to be a third condition here, |Y| >= 380, meaning "out on the
+	// beam". It was written for the collision BOX, whose side face sat at
+	// |Y| = 520, so on the box every side hit passed it and it was dead code.
+	// On 25.09 the ball started stopping on the hull's own skin, where |Y| is
+	// the half-width at that station - 371 cm at most inside port 1's window
+	// and 333 inside port 4's - and the dead test came alive as a filter that
+	// made two guns per side impossible to dismount. A review caught it; the
+	// "12 -> 7" dismount count in the first version of OWNER_VERIFY 38 was this
+	// gate, not the timber. A hit that is not in the transom (above) and sits
+	// abreast of a port at deck height IS on the beam: the skin has no other
+	// surface there.
+	if (HullLocal.Z >= GunDeckLowCm && HullLocal.Z <= GunDeckHighCm)
 	{
 		for (int32 g = 0; g < UE_ARRAY_COUNT(GGunPortsX); ++g)
 		{

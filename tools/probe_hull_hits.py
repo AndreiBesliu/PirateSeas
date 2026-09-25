@@ -118,7 +118,9 @@ def zone(x, y, z, lo_cm, hi_cm, win_cm=100.0):
     by WHICH COMPONENT was struck, never by position)."""
     if x <= -1350 and abs(y) <= 180 and -270 <= z <= 90:
         return "rudder"
-    if abs(y) >= 380 and lo_cm <= z <= hi_cm:
+    # No |y| test: it was a box-face constant (see ShipPawn.cpp ClassifyHit)
+    # and the game dropped it on 25.09.
+    if lo_cm <= z <= hi_cm:
         for px in PORTS_CM:
             if abs(x - px) <= win_cm:
                 return "guns"
@@ -174,7 +176,11 @@ def main():
             rows.append((name, m.group(1).lower(), at, dr))
         print("%-14s done" % name)
 
-    outward = sum(1 for _, _, at, dr in rows if abs(abs(at[1]) - 5.2) < 0.25
+    # The direction must point INTO the ship at the hit. On the box this was
+    # tested on the side face (|y| = 5.2); on the skin |y| is the half-width,
+    # so any hit clear of the centreline is a side hit and the sign test alone
+    # is the guard. The first version kept the 5.2 test and became dead code.
+    outward = sum(1 for _, _, at, dr in rows if abs(at[1]) > 1.0
                   and at[1] * dr[1] > 0)
     if outward:
         print("\n%d side hits have a direction pointing OUT of the ship: the "

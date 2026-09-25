@@ -56,10 +56,12 @@ vânt în plante şi greement, `-Hour=` pentru ora din zi.
 - **Coca pe care o loveste ghiuleaua** (25.09): `Scripts/ship.py` exporta si
   `SM_PirateHull.fbx` (pielea inchisa a cocii, cu parapet). Dupa orice
   schimbare a cocii: Blender → `run_py.ps1 -Script reimport_hull.py` (o data;
-  moare dupa import, e normal) → `run_py.ps1 -Script hull_collision.py` (seteaza
-  complex-as-simple si RECITESTE de pe disc; linia `HULLCOL after ...
-  trace_flag=CTF_USE_COMPLEX_AS_SIMPLE` e proba). Fara pasul al treilea coca
-  nu are coliziune si jocul raporteaza „0 lovituri", nu „lipseste coliziunea".
+  moare dupa import, e normal) → `run_py.ps1 -Script hull_collision.py` DE DOUA
+  ORI: prima seteaza complex-as-simple si verifica varful (parapet) si numarul
+  de triunghiuri; a doua, prin linia ei `HULLCOL before`, e adevarul de pe
+  disc - in acelasi proces `load_asset` intoarce obiectul din memorie. Si in
+  joc fiecare nava spune la BeginPlay `SHIPLOG ... shothull=ok`; cheia
+  `shothull_ok` din suita e 0 daca vreo coca e transparenta.
 - **Probe (nu porti):** `python tools/probe_hull_hits.py [--band=LO,HI]` - continua
   fiecare lovitura de pe cutia de coliziune pana la lemnul din `ship.py` si
   reclasifica zona. Ruleaza motorul, cateva minute. Scrisa 25.09 pentru decizia
@@ -327,7 +329,7 @@ atmosfera, iar dara face cititul.
 
 ## Ce aşteaptă ochiul owner-ului
 
-`OWNER_VERIFY.md` are **37** de puncte; **16–37 n-au fost confirmate niciodată**
+`OWNER_VERIFY.md` are **38** de puncte; **16–36 n-au fost confirmate niciodată**, 37 e reparat, 38 e o DECIZIE a lui
 — sunt judecăţi vizuale pe care nu le pot face eu. (Scria 34 aici, şi numărul a
 rămas în urmă de două ori la rând: cele mai NOI puncte sunt exact cele pe care
 un cititor al acestei linii nu le-ar fi deschis.) Punctul 20 nu mai e o

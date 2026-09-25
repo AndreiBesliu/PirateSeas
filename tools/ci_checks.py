@@ -404,6 +404,26 @@ def check_comparison():
         fail("a zero must still be RECORDED, or the one number that must never "
              "move could vanish instead of moving: %r" % smoke)
 
+    # ENEMY GUNS KNOCKED OUT: only the enemy's, only the guns zone. A player
+    # gun hit and an enemy hull hit must both count for nothing here.
+    eg = ci_measure.measure("fixture",
+        "LogTemp: Display: SHOTLOG zone guns target=EnemyShipPawn_0 at=(-240,410,105) gun=1\n"
+        "LogTemp: Display: SHOTLOG zone guns target=ShipPawn_0 at=(120,400,90) gun=2\n"
+        "LogTemp: Display: SHOTLOG zone hull target=EnemyShipPawn_0 at=(0,346,10) gun=-1\n")
+    if eg.get("enemy_gun_hits") != 1:
+        fail("enemy_gun_hits must count the one enemy guns-zone line: %r" % eg)
+
+    # THE HULL'S COLLISION, said per ship. One transparent hull must make the
+    # key 0 even when the others are fine.
+    sh = ci_measure.measure("fixture",
+        "LogTemp: Display: SHIPLOG ShipPawn_0 shothull=ok\n"
+        "LogTemp: Display: SHIPLOG EnemyShipPawn_0 shothull=NO-COLLISION\n")
+    if sh.get("shothull_ok") != 0:
+        fail("one hull without collision must read shothull_ok=0: %r" % sh)
+    sh = ci_measure.measure("fixture", "LogTemp: Display: SHIPLOG ShipPawn_0 shothull=ok\n")
+    if sh.get("shothull_ok") != 1:
+        fail("every hull ok must read shothull_ok=1: %r" % sh)
+
     # THE MUZZLE FLASH's quit line. Three fields, not four: it has no cull, and
     # a fixture written to the smoke's shape would have passed on a reader that
     # silently matched nothing.

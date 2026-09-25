@@ -498,8 +498,14 @@ def build_shot_hull():
     CLOSED matters. A sweep against a one-sided surface only stops at faces it
     meets from the front, so an open top would let a plunging ball fall into
     the hull and out through the far side unseen. Transom, bow cap and a deck
-    lid at the gunwale close it; the lid is not planar (that is the sheer) and
-    Blender triangulates it on export, which is all collision needs."""
+    lid at the top of the bulwark close it; the lid is not planar (that is the
+    sheer) and the export triangulates it (use_triangles), which is all
+    collision needs.
+
+    KNOWN APPROXIMATION: the lid sits at the TOP of the bulwark, 1.15 m above
+    the deck, so a plunging ball onto the open deck stops at rail height rather
+    than on the planking. Only plunging fire sees it; a ball on the beam meets
+    the bulwark or the side first either way."""
     m = new_mat("M_ShotHull", (0.5, 0.5, 0.5, 1), 0.9)
     bm = bmesh.new()
     grid_s, grid_p = [], []
@@ -646,10 +652,15 @@ def main():
     bpy.context.view_layer.objects.active = shot_hull
     bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
     hull_fbx = os.path.join(OUT, "SM_PirateHull.fbx")
+    # use_triangles: the deck lid is a non-planar 94-gon, and WHO triangulates
+    # it decides whether the collision is closed. Blender does it here, from
+    # the same vertices the watertightness count below is taken on; leaving it
+    # to the importer would put that decision in code nobody reads.
     bpy.ops.export_scene.fbx(filepath=hull_fbx, use_selection=True,
                              apply_unit_scale=True, global_scale=1.0,
                              apply_scale_options="FBX_SCALE_NONE",
                              object_types={"MESH"}, mesh_smooth_type="FACE",
+                             use_triangles=True,
                              add_leaf_bones=False, bake_space_transform=False)
     # CLOSED, counted: every edge of a watertight mesh has exactly two faces.
     # Printed rather than asserted so a change to the loft shows up as a number
