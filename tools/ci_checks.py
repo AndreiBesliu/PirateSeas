@@ -436,6 +436,13 @@ def check_comparison():
             if row["holes_total"] != row["hull_hits"]:
                 fail("%s: %d scars for %d hull hits" % (name, row["holes_total"], row["hull_hits"]))
 
+    # THE GUN BAND a row ran with, read off the first ship's line.
+    gb = ci_measure.measure("fixture",
+        "LogTemp: Display: SHIPLOG ShipPawn_0 gunband=200..350\n"
+        "LogTemp: Display: SHIPLOG EnemyShipPawn_0 gunband=200..350\n")
+    if gb.get("gun_band_lo") != 200 or gb.get("gun_band_hi") != 350:
+        fail("the gun band line is not read: %r" % gb)
+
     # ENEMY GUNS KNOCKED OUT: only the enemy's, only the guns zone. A player
     # gun hit and an enemy hull hit must both count for nothing here.
     eg = ci_measure.measure("fixture",

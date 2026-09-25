@@ -1103,6 +1103,7 @@ pereche de rulări citea împrăștiere și credea că citește semnal.
 | `-ShipFlash=0` | stinge focul de la gura tunului (implicit APRINS) |
 | `-ShipSplinters=0` | stinge aschiile de la o lovitura in cocca (implicit APRINSE) |
 | `-ShipHoles=0` | stinge urmele loviturilor de pe cocca (implicit APRINSE) |
+| `-ShipGunBand=LO,HI` | banda de inaltime (cm, fata de linia de plutire) in care o lovitura scoate un tun din afet, pentru toate navele (implicit 0,240; `OWNER_VERIFY` 38) |
 | `-WindBearing=N` | fixează DIRECȚIA vântului, altfel „mal sub vânt" nu e reproductibil |
 | `-WindSpeed=N` | fixează și TĂRIA lui; fără asta două treceri peste același unghi sunt luate pe vreme diferită |
 | `-ShipPolar=1` | polarul de regim STABILIZAT: ține cârma pe un cap, așteaptă până nava nu mai schimbă nimic, abia atunci scrie rândul |

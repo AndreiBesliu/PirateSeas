@@ -422,6 +422,26 @@ void AShipPawn::BeginPlay()
 	{
 		bLeadTarget = Flag != 0;
 	}
+
+	// -ShipGunBand=LO,HI moves the band in which a hull hit dismounts a gun, for
+	// EVERY ship. It exists so the owner can play the decision in OWNER_VERIFY
+	// 38 instead of reading it: [0,240] is what the game has carried since the
+	// ports were at 120; 200,350 is where the guns actually stand now. Said out
+	// loud once per ship so a row that used it shows the band it ran with.
+	{
+		FString Band;
+		if (FParse::Value(FCommandLine::Get(), TEXT("ShipGunBand="), Band, false))
+		{
+			FString Lo, Hi;
+			if (Band.Split(TEXT(","), &Lo, &Hi))
+			{
+				GunDeckLowCm = FCString::Atof(*Lo);
+				GunDeckHighCm = FCString::Atof(*Hi);
+			}
+		}
+		UE_LOG(LogTemp, Display, TEXT("SHIPLOG %s gunband=%.0f..%.0f"),
+			*GetName(), GunDeckLowCm, GunDeckHighCm);
+	}
 	// ON by default since the smoke was unparked (17364af). This comment used to
 	// say OFF, and said it for two commits after it had stopped being true - the
 	// header has bGunSmoke = true and the default below is 1. The reasoning it

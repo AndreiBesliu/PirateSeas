@@ -391,6 +391,22 @@ SCENARIOS = {
                   "-EnemyY=1500", "-ShipFireTest=8", "-ShipQuitAfter=45",
                   "-ShipHoles=0"],
 
+    # THE OWNER'S DECISION, PLAYABLE. gunnery with the gun-damage band moved
+    # from [0,240] to where the guns stand. The key that must differ is
+    # enemy_gun_hits: the probe says every dismount in gunnery came in below
+    # the deck, so with the band moved they must all read as hull. gun_band_hi
+    # shows the cause on the same row.
+    "gunband_high": ["-WindBearing=120", "-WindSpeed=11", "-EnemyX=9000",
+                     "-EnemyY=1500", "-ShipFireTest=8", "-ShipQuitAfter=45",
+                     "-ShipGunBand=200,350"],
+
+    # WHAT THE AUTOMATIC LEAD IS WORTH. gunnery with -ShipLead=0 for everyone:
+    # the solver lays on where the target IS instead of where she will be. The
+    # number the owner was told from memory is now a row in the project.
+    "lead_off": ["-WindBearing=120", "-WindSpeed=11", "-EnemyX=9000",
+                 "-EnemyY=1500", "-ShipFireTest=8", "-ShipQuitAfter=45",
+                 "-ShipLead=0"],
+
     # THE GUNS LAID BY HAND. Three rows around one idea, and each pair says a
     # different thing.
     #
@@ -869,6 +885,13 @@ def measure(name, text):
         m["smoke_live_end"] = int(sm.group(2))
         m["smoke_culled"] = int(sm.group(3))
         m["smoke_stranded"] = int(sm.group(4))
+
+    # THE BAND A ROW RAN WITH, so gunband_high shows its cause beside its
+    # effect. Every ship prints it; they are all the same, take the first.
+    gb = re.search(r"SHIPLOG \S+ gunband=(-?\d+)\.\.(-?\d+)", text)
+    if gb:
+        m["gun_band_lo"] = int(gb.group(1))
+        m["gun_band_hi"] = int(gb.group(2))
 
     # GUNS KNOCKED OUT ON THE ENEMY, counted from the zone lines. Added 25.09
     # after a review showed the suite was blind here: a dead |Y| gate in

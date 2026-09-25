@@ -16,16 +16,21 @@ cocă scoteau un tun din afet, **toate 12 de sub punte** — şi după ce coca a
 primit coliziunea ei pe 25.09, **13 din 37**, tot toate de sub punte. Panoul
 GUNS îţi arată atunci un afet distrus de o ghiulea care a intrat la linia de
 plutire. Recomandarea mea e să mut banda unde sunt tunurile; asta face
-dărâmarea unui tun de vreo **douăsprezece ori mai rară**, şi de aceea nu o fac
-fără tine. Detaliile şi cele trei variante sunt la punctul 38.
+dărâmarea unui tun de vreo **treisprezece ori mai rară**, şi de aceea nu o fac
+fără tine. **Poţi juca decizia în loc s-o citeşti:** porneşte jocul cu
+`-ShipGunBand=200,350` şi vezi dacă a pierde un tun încă se simte. Detaliile
+şi cele trei variante sunt la punctul 38.
 
 ### O întrebare veche, încă deschisă
 
 **Căpitanul AI îşi rezolvă singur distanţa şi avansul; tu le judeci din ochi.**
 E o decizie, nu o scăpare (README, „Cum ocheşti"): cine îşi aliniază singur
 lovitura are dreptul să rateze. Dar înseamnă că tu şi ea nu jucaţi acelaşi joc.
-Am măsurat-o într-o sesiune anterioară şi **n-am scris cifra în proiect**, deci
-n-o repet aici ca fapt; dacă vrei să hotărăşti pe ea, o re-măsor întâi.
+**Măsurat pe 25.09, în proiect de data asta:** rândul `lead_off` e `gunnery` cu
+avansul stins pentru toată lumea. Loviturile (cocă + greement) scad de la **11 la
+8**, iar cele trei pierdute devin stropi; loviturile în cocă rămân 3 din 3. La 96
+m, avansul valorează cam un sfert din ce nimereşte ea. Dacă vrei ca jucatorul
+să primească un ajutor de avans, spune; dacă nu, rămâne aşa.
 
 ### Cinci lucruri de văzut, în ordinea asta
 
@@ -1010,8 +1015,14 @@ lovituri în cocă; pe cutia de dinainte erau 41 şi 12 dărâmări):
 tunuri, ea practic dispare până când cineva ocheşte mai sus. Cu B, panoul GUNS
 promite ceva ce avaria nu face — şi exact pe el te-am rugat să te uiţi la 35.
 
-**De ce nu pot eu:** o face pe una dintre mecanici de douăsprezece ori mai rară.
+**De ce nu pot eu:** o face pe una dintre mecanici de treisprezece ori mai rară.
 E o alegere de echilibru, ca magazia finită, nu o reparaţie.
+
+**Cum o joci:** `Packaged\Windows\PirateSeas.exe -ShipGunBand=200,350` e
+varianta A; fără steag e B. Steagul se aplică tuturor navelor şi se scrie în log
+la fiecare (`SHIPLOG ... gunband=200..350`). În suită, rândul `gunband_high` e
+`gunnery` cu steagul: diferă în exact trei chei - banda (cauza) şi
+`enemy_gun_hits` 3 -> 0 (efectul) - şi în nimic altceva.
 
 **Numerele depind de o alegere a mea**, şi o spun: 200–350 cm e „de sub punte
 până la vârful copastiei". O bandă mai largă ar lăsa mai multe dărâmări. Proba

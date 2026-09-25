@@ -4615,3 +4615,27 @@ si `holes_total == hull_hits == chips_spawned` pe fiecare rand.** Baseline
 reinregistrat.
 
 **Task Completed.**
+
+## 25.09.2026 - Doua comutatoare pentru cele doua intrebari ale owner-ului
+
+**Task Started.** Prompt: "continua". Model: Fable 5.1.
+
+`OWNER_VERIFY` 38 ii cerea owner-ului sa aleaga banda de avarie a tunurilor
+dintr-o descriere. `-ShipGunBand=LO,HI` il lasa s-o JOACE in pachet, pentru
+toate navele, scrisa in log la fiecare (`SHIPLOG ... gunband=`). In suita,
+`gunband_high` e `gunnery` cu `200,350`: difera in exact trei chei - banda
+(cauza, `gun_band_lo/hi`) si `enemy_gun_hits` 3 -> 0 (efectul) - si in nimic
+altceva. Comutatorul face fix ce descrie punctul 38.
+
+Si intrebarea veche despre avansul automat al AI-ului avea o cifra pe care o
+tineam minte si n-o scrisesem in proiect. `lead_off` e `gunnery` cu `-ShipLead=0`
+pentru toata lumea: loviturile (coca + greement) scad de la **11 la 8**, cele
+trei pierdute devin stropi, loviturile in coca raman 3 din 3. La 96 m, avansul
+valoreaza cam un sfert din ce nimereste ea. O samanta, un scenariu - dar e un
+rand in linia de baza, nu o amintire.
+
+**Suita: 41 de scenarii, zero cifre miscate, 80 de chei noi** (banda pe fiecare
+rand, plus cele doua randuri). Baseline reinregistrat.
+
+**Task Completed.**
+
