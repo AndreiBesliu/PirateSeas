@@ -404,12 +404,21 @@ def check_comparison():
         fail("a zero must still be RECORDED, or the one number that must never "
              "move could vanish instead of moving: %r" % smoke)
 
-    # THE SCARS' quit line, summed over hulls.
+    # THE SCARS' quit line: the level TOTAL for added/culled, the survivors'
+    # sum for live. A wreck's line missing must not lower added.
     ho = ci_measure.measure("fixture",
         "LogTemp: Display: HOLELOG ShipPawn_0 added=2 live=2 culled=0\n"
-        "LogTemp: Display: HOLELOG EnemyShipPawn_0 added=5 live=4 culled=1\n")
-    if ho.get("holes_total") != 7 or ho.get("holes_live_end") != 6 or ho.get("holes_culled") != 1:
-        fail("the scar quit line is not summed over hulls: %r" % ho)
+        "LogTemp: Display: HOLELOG TOTAL added=7 culled=1\n")
+    if ho.get("holes_total") != 7 or ho.get("holes_live_end") != 2 or ho.get("holes_culled") != 1:
+        fail("the scar totals must come from HOLELOG TOTAL: %r" % ho)
+
+    # AND A REFUSED HIT IS NOT A HIT. damage=0 is a ball into a hull already
+    # going down; it is counted apart, so scars and splinters can equal hits.
+    rh = ci_measure.measure("fixture",
+        "LogTemp: Display: SHOTLOG hit by=ShipPawn_0 shot=1 target=EnemyShipPawn_0 damage=60\n"
+        "LogTemp: Display: SHOTLOG hit by=ShipPawn_0 shot=2 target=EnemyShipPawn_0 damage=0\n")
+    if rh.get("hull_hits") != 1 or rh.get("hits_ignored") != 1:
+        fail("a damage=0 hit must be counted as ignored, not as a hit: %r" % rh)
 
     # AND THE ARITHMETIC: a scar per ball into timber, so holes_total must
     # equal hull_hits on every recorded row but holes_off - the same gate the

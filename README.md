@@ -1383,7 +1383,6 @@ toată nava, fiindcă `ObjectBounds` întorcea zero pentru mesh-ul ăla.
   dar norii şi atmosfera rămân cum sunt), şi timpul nu curge în timpul unei
   partide
 - niciun sunet
-- coca nu poartă urme de lovitură: gaura se vede în cifre, nu pe lemn
 - convoiul n-are prăzi, valoare a mărfii, escortă sau port adevărat (rada e un
   punct pe apă); negustorul nu ştie să vireze prin vânt, deci un drum aşezat în
   vânt l-ar putea prinde în irons
@@ -1399,7 +1398,7 @@ toată nava, fiindcă `ObjectBounds` întorcea zero pentru mesh-ul ăla.
   progresia sunt următoarele ateliere, în ordinea asta
 
 Reparate de când secțiunea asta a fost scrisă, și scoase din ea ca să nu fie
-refăcute: magazia, care e FINITA implicit din 16.09 (decizia owner-ului, 40 de
+refăcute: urmele loviturilor pe cocă (25.09, secțiunea „Urmele loviturilor”); magazia, care e FINITA implicit din 16.09 (decizia owner-ului, 40 de
 ghiulele) si nu mai e o intrebare deschisa; negustorul, care primeste avarie in
 coca de la o ghiulea in banda puntii lui de tun; portul, care nu mai cere un
 convoi ca sa existe (`-Port=1` singur e de ajuns); mai multe insule odată (până

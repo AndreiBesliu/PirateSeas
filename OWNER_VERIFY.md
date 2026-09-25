@@ -468,7 +468,7 @@ tu). Lista onestă de acum, cât o ştiu eu:
   expunerea, dar norii şi atmosfera rămân aceiaşi, şi timpul nu curge în timpul
   unei partide;
 - nu există sunet, deloc;
-- coca nu poartă urme de lovitură: gaura se vede în cifre, nu pe lemn;
+- ~~coca nu poartă urme de lovitură~~ (poartă, din 25.09: punctul 39);
 - nu există echipaj, nici interior.
 
 Care dintre astea te scoate prima din cadru?
@@ -1024,7 +1024,7 @@ deci durează câteva minute, nu secunde.
 `-ShipFireTest=8`), apoi apropie camera de bordajul ei dupa salva. Sau lasa-te
 lovit si uita-te la propriul bordaj.
 
-**Cum arata bine:** Un disc intunecat, cat un cap de om, EXACT unde a intrat
+**Cum arata bine:** Un disc intunecat de 60 cm - cat o roata mica de caruta - EXACT unde a intrat
 ghiuleaua, lipit de scanduri, care ramane acolo si se misca odata cu nava. Dupa
 o lupta lunga, bordajul unei nave batute e ciuruit si se vede de la distanta ca
 a incasat.
@@ -1036,8 +1036,15 @@ a abtibild rotund, nu a gaura - atunci ii trebuie o margine rupta, si aia e alt
 material.
 
 **De ce nu pot eu:** pot numara ca sunt exact cate lovituri au fost (poarta o
-cere pe fiecare rand din suita) si ca stau la punctul raportat de coliziune. Am
-incercat sa le fotografiez: la 30 m un disc de 60 cm e cinci pixeli intr-un
-cadru de 1920, si nu l-am putut deosebi de fum. Cat de tare se vede, si daca
-citeste a gaura, e ochiul tau.
+cere pe fiecare rand din suita). Ca stau la punctul raportat de coliziune e prin
+constructie, nu masurat: nimic nu citeste inapoi transformarea unei instante.
+Am incercat sa le fotografiez de la camera de urmarire, unde un disc de 60 cm pe
+o nava la 30 m e sub zece pixeli, si nu l-am putut deosebi de fum. Cat de tare
+se vede, si daca citeste a gaura, e ochiul tau.
+
+(O recenzie a prins ca o ghiulea cazuta pe PUNTE lasa semnul la 1,15 m deasupra
+scandurilor, plutind: pielea de coliziune avea capacul pe varful parapetului.
+Reparat in aceeasi zi - parapetul e o placa inchisa de 10 cm si puntea sta intre
+fetele ei, la 12 cm deasupra scandurilor vizibile. Daca vezi un disc plutind,
+asta ar fi.)
 

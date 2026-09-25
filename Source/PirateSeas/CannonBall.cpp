@@ -305,8 +305,14 @@ void ACannonBall::StrikeShip(AShipPawn* Ship, const FHitResult& Hit)
 	// runs before physics, when it is not - LastFlightVel is right for both.
 	const FVector Incoming = LastFlightVel.IsNearlyZero()
 		? GetVelocity() : LastFlightVel;
-	// The shooter may be a wreck, or gone, by the time the ball lands.
-	UGameplayStatics::ApplyPointDamage(Struck, ImpactDamage,
+	// The shooter may be a wreck, or gone, by the time the ball lands. And
+	// WHAT THE SHIP TOOK is what gets logged, not what the ball carried: a ship
+	// already going down refuses damage (TakeDamage returns 0 before it does
+	// anything), and until 25.09 that ball was still logged as a hit, still
+	// threw oak, and marked nothing - so "scars equal hits" held only because
+	// no scenario fires into a wreck. A refused hit is damage=0 below, throws
+	// nothing, marks nothing, and the suite counts it apart.
+	const float Applied = UGameplayStatics::ApplyPointDamage(Struck, ImpactDamage,
 		Incoming.GetSafeNormal(), Hit,
 		IsValid(Shooter) ? Shooter->GetInstigatorController() : nullptr,
 		this, nullptr);
@@ -329,7 +335,7 @@ void ACannonBall::StrikeShip(AShipPawn* Ship, const FHitResult& Hit)
 
 	UE_LOG(LogTemp, Display, TEXT("SHOTLOG hit by=%s shot=%d target=%s damage=%.0f"),
 		IsValid(Shooter) ? *Shooter->GetName() : TEXT("?"), ShotIndex,
-		*Struck->GetName(), ImpactDamage);
+		*Struck->GetName(), Applied);
 
 	// AND SOMETHING TO SEE. Until 19.09 a hull hit produced this log line and
 	// a number on a bar, while a MISS threw up a column of water visible at
@@ -339,7 +345,7 @@ void ACannonBall::StrikeShip(AShipPawn* Ship, const FHitResult& Hit)
 	// Ships only. Rock does not splinter, and a ball into a hillside already
 	// ends with its own reason string; oak coming out of an island would be
 	// the effect lying about what was hit.
-	if (bSplinters && Ship)
+	if (bSplinters && Ship && Applied > 0.f)
 	{
 		// The struck ship's way, so the burst stays with the hole, and the
 		// sea's height there, so the pieces end in the water rather than

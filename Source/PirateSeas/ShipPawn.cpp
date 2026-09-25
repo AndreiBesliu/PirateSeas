@@ -1275,6 +1275,9 @@ int32 AShipPawn::GetGunsRemaining(bool bStarboard) const
 	return Count;
 }
 
+int32 AShipPawn::HolesAddedTotal = 0;
+int32 AShipPawn::HolesCulledTotal = 0;
+
 int32 AShipPawn::GetHolesLive() const
 {
 	return ShotHoles ? ShotHoles->GetInstanceCount() : 0;
@@ -1416,6 +1419,7 @@ float AShipPawn::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent,
 		{
 			ShotHoles->RemoveInstance(0);
 			++HolesCulled;
+			++HolesCulledTotal;
 		}
 		const FVector N = LastHitNormalLocal.GetSafeNormal();
 		const FQuat Face = FRotationMatrix::MakeFromZ(N).ToQuat();
@@ -1423,6 +1427,7 @@ float AShipPawn::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent,
 		ShotHoles->AddInstance(FTransform(Face, LastHitLocal + N * 2.f,
 			FVector(D, D, 0.02f)), false);
 		++HolesAdded;
+		++HolesAddedTotal;
 	}
 
 	switch (Zone)

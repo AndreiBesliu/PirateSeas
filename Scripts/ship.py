@@ -502,10 +502,10 @@ def build_shot_hull():
     sheer) and the export triangulates it (use_triangles), which is all
     collision needs.
 
-    KNOWN APPROXIMATION: the lid sits at the TOP of the bulwark, 1.15 m above
-    the deck, so a plunging ball onto the open deck stops at rail height rather
-    than on the planking. Only plunging fire sees it; a ball on the beam meets
-    the bulwark or the side first either way."""
+    The bulwark is a closed slab 10 cm thick and the deck lies BETWEEN its inner
+    faces at gunwale height - 12 cm above the visual planking, which is the
+    remaining approximation (it used to be 1.15 m, a lid on top of the rail,
+    and a ball onto the deck left its scar hovering there)."""
     m = new_mat("M_ShotHull", (0.5, 0.5, 0.5, 1), 0.9)
     bm = bmesh.new()
     grid_s, grid_p = [], []
@@ -537,28 +537,56 @@ def build_shot_hull():
     bow_ring = ([grid_s[NS][j] for j in range(NR + 1)]
                 + [grid_p[NS][j] for j in range(NR, -1, -1)])
     bm.faces.new(bow_ring)
-    # THE BULWARK, or a ball between the deck and the rail sails over the
-    # hull. Measured on the first version, which closed at the gunwale: 37 hits
-    # where the box had 41, the four missing ones all at bulwark height - and
-    # that is exactly the band the gun ports are cut in. Same wall as the
-    # visual rail (build_hull): from the gunwale up BULWARK, drawn in 1.5%.
-    top_s, top_p = [], []
+    # THE BULWARK AS A SLAB, and the deck INSIDE it. The first skin closed at
+    # the gunwale (a ball at rail height sailed over: 37 hits where the box had
+    # 41, in the very band the ports are cut in); the second put a lid on TOP
+    # of the bulwark, so a ball coming over the rail stopped 1.15 m above the
+    # planking and left its scar hovering there. This is the shape a ship has:
+    # outer face up to the rail top, a 10 cm rail cap, an inner face back down
+    # to the gunwale, and the deck between the inner faces. One closed manifold.
+    RAIL = 0.10
+    out_top_s, out_top_p, in_top_s, in_top_p, in_deck_s, in_deck_p = [], [], [], [], [], []
     for i in range(NS + 1):
         t = i / NS
         x = station_x(t)
         y, z = section_point(t, 1.0)
-        top_s.append(bm.verts.new((x, y * 0.985, z + BULWARK)))
-        top_p.append(bm.verts.new((x, -y * 0.985, z + BULWARK)))
+        yo = y * 0.985                     # outer face at the top, as the rail
+        yi = max(0.05, yo - RAIL)          # inner face of the slab
+        out_top_s.append(bm.verts.new((x, yo, z + BULWARK)))
+        out_top_p.append(bm.verts.new((x, -yo, z + BULWARK)))
+        in_top_s.append(bm.verts.new((x, yi, z + BULWARK)))
+        in_top_p.append(bm.verts.new((x, -yi, z + BULWARK)))
+        in_deck_s.append(bm.verts.new((x, yi, z)))
+        in_deck_p.append(bm.verts.new((x, -yi, z)))
     bm.verts.ensure_lookup_table()
     for i in range(NS):
-        bm.faces.new((grid_s[i][NR], grid_s[i + 1][NR], top_s[i + 1], top_s[i]))
-        bm.faces.new((grid_p[i][NR], top_p[i], top_p[i + 1], grid_p[i + 1][NR]))
-    # close the bulwark's ends against the transom and the bow cap
-    bm.faces.new((grid_s[0][NR], top_s[0], top_p[0], grid_p[0][NR]))
-    bm.faces.new((grid_s[NS][NR], grid_p[NS][NR], top_p[NS], top_s[NS]))
-    # the lid, at the TOP of the bulwark: starboard aft to bow, port bow to aft
-    lid = top_s + top_p[::-1]
+        # outer bulwark face, gunwale -> rail top
+        bm.faces.new((grid_s[i][NR], grid_s[i + 1][NR], out_top_s[i + 1], out_top_s[i]))
+        bm.faces.new((grid_p[i][NR], out_top_p[i], out_top_p[i + 1], grid_p[i + 1][NR]))
+        # rail cap, outer top -> inner top
+        bm.faces.new((out_top_s[i], out_top_s[i + 1], in_top_s[i + 1], in_top_s[i]))
+        bm.faces.new((out_top_p[i], in_top_p[i], in_top_p[i + 1], out_top_p[i + 1]))
+        # inner bulwark face, rail top -> gunwale height, inboard
+        bm.faces.new((in_top_s[i], in_top_s[i + 1], in_deck_s[i + 1], in_deck_s[i]))
+        bm.faces.new((in_top_p[i], in_deck_p[i], in_deck_p[i + 1], in_top_p[i + 1]))
+    # the slab's ends, one quad each side at the transom and the bow
+    for k, (o_s, o_p) in ((0, (grid_s[0][NR], grid_p[0][NR])), (NS, (grid_s[NS][NR], grid_p[NS][NR]))):
+        if k == 0:
+            bm.faces.new((o_s, out_top_s[0], in_top_s[0], in_deck_s[0]))
+            bm.faces.new((o_p, in_deck_p[0], in_top_p[0], out_top_p[0]))
+        else:
+            bm.faces.new((o_s, in_deck_s[NS], in_top_s[NS], out_top_s[NS]))
+            bm.faces.new((o_p, out_top_p[NS], in_top_p[NS], in_deck_p[NS]))
+    # the deck, between the inner faces, at gunwale height; its transom and
+    # bow edges run between the inner deck points, and the hull's own end caps
+    # (transom, bow) already reach up to the gunwale, so the slab-end quads
+    # above are what close the 10 cm between them.
+    lid = in_deck_s + in_deck_p[::-1]
     bm.faces.new(lid)
+    # the hull's end caps stop at the outer gunwale points; the deck's edge is
+    # at the inner ones, 10 cm inboard. Two thin quads close each end.
+    bm.faces.new((grid_s[0][NR], in_deck_s[0], in_deck_p[0], grid_p[0][NR]))
+    bm.faces.new((grid_s[NS][NR], grid_p[NS][NR], in_deck_p[NS], in_deck_s[NS]))
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
     return obj_from_bm(bm, "SM_PirateHull", m, smooth=False)
 

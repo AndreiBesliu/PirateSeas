@@ -53,6 +53,7 @@ void ASeaGameMode::BeginPlay()
 	AGunSmoke::ResetForNewLevel();
 	AMuzzleFlash::ResetForNewLevel();
 	AHullSplinters::ResetForNewLevel();
+	AShipPawn::ResetHoleTotalsForNewLevel();
 
 	// Seed the world's randomness before anything draws from it.
 	//
@@ -1719,6 +1720,13 @@ void ASeaGameMode::QuitNow()
 	// went into a ship, so it can be read straight against the SHOTLOG hit lines
 	// - a burst count that drifted from the hit count would mean the effect is
 	// firing where no ball landed, or not firing where one did.
+	// The scars over the whole level, from the statics: the per-ship HOLELOG
+	// lines above are for a human, this is what the suite reads, and it does
+	// not lose a wreck that took her instances to the bottom with her.
+	UE_LOG(LogTemp, Display,
+		TEXT("HOLELOG TOTAL added=%d culled=%d"),
+		AShipPawn::GetHolesAddedTotal(), AShipPawn::GetHolesCulledTotal());
+
 	UE_LOG(LogTemp, Display,
 		TEXT("CHIPLOG TOTAL spawned=%d live=%d stranded=%d"),
 		AHullSplinters::GetSpawned(), AHullSplinters::CountLive(),

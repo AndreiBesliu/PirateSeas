@@ -4559,3 +4559,59 @@ daca se VAD, si daca citesc a gaura sau a abtibild, e `OWNER_VERIFY` 39.
 
 **Task Completed.**
 
+## 25.09.2026 - Ce a gasit recenzia in urme: un capac in aer si o lovitura refuzata
+
+**Task Started.** Prompt: "continua" (aceeasi sarcina). Model: Fable 5.1.
+
+Recenzie adversariala pe felia urmelor, 7 agenti: 2 confirmate (amandoua pe
+temei de MECANISM - defectul e pe drumul codului, nu masurat intr-o rulare),
+11 neverificate.
+
+### Capacul pielii era pe varful parapetului
+
+Pielea de coliziune se inchidea cu un capac la varful parapetului, 1,15 m
+deasupra puntii. O ghiulea venita peste copastie se oprea pe el, si urma ei - un
+disc orizontal, pe normala +Z - ramanea plutind la 1,4 m deasupra scandurilor
+vizibile, fara umbra care s-o ancoreze. `holes_total == hull_hits` trecea:
+poarta nu poate vedea ca o urma e in aer. Nicio lovitura din log-urile de azi n-a
+atins capacul; e o certitudine geometrica a formei, nu o rata masurata.
+
+Reparat in `ship.py`: parapetul e o PLACA inchisa de 10 cm (fata exterioara pana
+la varf, capacul de 10 cm, fata interioara inapoi pana la copastie), iar puntea
+sta INTRE fetele interioare, la inaltimea copastiei - 12 cm deasupra scandurilor
+vizibile, in loc de 1,15 m. Etans: 0 muchii deschise, 1435 fete. Aproximatia
+ramasa (12 cm) e scrisa in docstring.
+
+### O lovitura refuzata era tot lovitura
+
+`TakeDamage` intoarce 0 fara sa faca nimic pentru o nava care se scufunda deja -
+si ghiuleaua o loga tot ca lovitura, arunca tot stejar si nu lasa nicio urma.
+Deci „urmele egale cu loviturile" tinea doar fiindca niciun scenariu nu trage
+intr-o epava. Regula acum: ghiuleaua logheaza ce a LUAT nava (`damage=` e
+valoarea intoarsa); o lovitura refuzata e `damage=0`, nu arunca nimic, nu
+marcheaza nimic, si e numarata separat, `hits_ignored`.
+
+Si totalurile urmelor se adunau peste navele in viata la iesire: o epava care
+se distruge singura isi lua linia - si fiecare lovitura purtata - din suma, in
+timp ce liniile ghiulelelor ramaneau. Totaluri statice pe nivel acum, resetate
+cu efectele, `HOLELOG TOTAL`.
+
+### Marunte, adevarate
+
+- README si OWNER_VERIFY 18 inca listau „coca nu poarta urme de lovitura" printre
+  lipsuri, la o ora dupa ce purta.
+- „Cat un cap de om" pentru un disc de 60 cm; si „cinci pixeli la 30 m" era
+  aritmetica gresita pentru camera proiectului (FOV 85: ~21 px de la 30 m, sub
+  10 de la camera de urmarire). Amandoua rescrise.
+- „Stau la punctul raportat de coliziune" era prezentat ca numarat; e prin
+  constructie, si asa scrie acum.
+
+Proba dupa placa: neschimbata (37 de lovituri, 0,00 m, 14 schimbari cu banda la
+200-350) - nicio ghiulea din cele sapte lupte nu venea peste copastie.
+
+**Suita: 39 de scenarii, zero cifre miscate, o cheie noua (`hits_ignored`, 0
+peste tot - niciun scenariu nu trage intr-o epava, exact cum spunea recenzia),
+si `holes_total == hull_hits == chips_spawned` pe fiecare rand.** Baseline
+reinregistrat.
+
+**Task Completed.**

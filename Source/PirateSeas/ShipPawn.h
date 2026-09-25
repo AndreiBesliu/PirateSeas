@@ -493,6 +493,14 @@ public:
 	int32 GetHolesCulled() const { return HolesCulled; }
 	int32 GetHolesLive() const;
 
+	/** The scars over the WHOLE level, which is what the suite reads. Summing
+	 *  the ships alive at quit was wrong: a wreck that has Destroy()ed herself
+	 *  takes her line - and every hit she carried - out of the sum while the
+	 *  balls' hit lines stay in. Static, reset at level start with the effects. */
+	static int32 GetHolesAddedTotal() { return HolesAddedTotal; }
+	static int32 GetHolesCulledTotal() { return HolesCulledTotal; }
+	static void ResetHoleTotalsForNewLevel() { HolesAddedTotal = 0; HolesCulledTotal = 0; }
+
 	/** How many carriages on that side are standing AND loaded - which is how
 	 *  many will actually go if the order is given now, magazine permitting. */
 	int32 GetGunsReady(bool bStarboard) const;
@@ -1274,6 +1282,8 @@ private:
 
 	int32 HolesAdded = 0;
 	int32 HolesCulled = 0;
+	static int32 HolesAddedTotal;
+	static int32 HolesCulledTotal;
 	bool bHasLastHit = false;
 	FVector BreachLocal = FVector::ZeroVector;
 	float LiftFraction = 0.f;

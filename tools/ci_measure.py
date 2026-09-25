@@ -884,11 +884,16 @@ def measure(name, text):
     # same way. live and culled are per run, summed too; culled is a zero no
     # scenario can move today (32 per ship; the most any ROW sums to is 15,
     # over every hull in it), which is said here so nobody reads it as a proof.
-    holes = re.findall(r"HOLELOG \S+ added=(\d+) live=(\d+) culled=(\d+)", text)
-    if holes:
-        m["holes_total"] = sum(int(a) for a, _, _ in holes)
-        m["holes_live_end"] = sum(int(l) for _, l, _ in holes)
-        m["holes_culled"] = sum(int(c) for _, _, c in holes)
+    # From the level's TOTAL line, not a sum over the ships alive at quit: a
+    # wreck that has destroyed herself is gone from that sum with every scar
+    # she carried, while the balls' hit lines stay. live is still the survivors'
+    # sum, because that is what it means.
+    tot = re.search(r"HOLELOG TOTAL added=(\d+) culled=(\d+)", text)
+    if tot:
+        m["holes_total"] = int(tot.group(1))
+        m["holes_culled"] = int(tot.group(2))
+        m["holes_live_end"] = sum(int(l) for l in re.findall(
+            r"HOLELOG \S+ added=\d+ live=(\d+) culled=\d+", text))
 
     # WHETHER A BALL CAN FIND A HULL AT ALL. Every ship says at BeginPlay whether
     # her collision skin carries complex-as-simple; the failure is otherwise
@@ -923,8 +928,12 @@ def measure(name, text):
     # `struck`; it was out by eight in the very scenario it was written for, and
     # a cross-check stated in prose is one nobody runs. This one is a key, in
     # every row of the baseline.
+    # Only hits the ship TOOK: damage=0 is a ball into a hull already going
+    # down, which throws nothing and marks nothing, and is counted apart below.
     m["hull_hits"] = len(re.findall(
-        r"SHOTLOG hit by=\S+ shot=\d+ target=\w*ShipPawn_\d+", text))
+        r"SHOTLOG hit by=\S+ shot=\d+ target=\w*ShipPawn_\d+ damage=[1-9]", text))
+    m["hits_ignored"] = len(re.findall(
+        r"SHOTLOG hit by=\S+ shot=\d+ target=\w*ShipPawn_\d+ damage=0\b", text))
 
     # THE HULL SPLINTERS. spawned counts BURSTS, one per ball into a hull - so it
     # must equal hull_hits above, in every scenario, and ci_checks.py asserts

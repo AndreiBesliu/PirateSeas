@@ -68,7 +68,7 @@ vânt în plante şi greement, `-Hour=` pentru ora din zi.
   din `OWNER_VERIFY` 38 (banda tunurilor nu mai contine tunurile).
 - **Porţile:**
   - `python tools/ci_checks.py` — fără motor, rulează şi în CI hosted
-  - `python tools/ci_measure.py` — 38 scenarii headless vs `tools/measurement_baseline.json`
+  - `python tools/ci_measure.py` — 39 scenarii headless vs `tools/measurement_baseline.json`
   - `python tools/ci_measure.py --record` — rescrie linia de bază, DELIBERAT, în
     acelaşi commit care o mişcă
   - `python tools/png_diff.py a.png b.png x0 y0 x1 y1` — compară o casetă
