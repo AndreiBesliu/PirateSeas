@@ -62,6 +62,7 @@ ASeaGameMode::ASeaGameMode()
 }
 
 int32 ASeaGameMode::SoundRequests[4] = { 0, 0, 0, 0 };
+int32 ASeaGameMode::SoundMissing = 0;
 bool ASeaGameMode::bSoundEnabled = true;
 bool ASeaGameMode::bSoundFlagRead = false;
 
@@ -71,6 +72,7 @@ void ASeaGameMode::ResetSoundsForNewLevel()
 	{
 		N = 0;
 	}
+	SoundMissing = 0;
 	bSoundFlagRead = false;
 }
 
@@ -102,8 +104,11 @@ void ASeaGameMode::PlaySea(UWorld* World, ESeaSound Which, const FVector& Where)
 	static bool bMissingReported[4] = { false, false, false, false };
 	if (!Wave)
 	{
-		// SAID ONCE, and counted above regardless: a missing wave must not read
-		// as "the gun fell silent", it must read as "the asset is gone".
+		// COUNTED EVERY TIME (the suite reads sound_missing and requires zero)
+		// and said once for a human. A review found the first version counted
+		// the request and not the miss, so an absent asset gave the same four
+		// numbers as a present one and the suite could not tell.
+		++SoundMissing;
 		if (!bMissingReported[I])
 		{
 			bMissingReported[I] = true;
@@ -1802,9 +1807,10 @@ void ASeaGameMode::QuitNow()
 	// Play requests, one counter per kind. Held against shots, hull hits,
 	// rig hits and splashes by the suite: a gun that goes quiet is a number.
 	UE_LOG(LogTemp, Display,
-		TEXT("SOUNDLOG TOTAL cannon=%d hit=%d rig=%d splash=%d"),
+		TEXT("SOUNDLOG TOTAL cannon=%d hit=%d rig=%d splash=%d missing=%d"),
 		GetSoundRequests(ESeaSound::Cannon), GetSoundRequests(ESeaSound::Hit),
-		GetSoundRequests(ESeaSound::Rig), GetSoundRequests(ESeaSound::Splash));
+		GetSoundRequests(ESeaSound::Rig), GetSoundRequests(ESeaSound::Splash),
+		GetSoundMissing());
 
 	UE_LOG(LogTemp, Display,
 		TEXT("CHIPLOG TOTAL spawned=%d live=%d stranded=%d"),

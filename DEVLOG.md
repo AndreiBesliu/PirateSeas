@@ -4673,3 +4673,40 @@ trase in toata suita, 545 de cereri), `sound_off` la zero.** Baseline reinregist
 
 **Task Completed.**
 
+## 25.09.2026 - Ce a gasit recenzia in sunet: contorul numara cererea, nu rezultatul
+
+**Task Started.** Prompt: "continua" (recenzia adversariala a feliei de sunet,
+7 agenti, 915k tokeni). Model: Fable 5.1.
+
+**Doua confirmate, ambele „verde fara sa poata fi altfel".** (1) `PlaySea`
+numara cererea INAINTE sa caute unda; o unda lipsa loga o data „missing" si
+iesea, iar `sound_hit == hull_hits` ramanea adevarat. Acum ramura de esec are
+contorul ei, `missing=` pe `SOUNDLOG TOTAL`, numarat de fiecare data (linia
+„spusa o data" e pentru om), cheie `sound_missing` cu poarta = 0 pe fiecare rand
+- si cititorul vechi cu cinci campuri NU mai parseaza (fixtura o cere). Proba:
+`S_Hit.uasset` ascuns, `gunnery` rulat singur: `hit=3 missing=3`; restaurat,
+sha identic. (2) `ci_checks` importa generatorul INAUNTRUL `try: import numpy`,
+deci un `sounds.py` sters citea „numpy missing", nota galbena. Importul
+obiectului verificat a iesit din garda; lipsa lui e `fail`.
+
+**Trei mici in generator**, toate schimba octetii: `lowpass` nu reseta
+acumulatorul intre cele doua treceri; suieratul greementului scria
+`sin(2*pi*f(t)*t)`, a carui inaltime instantanee e `f + t*f'`, nu `f` - acum
+`cumsum`, ca tunul; comentariul tunului spunea 38 Hz, tonul porneste de la 60.
+Undele regenerate, reimportate de doua ori (duratele neschimbate), .wav si
+.uasset comise impreuna. Poarta nu mai „construieste de doua ori": regenereaza
+si cere octetii din arbore - acopera determinismul si nu mai murdareste arborele.
+
+**Prosa devenita poarta.** „Perechea difera exact in familia X si nimic altceva"
+era scrisa in sase locuri; acum `ci_checks` compara fiecare rand `*_off` cu
+`gunnery` pe uniunea cheilor si cere: nimic in afara familiei, ceva inauntru.
+Pe linia de baza de azi toate sase tin (`sound_off` misca 4 chei `sound_*`,
+`holes_off` 2, restul cate una).
+
+**Suita:** 42 NEW (`sound_missing`, toate 0), 0 MOVED, 0 GONE; pe linia veche
+poarta noua a cazut in 43 de locuri (42 randuri fara cheie + undele), cum trebuia.
+`import_sounds.py`: docstring-ul mai vorbea de `ATT_Sea`; `save_asset` si
+rezultatul importului se verifica acum.
+
+**Task Completed.**
+

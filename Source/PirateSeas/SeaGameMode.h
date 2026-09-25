@@ -38,10 +38,15 @@ public:
 	enum class ESeaSound : uint8 { Cannon, Hit, Rig, Splash };
 	static void PlaySea(UWorld* World, ESeaSound Which, const FVector& Where);
 	static int32 GetSoundRequests(ESeaSound Which) { return SoundRequests[(int32)Which]; }
+	/** Requests that found no wave to play. Counted EVERY time, not once: the
+	 *  log line about it is said once for a human, this is for the suite, and a
+	 *  number that stops at 1 cannot be held against anything. */
+	static int32 GetSoundMissing() { return SoundMissing; }
 	static void ResetSoundsForNewLevel();
 
 private:
 	static int32 SoundRequests[4];
+	static int32 SoundMissing;
 	static bool bSoundEnabled;
 	static bool bSoundFlagRead;
 

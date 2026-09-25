@@ -52,8 +52,9 @@ def lowpass(x, cutoff_hz):
     shaping; nothing here needs a real filter design."""
     a = math.exp(-2.0 * math.pi * cutoff_hz / RATE)
     y = np.empty_like(x)
-    acc = 0.0
     for _ in range(2):
+        acc = 0.0   # per pass; the first version carried it over, so pass two
+        # started from pass one's last sample instead of from silence
         for i in range(len(x)):
             acc = a * acc + (1.0 - a) * x[i]
             y[i] = acc
@@ -64,8 +65,8 @@ def lowpass(x, cutoff_hz):
 def cannon(rng):
     t = t_axis(1.6)
     # The report: broadband noise with a fast decay, band-limited so it does
-    # not read as a hiss; the sub thump: a 38 Hz tone that pitches down as it
-    # decays, the way a big pressure wave does.
+    # not read as a hiss; the sub thump: a tone starting at 60 Hz and falling
+    # towards 22 as it decays, the way a big pressure wave does.
     report = lowpass(rng.standard_normal(len(t)), 2200.0) * np.exp(-t * 6.0)
     f = 38.0 * np.exp(-t * 1.2) + 22.0
     thump = np.sin(2.0 * np.pi * np.cumsum(f) / RATE) * np.exp(-t * 3.5)
@@ -86,7 +87,11 @@ def hit(rng):
 def rig(rng):
     t = t_axis(0.25)
     snap = lowpass(rng.standard_normal(len(t)), 9000.0) * np.exp(-t * 55.0)
-    whip = np.sin(2.0 * np.pi * (1900.0 * np.exp(-t * 12.0) + 300.0) * t) * np.exp(-t * 30.0)
+    # A sweep is the INTEGRAL of its frequency law, as cannon() does it; the
+    # first version wrote sin(2*pi*f(t)*t), whose instantaneous pitch is
+    # f + t*f'(t), not f.
+    f = 1900.0 * np.exp(-t * 12.0) + 300.0
+    whip = np.sin(2.0 * np.pi * np.cumsum(f) / RATE) * np.exp(-t * 30.0)
     return snap * 0.8 + whip * 0.3
 
 

@@ -1,8 +1,9 @@
 """
-Imports Scripts/Sounds/S_*.wav as USoundWave assets under /Game/Sounds, and
-builds ATT_Sea, the one attenuation every gunnery sound shares - then READS
-BACK durations and the attenuation's radius, because an import that silently
-produced a 0.0 s wave would play nothing and log a play request all the same.
+Imports Scripts/Sounds/S_*.wav as USoundWave assets under /Game/Sounds and
+builds one attenuation per sound (ATT_S_*), then reports durations and radii.
+The report after the import is the IN-MEMORY object; the disk truth is the
+"before" report of the next run, which is why it is run twice. The results of
+save_asset and of the import task are checked, not discarded.
 
 Run through Scripts/run_py.ps1 -Script import_sounds.py -Tag SNDIMP. Like the
 other importers it may die inside import_asset_tasks on the first run; the
@@ -81,7 +82,8 @@ for n in NAMES:
     sp(s, "distance_algorithm", unreal.AttenuationDistanceModel.NATURAL_SOUND)
     sp(s, "spatialize", True)
     sp(a, "attenuation", s)
-    EAL.save_asset(path)
+    if not EAL.save_asset(path):
+        unreal.log_error("SNDIMP save_asset failed for %s" % path)
 
 # ---- the waves
 tasks = []
@@ -100,5 +102,9 @@ for n in NAMES:
     tasks.append(task)
 L("importing %d waves" % len(tasks))
 AT.import_asset_tasks(tasks)
+for t in tasks:
+    got = list(t.get_editor_property("imported_object_paths") or [])
+    if not got:
+        unreal.log_error("SNDIMP import produced nothing for %s" % t.get_editor_property("filename"))
 # Nothing runs past here on a first import; the second run reports.
 report("after")

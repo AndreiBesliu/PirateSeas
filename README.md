@@ -344,8 +344,10 @@ cateva sute de metri).
 
 **Sintetizate, nu descarcate**, ca texturile: `Scripts/sounds.py` le scrie din
 zgomot filtrat si cateva tonuri amortizate, cu samanta fixa, in WAV de mana -
-nicio licenta in arbore, si aceiasi octeti la fiecare rulare (poarta le
-construieste de doua ori si compara). Tunul e un bubuit de bas sub un raport de
+nicio licenta in arbore, si aceiasi octeti la fiecare rulare (undele sunt in
+git; poarta le regenereaza si cere sa iasa octet cu octet cele din arbore - o
+samanta care s-ar misca sau un generator lipsa e rosu, nu o nota). Tunul e un
+bubuit de bas sub un raport de
 banda larga, cu o coada lunga care spune „tun mare, departe"; lemnul e o
 pocnitura cu un zvon de scandura; greementul e un plesnet mai sus si mai scurt;
 apa e o umflare fara atac.
@@ -354,9 +356,13 @@ apa e o umflare fara atac.
 (`-nosound`), deci ce se numara sunt CERERILE de redare - partea de care
 raspunde codul asta - si `SOUNDLOG TOTAL` le da la iesire. Poarta cere pe fiecare
 rand: `sound_cannon == balls_fired`, `sound_hit == hull_hits`,
-`sound_rig == rig_hits`, `sound_splash == splashes`. Un tun care amuteste e o
-cifra, nu o tacere pe care n-o observa nimeni. `-ShipSound=0` le stinge; perechea
-`gunnery` / `sound_off` difera in exact familia `sound_*`.
+`sound_rig == rig_hits`, `sound_splash == splashes`, si `sound_missing == 0`
+(cereri care n-au gasit unda; prima versiune numara cererea, nu lipsa, si un
+asset disparut dadea aceleasi patru cifre ca unul prezent). Un tun care amuteste
+e o cifra, nu o tacere pe care n-o observa nimeni. `-ShipSound=0` le stinge;
+perechea `gunnery` / `sound_off` difera in exact familia `sound_*` - si asta nu
+mai e o propozitie: poarta compara fiecare rand `*_off` cu `gunnery` si cere ca
+tot ce se misca sa fie in familia lui si ca familia sa se miste.
 
 O lovitura refuzata (o nava care se scufunda) nu suna - aceeasi regula ca la
 aschii si la urme. Si sunetele sunt referinte TARI ale modului de joc, gasite

@@ -929,12 +929,16 @@ def measure(name, text):
     # cannon == balls fired (shot_fired summed over hulls is the enemy's only;
     # the cannon count is EVERY gun that went), hit == hull_hits, rig == the
     # SHOTLOG rig lines, splash == splashes. The gate does the holding.
-    sn = re.search(r"SOUNDLOG TOTAL cannon=(\d+) hit=(\d+) rig=(\d+) splash=(\d+)", text)
+    # missing= is the one that must be zero: a request that found no wave. The
+    # first reader stopped at splash=, and the line was one field shorter, so a
+    # gone asset gave the same four numbers as a present one.
+    sn = re.search(r"SOUNDLOG TOTAL cannon=(\d+) hit=(\d+) rig=(\d+) splash=(\d+) missing=(\d+)", text)
     if sn:
         m["sound_cannon"] = int(sn.group(1))
         m["sound_hit"] = int(sn.group(2))
         m["sound_rig"] = int(sn.group(3))
         m["sound_splash"] = int(sn.group(4))
+        m["sound_missing"] = int(sn.group(5))
     # And the events, counted the same way the sounds are, so the two can be
     # compared row by row: every broadside line's guns= is the balls that went.
     m["balls_fired"] = sum(int(g) for g in re.findall(r"SHOTLOG broadside \S+ side=\S+ guns=(\d+)", text))

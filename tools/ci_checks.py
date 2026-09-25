@@ -447,12 +447,17 @@ def check_comparison():
     # that goes quiet must be a number. sound_off is the row where they are
     # meant to be zero.
     sn = ci_measure.measure("fixture",
-        "LogTemp: Display: SOUNDLOG TOTAL cannon=16 hit=3 rig=8 splash=5\n"
+        "LogTemp: Display: SOUNDLOG TOTAL cannon=16 hit=3 rig=8 splash=5 missing=0\n"
         "LogTemp: Display: SHOTLOG broadside ShipPawn_0 side=starboard guns=4 target=x\n"
         "LogTemp: Display: SHOTLOG broadside EnemyShipPawn_0 side=port guns=3 target=x\n"
         "LogTemp: Display: SHOTLOG rig by=ShipPawn_0 shot=1 target=EnemyShipPawn_0 comp=MainRig\n")
-    if sn.get("sound_cannon") != 16 or sn.get("sound_splash") != 5:
+    if sn.get("sound_cannon") != 16 or sn.get("sound_splash") != 5 or sn.get("sound_missing") != 0:
         fail("the sound quit line is not read: %r" % sn)
+    # And the old five-field line must NOT parse: a reader that accepted it
+    # would go on reporting four numbers with the fifth silently absent.
+    stale = ci_measure.measure("fixture", "LogTemp: Display: SOUNDLOG TOTAL cannon=16 hit=3 rig=8 splash=5\n")
+    if "sound_cannon" in stale:
+        fail("the five-field SOUNDLOG line still parses; a dropped missing= would pass unnoticed")
     if sn.get("balls_fired") != 7 or sn.get("rig_hits") != 1:
         fail("the events the sounds are held against are not counted: %r" % sn)
     base_path = os.path.join(ROOT, "tools", "measurement_baseline.json")
@@ -461,6 +466,11 @@ def check_comparison():
         for name, row in sorted(rows.items()):
             if "sound_cannon" not in row:
                 continue
+            # missing= on EVERY recorded row, sound_off included: a request that
+            # found no wave. Zero, or the asset is gone and the cook would say so
+            # too late.
+            if row.get("sound_missing") != 0:
+                fail("%s: sound_missing=%r (must be 0 on every row)" % (name, row.get("sound_missing")))
             if name == "sound_off":
                 if any(row.get(k) for k in ("sound_cannon", "sound_hit", "sound_rig", "sound_splash")):
                     fail("sound_off must request no sound: %r" % row)
@@ -471,23 +481,55 @@ def check_comparison():
                 if row.get(a) != row.get(b):
                     fail("%s: %s=%r but %s=%r" % (name, a, row.get(a), b, row.get(b)))
 
-    # THE SOUNDS ARE DETERMINISTIC, like the textures: the suite compares
-    # runs, and art that differs per build would make that a comparison of
-    # art. Built twice, compared byte for byte.
+        # THE PAIRS THAT MUST DIFFER IN EXACTLY ONE FAMILY. Every *_off row is
+        # gunnery with one switch, and the claim "and nothing else moves" was
+        # prose in six places; here it is checked against the recorded rows.
+        FAMILIES = {"sound_off": ("sound_",), "chips_off": ("chips_",),
+                    "holes_off": ("holes_",), "flash_off": ("flash_",),
+                    "smoke_off": ("smoke_",), "trail_off": ("trail_",)}
+        g = rows.get("gunnery", {})
+        for name, prefixes in FAMILIES.items():
+            r = rows.get(name)
+            if not r or not g:
+                continue
+            moved = sorted(k for k in set(r) | set(g) if r.get(k) != g.get(k))
+            outside = [k for k in moved if not k.startswith(prefixes)]
+            inside = [k for k in moved if k.startswith(prefixes)]
+            if outside:
+                fail("%s moves keys outside its family: %s" % (name, outside))
+            if not inside:
+                fail("%s does not differ from gunnery in its own family - the switch is dead" % name)
+
+    # THE SOUNDS ARE WHAT THEIR GENERATOR MAKES. The .wav files are tracked (the
+    # imported .uasset copies are what the game uses; the waves are kept so a
+    # diff shows what changed), so the check is: regenerate, and every byte
+    # must equal the tracked copy. That covers determinism too - a generator
+    # that varied per run could not match its own committed output. The
+    # generator is imported OUTSIDE the numpy guard: a missing sounds.py must
+    # be a failure, not a 'numpy missing' note.
+    sys.path.insert(0, os.path.join(ROOT, "Scripts"))
     try:
-        import numpy  # noqa: F401
-        sys.path.insert(0, os.path.join(ROOT, "Scripts"))
         import sounds as SND
-        SND.main()
-        first = {n: open(os.path.join(SND.OUT, n + ".wav"), "rb").read() for n, _, _ in SND.SOUNDS}
-        SND.main()
-        diff = [n for n, _, _ in SND.SOUNDS if open(os.path.join(SND.OUT, n + ".wav"), "rb").read() != first[n]]
-        if diff:
-            fail("sounds not deterministic: " + ", ".join(diff))
+    except ModuleNotFoundError as e:
+        fail("Scripts/sounds.py cannot be imported: %s" % e)
+        SND = None
+    if SND is not None:
+        try:
+            import numpy  # noqa: F401
+        except ImportError:
+            note("numpy missing - sound regeneration skipped, which is NOT a pass")
         else:
-            ok("%d sounds are byte-identical across two runs" % len(SND.SOUNDS))
-    except ImportError:
-        note("numpy missing - sound determinism skipped, which is NOT a pass")
+            before = {}
+            for n, _, _ in SND.SOUNDS:
+                pth = os.path.join(SND.OUT, n + ".wav")
+                before[n] = open(pth, "rb").read() if os.path.exists(pth) else None
+            SND.main()
+            bad = [n for n, _, _ in SND.SOUNDS
+                   if open(os.path.join(SND.OUT, n + ".wav"), "rb").read() != before[n]]
+            if bad:
+                fail("tracked waves differ from what Scripts/sounds.py makes: " + ", ".join(bad))
+            else:
+                ok("%d tracked waves match their generator byte for byte" % len(SND.SOUNDS))
 
     # ENEMY GUNS KNOCKED OUT: only the enemy's, only the guns zone. A player
     # gun hit and an enemy hull hit must both count for nothing here.

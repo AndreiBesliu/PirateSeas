@@ -63,7 +63,9 @@ vânt în plante şi greement, `-Hour=` pentru ora din zi.
   joc fiecare nava spune la BeginPlay `SHIPLOG ... shothull=ok`; cheia
   `shothull_ok` din suita e 0 daca vreo coca e transparenta.
 - **Sunetele** (25.09): `python Scripts/sounds.py` scrie `Scripts/Sounds/S_*.wav`
-  (sintetizate, cu samanta; poarta le construieste de doua ori si compara), apoi
+  (sintetizate, cu samanta; UNDELE SUNT IN GIT: poarta le regenereaza si cere
+  octetii din arbore - dupa orice schimbare in `sounds.py` rulezi generatorul,
+  reimporti si comiti .wav-urile cu .uasset-urile), apoi
   `run_py.ps1 -Script import_sounds.py` de doua ori (importa undele si face
   `ATT_S_*`; a doua rulare citeste de pe disc). Modul de joc le tine ca referinte
   TARI in constructor - altfel cook-ul nu le ia si pachetul e mut.
