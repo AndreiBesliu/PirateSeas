@@ -97,6 +97,10 @@ private:
 	 *  from a wave-aware one at a glance. */
 	float SurfaceZAtDeath = 0.f;
 
+	/** Velocity at the last tick before a contact: the direction she was
+	 *  travelling IN, which OnHit can no longer read off GetVelocity(). */
+	FVector LastFlightVel = FVector::ZeroVector;
+
 	/** One muzzle-awash line per ball, not per frame. */
 	bool bReportedAwash = false;
 	/** Said once per ball, not once per frame. */

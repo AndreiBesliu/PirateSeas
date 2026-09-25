@@ -3,6 +3,50 @@
 Lucrurile de mai jos nu le pot confirma singur. Fiecare are ce te uiți, cum
 arată bine și de ce nu pot eu.
 
+## Prima pagină — citește doar asta (25.09)
+
+Lista are 38 de puncte și de şase zile n-a fost atinsă. Nu-ţi cer să o parcurgi.
+**Mai jos sunt singurele lucruri care contează acum**, în ordinea în care
+contează; restul e arhivă, etichetată ca atare la sfârşitul paginii.
+
+### O decizie care e a ta
+
+**Banda de avarie a tunurilor — punctul 38.** Acum, 12 din 41 de lovituri în
+cocă scot un tun din afet, şi **toate 12 au lovit coca SUB punte**, între 21 şi
+152 cm deasupra apei — 0,6 până la 1,9 m sub tunul pe care l-au dărâmat. Panoul
+GUNS îţi arată atunci un afet distrus de o ghiulea care a intrat la linia de
+plutire. Recomandarea mea e să mut banda unde sunt tunurile; asta face
+dărâmarea unui tun de vreo **douăsprezece ori mai rară**, şi de aceea nu o fac
+fără tine. Detaliile şi cele trei variante sunt la punctul 38.
+
+### O întrebare veche, încă deschisă
+
+**Căpitanul AI îşi rezolvă singur distanţa şi avansul; tu le judeci din ochi.**
+E o decizie, nu o scăpare (README, „Cum ocheşti"): cine îşi aliniază singur
+lovitura are dreptul să rateze. Dar înseamnă că tu şi ea nu jucaţi acelaşi joc.
+Am măsurat-o într-o sesiune anterioară şi **n-am scris cifra în proiect**, deci
+n-o repet aici ca fapt; dacă vrei să hotărăşti pe ea, o re-măsor întâi.
+
+### Cinci lucruri de văzut, în ordinea asta
+
+1. **37 — aşchiile de la o lovitură.** Singurul efect pe care îl ştiu stricat:
+   sar de pe cutia de coliziune, nu de pe scânduri. Măsurat azi: în medie cu
+   **1,7 până la 3,4 m** înaintea lemnului, maxim 7.
+2. **36 — focul de la gura tunului.** `0,10 s` şi `60 000 cd/m²` sunt numere pe
+   care le-am ales singur.
+3. **35 — panoul GUNS cu trei stări.** Două pătrăţele palide la 0,30 şi 0,12
+   alpha; mă aştept să fie prea apropiate. (Dacă la decizia de mai sus alegi să
+   mut banda, starea „afet distrus" o vei vedea rar.)
+4. **33 — ochirea: te obligă să manevrezi, sau doar te enervează?**
+5. **34 — proporţia navei** după ce a fost ridicată pe linia ei de plutire.
+
+### Restul
+
+Punctele 1–15 sunt de la începutul proiectului; cele marcate REZOLVAT sau
+CONFIRMAT nu cer nimic. Punctele 16–32 sunt judecăţi de ochi care rămân
+valabile, dar niciuna nu blochează nimic: citeşte-le când ai chef, nu înainte de
+cele de mai sus. **31 e deja răspunsă** (magazia finită, 16.09).
+
 ---
 
 ## 1. REZOLVAT 12.09 — apa se vede
@@ -921,4 +965,47 @@ Sau: prea multe, prea mari, prea lente. Sau raman agatate in aer in loc sa cada.
 (`chips_spawned` = `hull_hits` in fiecare scenariu, verificat de poarta), ca nu
 ating nimic din simulare, si ca niciun manunchi nu supravietuieste varstei lui.
 Dar cate aschii arata a lovitura si cate arata a explozie e o judecata de ochi.
+
+## 38. Banda de avarie a tunurilor: unde sunt tunurile, sau unde loveşte AI-ul?
+
+**E o decizie, nu o verificare.**
+
+**Ce se întâmplă acum, măsurat pe 25.09** cu `tools/probe_hull_hits.py`, pe cele
+şapte lupte distincte din suită (41 de lovituri în cocă):
+
+- **12 din 41 scot un tun din afet** — şi **toate 12 au lovit coca sub punte**,
+  între 21 şi 152 cm deasupra apei. Puntea e pe la 210 cm, tunurile stau pe ea,
+  ţevile sunt la 280. Adică fiecare tun „lovit" a fost scos de o ghiulea care a
+  intrat cu 0,6 până la 1,9 m MAI JOS de el.
+- Banda în care o lovitură dărâmă un tun e `[0, 240]` cm. A fost pusă când
+  gurile de tun erau la **120** — comentariul din cod o spune — iar pe 18.09 le-am
+  urcat la 280 ca să nu mai tragă nava de la linia de plutire. Banda n-a urmat.
+- Căpitanul AI ocheşte deliberat la linia de plutire a ţintei (tirul jos), deci
+  aproape toate loviturile cad în bandă — şi aproape niciuna la înălţimea
+  tunurilor. Din 41, **una singură** a intrat la 253 cm, adică acolo unde un tun
+  chiar poate fi lovit; pe aia banda de acum o numără drept cocă.
+
+**Variantele:**
+
+- **A — banda unde sunt tunurile** (200–350 cm) **şi lovitura socotită acolo
+  unde ghiuleaua atinge lemnul**, nu pe faţa cutiei. Pe aceleaşi 41: dărâmările
+  scad de la **12 la 1**. Pipurile de „afet distrus" vor apărea rar, dar vor
+  însemna exact ce spun. **Recomandarea mea.**
+- **B — cum e acum.** Pierzi un tun la aproape o lovitură din trei în cocă, din
+  ghiulele care intră la linia de plutire. Presiunea rămâne; motivul e fals.
+- **C — A, plus o comandă de tir „la puntea de tunuri".** Tu poţi deja ochi mai
+  sus cu rotiţa; căpitanul AI ar primi o a treia ţintă pe lângă „jos" şi „sus".
+  Asta ar face dărâmarea tunurilor o TACTICĂ a cuiva, nu un accident al balisticii.
+
+**Ce se strică dacă alegem greşit:** cu A, dacă îţi plăcea presiunea de a pierde
+tunuri, ea practic dispare până când cineva ocheşte mai sus. Cu B, panoul GUNS
+promite ceva ce avaria nu face — şi exact pe el te-am rugat să te uiţi la 35.
+
+**De ce nu pot eu:** o face pe una dintre mecanici de douăsprezece ori mai rară.
+E o alegere de echilibru, ca magazia finită, nu o reparaţie.
+
+**Numerele depind de o alegere a mea**, şi o spun: 200–350 cm e „de sub punte
+până la vârful copastiei". O bandă mai largă ar lăsa mai multe dărâmări. Proba
+se poate rula din nou cu altă bandă (`--band=180,380`); rulează luptele în motor,
+deci durează câteva minute, nu secunde.
 

@@ -53,6 +53,10 @@ vânt în plante şi greement, `-Hour=` pentru ora din zi.
   `Packaged\Windows\PirateSeas.exe`, ia ACELEAŞI flag-uri ca editorul, şi îşi
   scrie logul la `Packaged\Windows\PirateSeas\Saved\Logs\`. `Packaged/` e în
   `.gitignore`.
+- **Probe (nu porti):** `python tools/probe_hull_hits.py [--band=LO,HI]` - continua
+  fiecare lovitura de pe cutia de coliziune pana la lemnul din `ship.py` si
+  reclasifica zona. Ruleaza motorul, cateva minute. Scrisa 25.09 pentru decizia
+  din `OWNER_VERIFY` 38 (banda tunurilor nu mai contine tunurile).
 - **Porţile:**
   - `python tools/ci_checks.py` — fără motor, rulează şi în CI hosted
   - `python tools/ci_measure.py` — 38 scenarii headless vs `tools/measurement_baseline.json`

@@ -106,6 +106,14 @@ void ACannonBall::Tick(float DeltaSeconds)
 	{
 		return;
 	}
+	// THE WAY SHE WAS GOING, kept from the last tick before anything touched
+	// her. OnHit fires AFTER the physics step that resolved the contact, so by
+	// then GetVelocity() is the ball coming back OFF the hull - measured: every
+	// hull hit in the suite logged a direction pointing out of the ship. Nothing
+	// in the game consumed that direction, which is how it stayed wrong; the
+	// first thing that did (a probe asking whether each ball's line would have
+	// met timber) got an answer of 100% false.
+	LastFlightVel = GetVelocity();
 	FlightTime += DeltaSeconds;
 
 	// The wisp she leaves. One line, and it knows nothing about the trail: the
@@ -286,8 +294,10 @@ void ACannonBall::OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor,
 	if (OtherActor)
 	{
 		// The shooter may be a wreck, or gone, by the time the ball lands.
+		const FVector Incoming = LastFlightVel.IsNearlyZero()
+			? GetVelocity() : LastFlightVel;
 		UGameplayStatics::ApplyPointDamage(OtherActor, ImpactDamage,
-			GetVelocity().GetSafeNormal(), Hit,
+			Incoming.GetSafeNormal(), Hit,
 			IsValid(Shooter) ? Shooter->GetInstigatorController() : nullptr,
 			this, nullptr);
 		UE_LOG(LogTemp, Display, TEXT("SHOTLOG hit by=%s shot=%d target=%s damage=%.0f"),

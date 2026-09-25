@@ -1281,6 +1281,13 @@ float AShipPawn::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent,
 	{
 		const FPointDamageEvent& Point = static_cast<const FPointDamageEvent&>(DamageEvent);
 		LastHitLocal = GetActorTransform().InverseTransformPosition(Point.HitInfo.ImpactPoint);
+		// And the way the ball was travelling, in the same hull frame. Logged
+		// only: the collision is a BOX (1550 x 520 x 350) and the hull inside it
+		// is not, so a hit on the box's face says nothing about whether the ball's
+		// line would have met timber. With the direction, a probe can ray-march
+		// each hit against the hull's real sections from Scripts/ship.py.
+		LastHitDirLocal = GetActorTransform().InverseTransformVectorNoScale(
+			Point.ShotDirection.GetSafeNormal());
 		bHasLastHit = true;
 		Struck = Point.HitInfo.Component.Get();
 	}
@@ -1339,11 +1346,12 @@ float AShipPawn::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent,
 	UE_LOG(LogTemp, Display, TEXT("%s damage taken=%.0f integrity=%.0f/%.0f"),
 		Tag, HullLoss, HullIntegrity, MaxHullIntegrity);
 	UE_LOG(LogTemp, Display,
-		TEXT("%s zone %s target=%s at=(%.0f,%.0f,%.0f) gun=%d rig=%.2f/%.2f rud=%.2f guns=%d/%d"),
+		TEXT("%s zone %s target=%s at=(%.0f,%.0f,%.0f) gun=%d rig=%.2f/%.2f rud=%.2f guns=%d/%d dir=(%.3f,%.3f,%.3f)"),
 		Tag,
 		ZoneName(Zone), *GetName(), LastHitLocal.X, LastHitLocal.Y, LastHitLocal.Z,
 		Gun, ForeRigIntegrity, MainRigIntegrity, RudderIntegrity,
-		GetGunsRemaining(false), GetGunsRemaining(true));
+		GetGunsRemaining(false), GetGunsRemaining(true),
+		LastHitDirLocal.X, LastHitDirLocal.Y, LastHitDirLocal.Z);
 
 	// A merchant does not fight to the last plank. On the same branch that
 	// decides a sinking, and BELOW the zero test in the order of events: a

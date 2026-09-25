@@ -4327,3 +4327,78 @@ Suita: 38 de scenarii, zero cifre miscate, 149 de chei noi.
 
 **Task Completed.**
 
+## 25.09.2026 - Masurat intai: unde loveste de fapt o ghiulea
+
+**Task Started.** Prompt: "continua". Model: Opus 5.5.
+
+Reluat de la capat dupa sase zile de pauza (repo neschimbat la `d090567`). Firul
+ales: defectul lasat semnalat in `OWNER_VERIFY` 37 - ghiulelele se opresc pe o
+CUTIE de coliziune (1550 x 520 x 350), nu pe coca. **Inainte sa construiesc o
+forma de coliziune noua, am masurat daca cutia conteaza pentru ceva in afara de
+locul unde apar aschiile.**
+
+### Instrumentul a mintit intai, si merita spus cum
+
+Linia `SHOTLOG zone` avea deja punctul loviturii in cadrul cocii. I-am adaugat
+directia ghiulelei (`dir=`) si am scris o proba care continua linia fiecarei
+ghiulele de pe fata cutiei pana la sectiunile reale ale cocii din `ship.py`.
+
+Prima rulare: **100% din lovituri "false"** - nicio ghiulea n-ar fi atins lemnul.
+Imposibil pentru tir de travers la mijloc, deci am suspectat instrumentul, nu
+jocul. Datele brute: `at.y = +5,20` si `dir.y = +0,8` - directia arata IN AFARA
+navei. `OnHit` se declanseaza DUPA pasul fizic care a rezolvat contactul, deci
+`GetVelocity()` e deja ghiuleaua ricosand. Nimic din joc nu citea directia, asa
+ca a stat gresita nevazuta.
+
+A doua rulare, cu componenta normala intoarsa de mana: **8 din 41 false (20%)**.
+Tot gresit - si stiam de ce: o restituire sub 1 face directia reconstruita mai
+razanta decat cea reala, deci inclina spre ratare. Nu era o cifra de raportat.
+
+A treia, cu viteza retinuta la ultimul tick DINAINTEA contactului
+(`ACannonBall::LastFlightVel`): **0 din 41**. Si o garda in proba care refuza sa
+dea un raspuns daca vreo directie mai arata in afara.
+
+**Geometria probei ancorata pe hartie inainte de orice rulare:** jumatate de
+latime amidships la plutire 3,47 m calculat contra 3,46 socotit de mana; un tir
+de travers intra 1,70 m dupa fata cutiei contra 1,67.
+
+### Ce a iesit, pe cele sapte lupte distincte din suita (41 de lovituri in cocca)
+
+- **0 lovituri false.** Cutia nu umfla numarul de lovituri.
+- Lemnul e in medie la **1,7 m** (zona tunurilor) pana la **3,4 m** (cocca) dupa
+  fata cutiei, maxim **7 m**. Asta e defectul vizual din 37, acum cu cifre.
+- **Si ce nu cautam:** 12 din 41 scot un tun din afet, si **toate 12 au lovit
+  cocca SUB punte**, intre 21 si 152 cm - 0,6 pana la 1,9 m sub tunul dat jos.
+  Banda de avarie e `[0, 240]`, pusa cand gurile de tun erau la 120; le-am
+  urcat la 280 pe 18.09 si banda n-a urmat. O recenzie de pe 19.09 o gasise si
+  doi sceptici o "respinsesera" - pe motiv ca nu era din felia recenzata, nu ca
+  n-ar fi adevarata. Ei insisi o numisera "o verucă de calibrare preexistenta".
+
+### Ce NU am facut, si de ce
+
+N-am mutat banda. Pusa unde sunt tunurile (200-350 cm) si cu lovitura socotita
+pe lemn, dararile scad de la **12 la 1** pe aceleasi 41 - de douasprezece ori mai
+rare, fiindca AI-ul ocheste la linia de plutire. Asta e o alegere de echilibru,
+ca magazia finita, nu o reparatie. E `OWNER_VERIFY` 38, cu trei variante si
+recomandarea mea.
+
+Am facut in schimb:
+- directia de VENIRE a ghiulelei, in loc de cea de ricoseu, pe `ApplyPointDamage`;
+- `dir=` pe linia de zona;
+- `tools/probe_hull_hits.py`, cu ancorele de hartie in el si `--band=`;
+- comentariul benzii, care spunea "about the ports modelled at +120", acum spune
+  masuratoarea si trimite la 38.
+
+**Suita: 38 de scenarii, toate identice cu linia de baza.** Directia corectata nu
+misca nimic - confirma ca n-o citea nimeni. Nimic reinregistrat.
+
+### Si lista owner-ului
+
+`OWNER_VERIFY.md` avea 37 de puncte si sase zile fara nicio atingere. A primit o
+**prima pagina**: decizia care e a lui (38), intrebarea veche despre AI (fara
+cifra, fiindca n-am gasit-o scrisa in proiect si n-o repet ca fapt), cinci
+lucruri de vazut in ordinea in care conteaza, si restul etichetat cinstit ca
+arhiva. Nimic sters - doar reordonat.
+
+**Task Completed.**
+

@@ -917,9 +917,21 @@ protected:
 	float RudderlessAuthority = 0.15f;
 
 	/** A shot lands in the battery if it comes in this close to a gun port
-	 *  abscissa, this far out on the beam, and within the gun deck's height,
-	 *  which is the band GunDeckLowCm to GunDeckHighCm about the ports
-	 *  modelled at +120. */
+	 *  abscissa, this far out on the beam, and within the band GunDeckLowCm to
+	 *  GunDeckHighCm.
+	 *
+	 *  THAT BAND NO LONGER CONTAINS THE GUNS, and this comment used to hide it by
+	 *  saying the band was "about the ports modelled at +120". The ports have
+	 *  been at GGunPortZ = 280 since 18.09; [0, 240] is the hull from the
+	 *  waterline to just above the deck. Measured 25.09 with
+	 *  tools/probe_hull_hits.py over the suite's seven distinct fights: 12 of 41
+	 *  hull hits dismounted a gun, and every one of the twelve met the hull BELOW
+	 *  the deck, 0.6 to 1.9 m under the gun it took out.
+	 *
+	 *  Left as it is on purpose, pending the owner (OWNER_VERIFY 38): moving the
+	 *  band to where the guns are makes a dismount about twelve times rarer,
+	 *  because the AI lays its shot on the waterline. That is a balance decision,
+	 *  not a repair. */
 	UPROPERTY(EditAnywhere, Category = "Damage")
 	float GunPortWindowCm = 100.f;
 
@@ -1205,6 +1217,8 @@ private:
 	float RestCoefficient[6] = { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f };
 	float BreachWeight[6] = { 1.f, 1.f, 1.f, 1.f, 1.f, 1.f };
 	FVector LastHitLocal = FVector::ZeroVector;
+	/** The ball's direction at that hit, hull-local, for the zone log only. */
+	FVector LastHitDirLocal = FVector::ZeroVector;
 	bool bHasLastHit = false;
 	FVector BreachLocal = FVector::ZeroVector;
 	float LiftFraction = 0.f;
