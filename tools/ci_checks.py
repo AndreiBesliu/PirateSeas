@@ -443,6 +443,52 @@ def check_comparison():
     if gb.get("gun_band_lo") != 200 or gb.get("gun_band_hi") != 350:
         fail("the gun band line is not read: %r" % gb)
 
+    # SOUND REQUESTS against their events, over the recorded baseline: a gun
+    # that goes quiet must be a number. sound_off is the row where they are
+    # meant to be zero.
+    sn = ci_measure.measure("fixture",
+        "LogTemp: Display: SOUNDLOG TOTAL cannon=16 hit=3 rig=8 splash=5\n"
+        "LogTemp: Display: SHOTLOG broadside ShipPawn_0 side=starboard guns=4 target=x\n"
+        "LogTemp: Display: SHOTLOG broadside EnemyShipPawn_0 side=port guns=3 target=x\n"
+        "LogTemp: Display: SHOTLOG rig by=ShipPawn_0 shot=1 target=EnemyShipPawn_0 comp=MainRig\n")
+    if sn.get("sound_cannon") != 16 or sn.get("sound_splash") != 5:
+        fail("the sound quit line is not read: %r" % sn)
+    if sn.get("balls_fired") != 7 or sn.get("rig_hits") != 1:
+        fail("the events the sounds are held against are not counted: %r" % sn)
+    base_path = os.path.join(ROOT, "tools", "measurement_baseline.json")
+    if os.path.exists(base_path):
+        rows = json.loads(io.open(base_path, encoding="utf-8-sig").read())
+        for name, row in sorted(rows.items()):
+            if "sound_cannon" not in row:
+                continue
+            if name == "sound_off":
+                if any(row.get(k) for k in ("sound_cannon", "sound_hit", "sound_rig", "sound_splash")):
+                    fail("sound_off must request no sound: %r" % row)
+                continue
+            pairs = (("sound_cannon", "balls_fired"), ("sound_hit", "hull_hits"),
+                     ("sound_rig", "rig_hits"), ("sound_splash", "splashes"))
+            for a, b in pairs:
+                if row.get(a) != row.get(b):
+                    fail("%s: %s=%r but %s=%r" % (name, a, row.get(a), b, row.get(b)))
+
+    # THE SOUNDS ARE DETERMINISTIC, like the textures: the suite compares
+    # runs, and art that differs per build would make that a comparison of
+    # art. Built twice, compared byte for byte.
+    try:
+        import numpy  # noqa: F401
+        sys.path.insert(0, os.path.join(ROOT, "Scripts"))
+        import sounds as SND
+        SND.main()
+        first = {n: open(os.path.join(SND.OUT, n + ".wav"), "rb").read() for n, _, _ in SND.SOUNDS}
+        SND.main()
+        diff = [n for n, _, _ in SND.SOUNDS if open(os.path.join(SND.OUT, n + ".wav"), "rb").read() != first[n]]
+        if diff:
+            fail("sounds not deterministic: " + ", ".join(diff))
+        else:
+            ok("%d sounds are byte-identical across two runs" % len(SND.SOUNDS))
+    except ImportError:
+        note("numpy missing - sound determinism skipped, which is NOT a pass")
+
     # ENEMY GUNS KNOCKED OUT: only the enemy's, only the guns zone. A player
     # gun hit and an enemy hull hit must both count for nothing here.
     eg = ci_measure.measure("fixture",

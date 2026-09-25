@@ -2,6 +2,10 @@
 
 #include "EnemyShipPawn.h"
 #include "GunSmoke.h"
+#include "Kismet/GameplayStatics.h"
+#include "UObject/ConstructorHelpers.h"
+#include "Sound/SoundAttenuation.h"
+#include "Sound/SoundBase.h"
 #include "HullSplinters.h"
 #include "MuzzleFlash.h"
 #include "MerchantShipPawn.h"
@@ -37,15 +41,83 @@
 
 ASeaGameMode::ASeaGameMode()
 {
+	// The gunnery sounds and their attenuations, as hard references: see the
+	// header. Order matches ESeaSound.
+	{
+		static ConstructorHelpers::FObjectFinder<USoundBase> W0(TEXT("/Game/Sounds/S_Cannon.S_Cannon"));
+		static ConstructorHelpers::FObjectFinder<USoundBase> W1(TEXT("/Game/Sounds/S_Hit.S_Hit"));
+		static ConstructorHelpers::FObjectFinder<USoundBase> W2(TEXT("/Game/Sounds/S_Rig.S_Rig"));
+		static ConstructorHelpers::FObjectFinder<USoundBase> W3(TEXT("/Game/Sounds/S_Splash.S_Splash"));
+		static ConstructorHelpers::FObjectFinder<USoundAttenuation> A0(TEXT("/Game/Sounds/ATT_S_Cannon.ATT_S_Cannon"));
+		static ConstructorHelpers::FObjectFinder<USoundAttenuation> A1(TEXT("/Game/Sounds/ATT_S_Hit.ATT_S_Hit"));
+		static ConstructorHelpers::FObjectFinder<USoundAttenuation> A2(TEXT("/Game/Sounds/ATT_S_Rig.ATT_S_Rig"));
+		static ConstructorHelpers::FObjectFinder<USoundAttenuation> A3(TEXT("/Game/Sounds/ATT_S_Splash.ATT_S_Splash"));
+		SeaWaves = { W0.Object, W1.Object, W2.Object, W3.Object };
+		SeaAttenuations = { A0.Object, A1.Object, A2.Object, A3.Object };
+	}
 	DefaultPawnClass = AShipPawn::StaticClass();
 	EnemyShipClass = AEnemyShipPawn::StaticClass();
 	MerchantShipClass = AMerchantShipPawn::StaticClass();
 	HUDClass = AShipHUD::StaticClass();
 }
 
+int32 ASeaGameMode::SoundRequests[4] = { 0, 0, 0, 0 };
+bool ASeaGameMode::bSoundEnabled = true;
+bool ASeaGameMode::bSoundFlagRead = false;
+
+void ASeaGameMode::ResetSoundsForNewLevel()
+{
+	for (int32& N : SoundRequests)
+	{
+		N = 0;
+	}
+	bSoundFlagRead = false;
+}
+
+void ASeaGameMode::PlaySea(UWorld* World, ESeaSound Which, const FVector& Where)
+{
+	if (!bSoundFlagRead)
+	{
+		int32 Flag = 1;
+		if (FParse::Value(FCommandLine::Get(), TEXT("ShipSound="), Flag))
+		{
+			bSoundEnabled = Flag != 0;
+		}
+		bSoundFlagRead = true;
+	}
+	if (!bSoundEnabled || !World)
+	{
+		return;
+	}
+	++SoundRequests[(int32)Which];
+
+	// Off the game mode's own properties, found in its constructor, so the cook
+	// carries them. The first version loaded them by path at play time, which
+	// the cook cannot see: the packaged game would have been silent.
+	const int32 I = (int32)Which;
+	const ASeaGameMode* Sea = World->GetAuthGameMode<ASeaGameMode>();
+	USoundBase* Wave = (Sea && Sea->SeaWaves.IsValidIndex(I)) ? Sea->SeaWaves[I].Get() : nullptr;
+	USoundAttenuation* Att = (Sea && Sea->SeaAttenuations.IsValidIndex(I))
+		? Sea->SeaAttenuations[I].Get() : nullptr;
+	static bool bMissingReported[4] = { false, false, false, false };
+	if (!Wave)
+	{
+		// SAID ONCE, and counted above regardless: a missing wave must not read
+		// as "the gun fell silent", it must read as "the asset is gone".
+		if (!bMissingReported[I])
+		{
+			bMissingReported[I] = true;
+			UE_LOG(LogTemp, Error, TEXT("SOUNDLOG missing sound %d"), I);
+		}
+		return;
+	}
+	UGameplayStatics::PlaySoundAtLocation(World, Wave, Where, 1.f, 1.f, 0.f, Att);
+}
+
 void ASeaGameMode::BeginPlay()
 {
 	Super::BeginPlay();
+	ResetSoundsForNewLevel();
 
 	// The smoke's statics, before anything can spawn a puff. A list and three
 	// counters that outlive a level do not fail, they answer - with last
@@ -1726,6 +1798,13 @@ void ASeaGameMode::QuitNow()
 	UE_LOG(LogTemp, Display,
 		TEXT("HOLELOG TOTAL added=%d culled=%d"),
 		AShipPawn::GetHolesAddedTotal(), AShipPawn::GetHolesCulledTotal());
+
+	// Play requests, one counter per kind. Held against shots, hull hits,
+	// rig hits and splashes by the suite: a gun that goes quiet is a number.
+	UE_LOG(LogTemp, Display,
+		TEXT("SOUNDLOG TOTAL cannon=%d hit=%d rig=%d splash=%d"),
+		GetSoundRequests(ESeaSound::Cannon), GetSoundRequests(ESeaSound::Hit),
+		GetSoundRequests(ESeaSound::Rig), GetSoundRequests(ESeaSound::Splash));
 
 	UE_LOG(LogTemp, Display,
 		TEXT("CHIPLOG TOTAL spawned=%d live=%d stranded=%d"),

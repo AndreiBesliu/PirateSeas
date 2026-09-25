@@ -62,6 +62,11 @@ vânt în plante şi greement, `-Hour=` pentru ora din zi.
   disc - in acelasi proces `load_asset` intoarce obiectul din memorie. Si in
   joc fiecare nava spune la BeginPlay `SHIPLOG ... shothull=ok`; cheia
   `shothull_ok` din suita e 0 daca vreo coca e transparenta.
+- **Sunetele** (25.09): `python Scripts/sounds.py` scrie `Scripts/Sounds/S_*.wav`
+  (sintetizate, cu samanta; poarta le construieste de doua ori si compara), apoi
+  `run_py.ps1 -Script import_sounds.py` de doua ori (importa undele si face
+  `ATT_S_*`; a doua rulare citeste de pe disc). Modul de joc le tine ca referinte
+  TARI in constructor - altfel cook-ul nu le ia si pachetul e mut.
 - **Probe (nu porti):** `python tools/probe_hull_hits.py [--band=LO,HI]` - continua
   fiecare lovitura de pe cutia de coliziune pana la lemnul din `ship.py` si
   reclasifica zona. Ruleaza motorul, cateva minute. Scrisa 25.09 pentru decizia
@@ -268,7 +273,8 @@ Urmatorul: de ales cu owner-ul. **Deschise si stiute:**
   100 m, adica mai LARG decat poarta lui de acum.
 - ~~**Capcana salvei partiale.**~~ **INCHISA pe 19.09.** Reincarcarea e pe tun
   (`GunReload[2][4]`), fumul e aprins implicit de pe 17364af, iar panoul arata
-  trei stari. Ramane adevarat ca proiectul n-are NICIUN sunet.
+  trei stari. Sunetul a venit pe 25.09: patru unde sintetizate, numarate contra
+  evenimentelor (`SOUNDLOG TOTAL`, chei `sound_*`).
 - ~~`sinking.casualties_max` a cazut la 0~~ **FALSA ALARMA, verificata si
   inchisa.** Acelasi rand arata acum si `broadsides: 0` si `struck: 0`: NIMENI nu
   trage in scenariul ala, care e un test de scufundare deliberata si nu o lupta.
@@ -329,7 +335,7 @@ atmosfera, iar dara face cititul.
 
 ## Ce aşteaptă ochiul owner-ului
 
-`OWNER_VERIFY.md` are **39** de puncte; **16–36 şi 39 n-au fost confirmate niciodată**, 37 e reparat, 38 e o DECIZIE a lui
+`OWNER_VERIFY.md` are **40** de puncte; **16–36, 39 şi 40 n-au fost confirmate niciodată**, 37 e reparat, 38 e o DECIZIE a lui
 — sunt judecăţi vizuale pe care nu le pot face eu. (Scria 34 aici, şi numărul a
 rămas în urmă de două ori la rând: cele mai NOI puncte sunt exact cele pe care
 un cititor al acestei linii nu le-ar fi deschis.) Punctul 20 nu mai e o

@@ -1,6 +1,7 @@
 #include "CannonBall.h"
 
 #include "HullSplinters.h"
+#include "SeaGameMode.h"
 #include "ShotTrail.h"
 
 #include "Island.h"
@@ -329,6 +330,7 @@ void ACannonBall::StrikeShip(AShipPawn* Ship, const FHitResult& Hit)
 			IsValid(Shooter) ? *Shooter->GetName() : TEXT("?"), ShotIndex,
 			*Struck->GetName(),
 			Hit.Component.IsValid() ? *Hit.Component->GetName() : TEXT("?"));
+		ASeaGameMode::PlaySea(GetWorld(), ASeaGameMode::ESeaSound::Rig, Hit.ImpactPoint);
 		ReportAndDie(TEXT("rigged"), Hit.ImpactPoint);
 		return;
 	}
@@ -356,6 +358,12 @@ void ACannonBall::StrikeShip(AShipPawn* Ship, const FHitResult& Hit)
 			FVector(Ship->GetVelocity().X, Ship->GetVelocity().Y, 0.f),
 			SurfaceZAtDeath);
 	}
+	// The crack of oak, only for a hit the ship TOOK: a refused hit (a wreck)
+	// makes no sound, the same rule as the splinters and the scar.
+	if (Applied > 0.f && Ship)
+	{
+		ASeaGameMode::PlaySea(GetWorld(), ASeaGameMode::ESeaSound::Hit, Hit.ImpactPoint);
+	}
 	ReportAndDie(TEXT("impact"), Hit.ImpactPoint);
 }
 
@@ -374,6 +382,7 @@ void ACannonBall::ReportAndDie(const TCHAR* Reason, const FVector& Where)
 	if (FCString::Strcmp(Reason, TEXT("splash")) == 0)
 	{
 		AOceanSurface::ReportSplash(GetWorld(), Where);
+		ASeaGameMode::PlaySea(GetWorld(), ASeaGameMode::ESeaSound::Splash, Where);
 	}
 
 	const float RangeM = FVector::Dist2D(LaunchLocation, Where) * 0.01f;

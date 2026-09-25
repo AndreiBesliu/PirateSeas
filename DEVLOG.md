@@ -4639,3 +4639,37 @@ rand, plus cele doua randuri). Baseline reinregistrat.
 
 **Task Completed.**
 
+## 25.09.2026 - Sunetul: patru unde sintetizate, numarate contra evenimentelor
+
+**Task Started.** Prompt: "continua". Model: Fable 5.1.
+
+Cel mai des semnalat gol din proiect - „nu exista niciun sunet" apare in
+handoff, in devlog si in README - si jumatatea lipsa a feedback-ului dupa ce cea
+vizuala s-a inchis azi. Patru sunete, sintetizate in `Scripts/sounds.py` cu
+aceeasi regula ca texturile (nimic descarcat, nimic cu licenta, samanta fixa,
+WAV scris de mana): tunul (bas + raport de banda larga + coada), lemnul
+(pocnitura + doua moduri amortizate), greementul (plesnet + suierat), apa
+(umflare fara atac). `import_sounds.py` le importa si face patru atenuari
+(tunul 60 m plin / 2,5 km cadere; lemnul si apa cateva sute de metri).
+
+**Numarate.** `ASeaGameMode::PlaySea` e singurul loc care cere o redare, cu un
+contor pe fel; `SOUNDLOG TOTAL` la iesire; in suita `sound_*` contra
+`balls_fired` / `hull_hits` / `rig_hits` / `splashes`, poarta pe fiecare rand.
+Masurat pe `gunnery`: 16/16, 3/3, 8/8, 5/5; `sound_off` zeroeaza cererile si
+nimic altceva. O lovitura refuzata nu suna - regula aschiilor si a urmelor.
+
+**Cook-ul nu vede o cale intr-un sir.** Prima versiune incarca undele cu
+`LoadObject` dupa cale la prima redare; in editor merge, in pachet asset-ul
+nereferentiat nu exista si jocul ar fi fost mut, cu o linie „missing" in log
+pe care n-ar fi citit-o nimeni. Referinte TARI acum, `FObjectFinder` in
+constructorul modului de joc - aceeasi discipline ca nava, fumul si pielea
+cocii. Verificat in pachet prin rulare, nu prin presupunere.
+
+Ce nu pot: sa aud. Daca zgomotul filtrat suna a tun e `OWNER_VERIFY` 40.
+
+**Suita: 42 de scenarii, zero cifre miscate, 247 de chei noi; fiecare cerere de
+redare isi are evenimentul pe toate cele 41 de randuri cu sunet (545 de tunuri
+trase in toata suita, 545 de cereri), `sound_off` la zero.** Baseline reinregistrat.
+
+**Task Completed.**
+

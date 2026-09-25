@@ -391,6 +391,13 @@ SCENARIOS = {
                   "-EnemyY=1500", "-ShipFireTest=8", "-ShipQuitAfter=45",
                   "-ShipHoles=0"],
 
+    # SOUND, the fifth flag of the same shape. The suite runs -nosound, so what
+    # is counted is play REQUESTS - the part this code is responsible for - and
+    # the pair must differ in the sound_* family and nothing else.
+    "sound_off": ["-WindBearing=120", "-WindSpeed=11", "-EnemyX=9000",
+                  "-EnemyY=1500", "-ShipFireTest=8", "-ShipQuitAfter=45",
+                  "-ShipSound=0"],
+
     # THE OWNER'S DECISION, PLAYABLE. gunnery with the gun-damage band moved
     # from [0,240] to where the guns stand. The key that must differ is
     # enemy_gun_hits: the probe says every dismount in gunnery came in below
@@ -917,6 +924,21 @@ def measure(name, text):
         m["holes_culled"] = int(tot.group(2))
         m["holes_live_end"] = sum(int(l) for l in re.findall(
             r"HOLELOG \S+ added=\d+ live=(\d+) culled=\d+", text))
+
+    # SOUND REQUESTS, one per kind, held against the events that cause them:
+    # cannon == balls fired (shot_fired summed over hulls is the enemy's only;
+    # the cannon count is EVERY gun that went), hit == hull_hits, rig == the
+    # SHOTLOG rig lines, splash == splashes. The gate does the holding.
+    sn = re.search(r"SOUNDLOG TOTAL cannon=(\d+) hit=(\d+) rig=(\d+) splash=(\d+)", text)
+    if sn:
+        m["sound_cannon"] = int(sn.group(1))
+        m["sound_hit"] = int(sn.group(2))
+        m["sound_rig"] = int(sn.group(3))
+        m["sound_splash"] = int(sn.group(4))
+    # And the events, counted the same way the sounds are, so the two can be
+    # compared row by row: every broadside line's guns= is the balls that went.
+    m["balls_fired"] = sum(int(g) for g in re.findall(r"SHOTLOG broadside \S+ side=\S+ guns=(\d+)", text))
+    m["rig_hits"] = len(re.findall(r"SHOTLOG rig by=", text))
 
     # WHETHER A BALL CAN FIND A HULL AT ALL. Every ship says at BeginPlay whether
     # her collision skin carries complex-as-simple; the failure is otherwise

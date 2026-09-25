@@ -28,6 +28,33 @@ public:
 
 	int32 GetVictories() const { return Victories; }
 
+	/** THE GUNNERY SOUNDS, in one place. Four waves synthesised by
+	 *  Scripts/sounds.py, four attenuations from Scripts/import_sounds.py, and a
+	 *  counter per kind so the suite can hold play requests against the events
+	 *  that should have caused them. Played, not merely requested, only when the
+	 *  engine has audio - the suite runs -nosound - which is why the counters
+	 *  count REQUESTS: the thing this code is responsible for. -ShipSound=0
+	 *  silences every one and zeroes nothing. */
+	enum class ESeaSound : uint8 { Cannon, Hit, Rig, Splash };
+	static void PlaySea(UWorld* World, ESeaSound Which, const FVector& Where);
+	static int32 GetSoundRequests(ESeaSound Which) { return SoundRequests[(int32)Which]; }
+	static void ResetSoundsForNewLevel();
+
+private:
+	static int32 SoundRequests[4];
+	static bool bSoundEnabled;
+	static bool bSoundFlagRead;
+
+	/** Held as properties so the COOK ships them. A path string loaded at
+	 *  runtime references nothing as far as the cook is concerned, and the
+	 *  packaged game would have been silent with a "missing" line in its log. */
+	UPROPERTY()
+	TArray<TObjectPtr<class USoundBase>> SeaWaves;
+	UPROPERTY()
+	TArray<TObjectPtr<class USoundAttenuation>> SeaAttenuations;
+
+public:
+
 	/** How many of them are still afloat. The panel shows it: a player who
 	 *  cannot see how much of the squadron is left cannot decide whether to
 	 *  press the fight or bear away. */

@@ -13,6 +13,7 @@
 #include "CannonBall.h"
 #include "GunSmoke.h"
 #include "MuzzleFlash.h"
+#include "SeaGameMode.h"
 #include "Island.h"
 #include "Camera/CameraComponent.h"
 #include "Components/BoxComponent.h"
@@ -1199,6 +1200,11 @@ bool AShipPawn::FireBroadside(bool bStarboard, AActor* AimAt, bool bHigh)
 		if (bMuzzleFlash)
 		{
 			AMuzzleFlash::Spawn(GetWorld(), EffectMuzzle, Aim, ThisShot);
+		}
+		// And the report, from the same mouth. One per gun that fired, so the
+		// count equals balls fired, not broadsides.
+		{
+			ASeaGameMode::PlaySea(GetWorld(), ASeaGameMode::ESeaSound::Cannon, EffectMuzzle);
 		}
 		++Fired;
 		// HER OWN clock, not the battery's. This is the whole of what the owner

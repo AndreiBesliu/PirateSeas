@@ -334,6 +334,35 @@ parametrul funcţionează. Dar între 0,98 şi 1,06 diferenţa e **o singură
 lovitură din treizeci şi trei**, pe patru seminţe. Aia e împrăştiere, nu semnal,
 şi nu se calibrează nimic pe ea. Rămâne 1,04.
 
+## Sunetul
+
+**Pana pe 25.09 jocul n-avea niciun sunet.** O salva era un foc, un puf si o
+cifra. Acum sunt patru: tunul, ghiuleaua in stejar, ghiuleaua prin greement si
+ghiuleaua in mare - fiecare la locul in care s-a intamplat, cu atenuare pe
+distanta (tunul se aude de la doi kilometri si jumatate, lemnul si apa de la
+cateva sute de metri).
+
+**Sintetizate, nu descarcate**, ca texturile: `Scripts/sounds.py` le scrie din
+zgomot filtrat si cateva tonuri amortizate, cu samanta fixa, in WAV de mana -
+nicio licenta in arbore, si aceiasi octeti la fiecare rulare (poarta le
+construieste de doua ori si compara). Tunul e un bubuit de bas sub un raport de
+banda larga, cu o coada lunga care spune „tun mare, departe"; lemnul e o
+pocnitura cu un zvon de scandura; greementul e un plesnet mai sus si mai scurt;
+apa e o umflare fara atac.
+
+**Numarate, si tinute contra evenimentelor.** Suita ruleaza fara audio
+(`-nosound`), deci ce se numara sunt CERERILE de redare - partea de care
+raspunde codul asta - si `SOUNDLOG TOTAL` le da la iesire. Poarta cere pe fiecare
+rand: `sound_cannon == balls_fired`, `sound_hit == hull_hits`,
+`sound_rig == rig_hits`, `sound_splash == splashes`. Un tun care amuteste e o
+cifra, nu o tacere pe care n-o observa nimeni. `-ShipSound=0` le stinge; perechea
+`gunnery` / `sound_off` difera in exact familia `sound_*`.
+
+O lovitura refuzata (o nava care se scufunda) nu suna - aceeasi regula ca la
+aschii si la urme. Si sunetele sunt referinte TARI ale modului de joc, gasite
+in constructor: prima versiune le incarca dupa cale la redare, si cook-ul nu
+vede o cale intr-un sir - pachetul ar fi fost mut cu o linie „missing" in log.
+
 ## Urmele loviturilor
 
 **O lovitura in cocca lasa un semn care ramane.** Pana pe 25.09 se vedea in
@@ -1103,6 +1132,7 @@ pereche de rulări citea împrăștiere și credea că citește semnal.
 | `-ShipFlash=0` | stinge focul de la gura tunului (implicit APRINS) |
 | `-ShipSplinters=0` | stinge aschiile de la o lovitura in cocca (implicit APRINSE) |
 | `-ShipHoles=0` | stinge urmele loviturilor de pe cocca (implicit APRINSE) |
+| `-ShipSound=0` | stinge cele patru sunete de tir (implicit APRINSE) |
 | `-ShipGunBand=LO,HI` | banda de inaltime (cm, fata de linia de plutire) in care o lovitura scoate un tun din afet, pentru toate navele (implicit 0,240; `OWNER_VERIFY` 38) |
 | `-WindBearing=N` | fixează DIRECȚIA vântului, altfel „mal sub vânt" nu e reproductibil |
 | `-WindSpeed=N` | fixează și TĂRIA lui; fără asta două treceri peste același unghi sunt luate pe vreme diferită |
@@ -1383,7 +1413,6 @@ toată nava, fiindcă `ObjectBounds` întorcea zero pentru mesh-ul ăla.
 - cerul e tot cel implicit al motorului (`-Hour=` mută soarele şi expunerea,
   dar norii şi atmosfera rămân cum sunt), şi timpul nu curge în timpul unei
   partide
-- niciun sunet
 - convoiul n-are prăzi, valoare a mărfii, escortă sau port adevărat (rada e un
   punct pe apă); negustorul nu ştie să vireze prin vânt, deci un drum aşezat în
   vânt l-ar putea prinde în irons

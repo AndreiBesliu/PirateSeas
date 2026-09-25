@@ -5,7 +5,7 @@ arată bine și de ce nu pot eu.
 
 ## Prima pagină — citește doar asta (25.09)
 
-Lista are 39 de puncte și de şase zile n-a fost atinsă. Nu-ţi cer să o parcurgi.
+Lista are 40 de puncte și de şase zile n-a fost atinsă. Nu-ţi cer să o parcurgi.
 **Mai jos sunt singurele lucruri care contează acum**, în ordinea în care
 contează; restul e arhivă, etichetată ca atare la sfârşitul paginii.
 
@@ -46,6 +46,8 @@ să primească un ajutor de avans, spune; dacă nu, rămâne aşa.
 5. **34 — proporţia navei** după ce a fost ridicată pe linia ei de plutire.
 6. **39 — urmele loviturilor.** Nou, 25.09: un disc de 60 cm la fiecare gaură.
    Dacă citeşte a gaură sau a abţibild.
+7. **40 — sunetul.** Nou, 25.09: tun, lemn, greement, apă, sintetizate. Dacă
+   sună a tun sau a tobă, şi dacă distanţele sunt bune.
 
 ### Restul
 
@@ -472,7 +474,7 @@ tu). Lista onestă de acum, cât o ştiu eu:
 - cerul e tot cel implicit al motorului: `-Hour=` mută soarele, culoarea şi
   expunerea, dar norii şi atmosfera rămân aceiaşi, şi timpul nu curge în timpul
   unei partide;
-- nu există sunet, deloc;
+- ~~nu există sunet, deloc~~ (există, din 25.09: punctul 40);
 - ~~coca nu poartă urme de lovitură~~ (poartă, din 25.09: punctul 39);
 - nu există echipaj, nici interior.
 
@@ -1058,4 +1060,30 @@ scandurilor, plutind: pielea de coliziune avea capacul pe varful parapetului.
 Reparat in aceeasi zi - parapetul e o placa inchisa de 10 cm si puntea sta intre
 fetele ei, la 12 cm deasupra scandurilor vizibile. Daca vezi un disc plutind,
 asta ar fi.)
+
+## 40. Sunetul: tun, lemn, greement, apa
+
+**Ce te uiti (asculti):** Trage o salva. Apoi lasa inamicul sa traga la tine de
+la cateva sute de metri, si asculta de la pupa cand o ghiulea intra in cocca,
+cand trece prin greement, si cand cade in mare langa tine.
+
+**Cum suna bine:** Tunul e un bubuit greu cu o coada lunga - un tun mare,
+departe - nu un pocnet de pistol si nu o toba. Lemnul e o pocnitura scurta, cu
+putin zvon de scandura; greementul e un plesnet; apa e o umflare fara lovitura.
+De la 96 m tunul inamic se aude limpede; de la doi kilometri abia. Sunetul vine
+din DIRECTIA in care s-a intamplat.
+
+**Cum suna prost:** Toate patru seamana intre ele (zgomot filtrat e zgomot
+filtrat). Tunul e prea „curat", fara greutate. Sau nimic nu se aude decat de
+aproape - atunci razele de atenuare (2500 m tunul, 500-700 m restul) sunt prea
+mici. Sau se aude tot la fel de tare de oriunde - atunci spatializarea nu s-a
+prins.
+
+**De ce nu pot eu:** pot numara ca fiecare cerere de redare are evenimentul ei
+(poarta o cere pe fiecare rand: tun = ghiulele trase, lemn = lovituri, greement
+= lovituri in greement, apa = stropi) si ca pachetul are asset-urile. Dar
+suita ruleaza fara audio, iar eu n-am urechi: daca un zgomot filtrat cu samanta
+fixa suna a tun de 24 de livre e singurul lucru din felia asta pe care nu-l pot
+masura. Sunt PATRU numere de ales daca nu-ti place ceva: forma undei e in
+`Scripts/sounds.py`, razele in `Scripts/import_sounds.py`.
 
