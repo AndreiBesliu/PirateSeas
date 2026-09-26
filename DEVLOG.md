@@ -5032,3 +5032,40 @@ Suita 70: 0 MOVED, 0 GONE, o cheie noua (`line_station_err_m`).
 
 **Task Completed** (commit + pachet verificat prin rulare, mai jos).
 
+## 26.09.2026 - Fugara scapa: victoria nu mai depinde de o nava pe care n-o poti prinde
+
+**Task Started.** Prompt: "Continua si verificam alta data". Model: Opus 5.5.
+
+**Masurat intai.** Linia de bataie (felia de dinainte) a lasat numita o problema
+pe drumul implicit: o nava a Coroanei care a rupt lupta fuge la nesfarsit, iar
+victoria cerea ca TOATE sa fie scufundate. Cat de sigur e blocajul? Pe
+`line_breaks`, fugara merge cu vantul drept in pupa cu **6,42 m/s**; polara
+aceleiasi nave are varful de 6,41 m/s la 141 de grade, adica sub 5 m/s spre sub
+vant. Un urmaritor pe aceeasi coca nu castiga niciodata teren pe o fugara cu
+greementul intreg: blocajul nu e probabil, e sigur.
+
+**Regula.** O fugara ajunsa la peste `EscapeRangeM` (**2000 m**, numarul
+owner-ului, `-EnemyEscapeM=`, 0 o stinge) de coca VIE a jucatorului a scapat: iese
+de pe apa, iar escadra se socoteste fara ea prin `TallySquadron` - aceeasi
+socoteala pe care o foloseste acum si scufundarea (un singur loc). Esantionata
+la jumatate de secunda; o fugara nu scapa dintr-un jucator aflat la fund, il
+asteapta pe urmatoarea lui coca.
+
+**Masurat.** Perechea `escape_on` / `escape_off` (o nava la 1,9 km, rupta la
+t=5): scapa la 140 s, la **2001 m** - prinsa in primul esantion de dupa prag
+(poarta cere cel mult viteza maxima x jumatate de secunda peste prag) - si vine
+VICTORY; cu regula stinsa fuge mai departe. Perechea misca exact 14 chei:
+cele patru ale scaparii, numarul de fugare, si - numite, fiindca pleaca odata cu
+ea - cele noua chei citite din liniile de iesire ale navei scapate. Doua garzi,
+fiecare cu randul ei: o nava care inca LUPTA dincolo de 2 km nu scapa
+(`escape_fighting`); cu jucatorul scufundat la t=3, fugara (la 2,1 km de la t=5)
+scapa abia la 36,0 s, dupa ce coca noua a lui e legata la 35,8
+(`escape_player_down`). Suita: 74 de scenarii, 0 MOVED, 0 GONE; `sinking` isi
+pastreaza victoria prin socoteala comuna.
+
+**Mutatii: 6 din 6 prinse** - orice nava departata scapa (si cea care lupta),
+scapare dintr-un jucator la fund, scapare nesocotita, fugara ramasa pe apa,
+fara prag, comutatorul necitit.
+
+**Task Completed** (commit + pachet verificat prin rulare, mai jos).
+

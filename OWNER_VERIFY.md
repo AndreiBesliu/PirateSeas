@@ -319,7 +319,10 @@ ciocnesc. Când una e între tine și alta, cea din spate nu trage prin ea. Şi,
 de pe 26.09: când prima rupe lupta (sub 30% din cocă fuge cu vântul în pupa),
 a doua **preia conducerea şi se bate cu tine** - se apropie până la distanţa ei
 de tragere şi trage - în loc s-o escorteze pe prima afară din luptă. (Rău: a
-doua pleacă după prima şi lupta moare.)
+doua pleacă după prima şi lupta moare.) Iar fugara nu te mai ține fără
+victorie: la peste **2000 m** de tine a scăpat, iese de pe apă şi, dacă cealaltă
+e scufundată, vine VICTORY şi escadra următoare. 2000 m e numărul tău
+(`-EnemyEscapeM=`): dacă vrei s-o poţi urmări mai mult, mai mare.
 
 **Cum arată prost:** Se ciocnesc, sau se învârt una în jurul alteia, sau vin
 toate trei în linie de front, cot la cot.

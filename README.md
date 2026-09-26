@@ -777,11 +777,19 @@ intre ele e deja sub doua intervale, dar punctul de statie e la ~192 m. Dupa
 90 s urmaritoarea e la 80 m de el - sub jumatate. Recenzia a prins ca primul
 control trecea si fara sa se formeze nimic. Perechea misca exact noua chei.
 
-**Ce ramane, si e spus:** fugara fuge la nesfarsit - si victoria cere ca TOATE
-navele Coroanei sa fie scufundate. O fugara cu greementul intreg nu e incetinita
-de coca ei, deci poate tine lupta implicita fara victorie si fara escadra
-urmatoare. Cheia `line_runners_afloat` le numara la iesire; regula prin care o
-fugara desprinsa conteaza ca „scapata" e felia urmatoare.
+**Si fugara SCAPA.** Masurat: cu vantul drept in pupa face 6,42 m/s, iar polara
+aceleiasi nave are varful de 6,41 m/s la 141 de grade - adica sub 5 m/s spre sub
+vant. O fugara cu greementul intreg nu poate fi prinsa niciodata, iar victoria
+cerea ca TOATE navele Coroanei sa fie scufundate: lupta implicita ramanea fara
+victorie si fara escadra urmatoare. Acum o fugara ajunsa la peste **2000 m** de
+coca jucatorului (numarul owner-ului, `-EnemyEscapeM=`) a scapat: iese de pe
+apa, iar escadra se socoteste fara ea - aceeasi socoteala ca la o scufundare.
+Nu scapa dintr-un jucator aflat la fund: il asteapta pe urmatoarea lui coca.
+Perechea `escape_on` / `escape_off` (o nava la 1,9 km, rupta la t=5): scapa la
+140 s, la 2001 m - prinsa in primul esantion de dupa prag - si vine victoria;
+cu regula stinsa fuge mai departe. Poarta cere si doua garzi, fiecare cu randul
+ei: o nava care inca LUPTA dincolo de 2 km nu scapa; o fugara cu jucatorul la
+fund scapa abia la 36,0 s, dupa ce coca noua a lui e legata la 35,8.
 
 ## Nava inamică
 
@@ -1357,6 +1365,7 @@ pereche de rulări citea împrăștiere și credea că citește semnal.
 | `-ShipHoles=0` | stinge urmele loviturilor de pe cocca (implicit APRINSE) |
 | `-ShipSound=0` | stinge cele patru sunete de tir (implicit APRINSE) |
 | `-Ledger=0` | cartea navei inchisa pentru o rulare: nu se citeste si nu se scrie (implicit DESCHISA in orice partida cu `-Port=1` si fara flag-urile de test `-Shot=`/`-ShipHullTest=`/`-ShipToggleTackle=`/`-EnemyBreakTest=`; `Saved/Ledger/book.txt`) |
+| `-EnemyEscapeM=N` | o nava a Coroanei care a rupt lupta si e la peste N m de jucator a scapat (implicit 2000; 0 = nu scapa niciodata) |
 | `-EnemyBreakTest=N` | la secunda N, prima nava a Coroanei inca in lupta primeste coca la un sfert si rupe lupta; flag de TEST, tine cartea inchisa |
 | `-ShipToggleTackle=N` | apasa T de N ori la pornire (comanda de palancuri, apoi retragerea ei); flag de TEST, tine cartea inchisa |
 | `-LedgerBook=<cale>` | citeste si scrie alt fisier in locul cartii, relativ la proiect (suita: sub `Saved/CI/`) |

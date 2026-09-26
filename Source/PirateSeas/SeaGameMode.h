@@ -196,6 +196,16 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Sea")
 	float EnemyRespawnDelay = 8.f;
 
+	/** THE RUNNER WHO GETS AWAY. A Crown ship that has broken off and lies
+	 *  farther than this from the player's hull has escaped: she leaves the
+	 *  sea and the squadron is tallied without her. Measured: running dead
+	 *  before the wind she makes 6.42 m/s, and the same polar's best puts less
+	 *  than 5 m/s downwind - an undamaged runner is never caught, and a victory
+	 *  that needs every hull sunk would never come. -EnemyEscapeM=N, 0 switches
+	 *  it off. The distance is the owner's number: OWNER_VERIFY 11. */
+	UPROPERTY(EditDefaultsOnly, Category = "Sea")
+	float EscapeRangeM = 2000.f;
+
 	/** Nothing may stick up above this depth at the spawn point. Compared
 	 *  against a hull's whole BOUNDING BOX, not its origin: a wreck plunges
 	 *  heeled 35 degrees and pitched 30, so at an origin of -1000 her masts
@@ -588,6 +598,16 @@ private:
 	int32 LineBroken = 0;
 	mutable float LineClosedAt = -1.f;
 	int32 LineRunnerTicks = 0;
+
+	/** Escapes, sampled every half second against a LIVE player hull (a
+	 *  runner does not escape a player who is on the bottom waiting to
+	 *  respawn), and the one tally a sinking and an escape both go through. */
+	FTimerHandle EscapeTimer;
+	void SampleEscapes();
+	void TallySquadron(float Now);
+	int32 Escaped = 0;
+	float FirstEscapeAt = -1.f;
+	float FirstEscapeDistM = -1.f;
 
 	/** -ConvoyStrikeTest=N: the first merchant still running strikes at N
 	 *  seconds, through Strike() and nothing else, so the whole path from a

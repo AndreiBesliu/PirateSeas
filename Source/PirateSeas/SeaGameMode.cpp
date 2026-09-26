@@ -343,6 +343,12 @@ void ASeaGameMode::BeginPlay()
 
 	GetWorldTimerManager().SetTimer(EnemySpawnTimer, this,
 		&ASeaGameMode::SpawnSquadron, FMath::Max(0.05f, EnemySpawnDelay), false);
+	FParse::Value(FCommandLine::Get(), TEXT("EnemyEscapeM="), EscapeRangeM);
+	if (EscapeRangeM > 0.f)
+	{
+		GetWorldTimerManager().SetTimer(EscapeTimer, this,
+			&ASeaGameMode::SampleEscapes, 0.5f, true);
+	}
 
 	FParse::Value(FCommandLine::Get(), TEXT("ShipQuitAfter="), QuitAfterSeconds);
 	if (QuitAfterSeconds > 0.f)
@@ -1393,19 +1399,60 @@ void ASeaGameMode::HandleShipSunk(AShipPawn* Ship, AActor* Causer)
 	{
 		// One enemy down is not a victory while her consorts are still firing.
 		// The count runs from her sinking, so she is already excluded.
-		const int32 Left = CountEnemiesAfloat();
 		UE_LOG(LogTemp, Display, TEXT("SEALOG enemy struck ship=%s by=%s t=%.1f left=%d"),
-			*Ship->GetName(), *By, Now, Left);
-		if (Left == 0)
-		{
-			++Victories;
-			UE_LOG(LogTemp, Display, TEXT("SEALOG VICTORY squadron beaten t=%.1f"), Now);
-			GetWorldTimerManager().SetTimer(EnemyRespawnTimer, this,
-				&ASeaGameMode::TryRespawnEnemy, EnemyRespawnDelay, false);
-		}
+			*Ship->GetName(), *By, Now, CountEnemiesAfloat());
+		TallySquadron(Now);
 	}
 	UE_LOG(LogTemp, Display, TEXT("SEALOG score victories=%d defeats=%d"),
 		Victories, Defeats);
+}
+
+void ASeaGameMode::TallySquadron(float Now)
+{
+	// ONE tally, for a hull that sank and a hull that got away alike: the
+	// squadron is beaten when none of it is left on the water.
+	if (CountEnemiesAfloat() == 0)
+	{
+		++Victories;
+		UE_LOG(LogTemp, Display, TEXT("SEALOG VICTORY squadron beaten t=%.1f"), Now);
+		GetWorldTimerManager().SetTimer(EnemyRespawnTimer, this,
+			&ASeaGameMode::TryRespawnEnemy, EnemyRespawnDelay, false);
+	}
+}
+
+void ASeaGameMode::SampleEscapes()
+{
+	const AShipPawn* Player = PlayerShip.Get();
+	if (!IsValid(Player) || Player->IsSunk())
+	{
+		return;
+	}
+	for (const TWeakObjectPtr<AShipPawn>& Ptr : Squadron)
+	{
+		AShipPawn* Ship = Ptr.Get();
+		if (!IsValid(Ship) || Ship->IsSunk() || !AShipAIController::IsShipBreakingOff(Ship))
+		{
+			continue;
+		}
+		const float DistM = FVector::Dist2D(Ship->GetActorLocation(), Player->GetActorLocation()) * 0.01f;
+		if (DistM <= EscapeRangeM)
+		{
+			continue;
+		}
+		const float Now = GetWorld()->GetTimeSeconds();
+		++Escaped;
+		if (FirstEscapeAt < 0.f)
+		{
+			FirstEscapeAt = Now;
+			FirstEscapeDistM = DistM;
+		}
+		UE_LOG(LogTemp, Display, TEXT("SEALOG %s ESCAPED t=%.1f dist=%.0f range=%.0f"),
+			*Ship->GetName(), Now, DistM, EscapeRangeM);
+		Ship->Destroy();
+		TallySquadron(Now);
+		// One per sample: the next half second takes any other.
+		return;
+	}
 }
 
 void ASeaGameMode::HandleShipWrecked(AShipPawn* Ship)
@@ -2454,6 +2501,8 @@ void ASeaGameMode::QuitNow()
 		UE_LOG(LogTemp, Display,
 			TEXT("LINELOG TOTAL broken=%d closed=%.2f runnerTicks=%d runnerGap=%.0f stationGap=%.0f runnersAfloat=%d stationErr=%.0f"),
 			LineBroken, LineClosedAt, LineRunnerTicks, RunnerGapM, StationGapM, RunnersAfloat, StationErrM);
+		UE_LOG(LogTemp, Display, TEXT("SEALOG TOTAL escaped=%d firstEscape=%.1f dist=%.0f victories=%d"),
+			Escaped, FirstEscapeAt, FirstEscapeDistM, Victories);
 	}
 
 	// ALWAYS, even in a run with no convoy in it: a counted zero. A money

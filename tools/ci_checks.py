@@ -1631,6 +1631,107 @@ def check_line():
         fail("ledger_testbreak: -EnemyBreakTest does not shut the book: why=%r written=%r"
              % (tb.get("ledger_why"), tb.get("ledger_written")))
 
+def check_escape():
+    """THE RUNNER WHO GETS AWAY, on paper.
+
+    escape_on / escape_off differ in one flag and move exactly the escape's
+    keys, the runner count, and - named, because they leave with her - the
+    escaped hull's own quit-line keys. The escape is seen within one sample:
+    no farther past the range than her best speed covers in half a second.
+    Two guards with the rows only they can catch.
+    """
+    import re
+    sys.path.insert(0, os.path.join(ROOT, "tools"))
+    try:
+        import ci_measure
+    except Exception as e:
+        fail("cannot import ci_measure: %s" % e)
+        return
+    got = ci_measure.measure("fixture",
+        "LogTemp: Display: SEALOG player ship=ShipPawn_0 bound t=0.0\n"
+        "LogTemp: Display: SEALOG player ship=ShipPawn_1 bound t=35.8\n"
+        "LogTemp: Display: SEALOG TOTAL escaped=2 firstEscape=36.5 dist=2083 victories=3\n")
+    want = {"sea_escaped": 2, "sea_escape_t": 36.5, "sea_escape_dist_m": 2083.0, "sea_victories": 3,
+            "sea_player_rebound_t": 35.8}
+    bad = {k: (got.get(k), v) for k, v in want.items() if got.get(k) != v}
+    if bad:
+        fail("the escape lines are not read field by field (got, want): %r" % bad)
+
+    def const(path, pattern):
+        src = io.open(os.path.join(ROOT, "Source", "PirateSeas", path), encoding="utf-8").read()
+        mm = re.search(pattern, src)
+        if not mm:
+            fail("cannot read %r out of %s" % (pattern, path))
+            return None
+        return float(mm.group(1))
+    RANGE = const("SeaGameMode.h", r"float EscapeRangeM = ([\d.]+)f;")
+    RESPAWN = const("SeaGameMode.h", r"float EnemyRespawnDelay = ([\d.]+)f;")
+    PERIOD = const("SeaGameMode.cpp", r"&ASeaGameMode::SampleEscapes, ([\d.]+)f, true")
+    TOP = const("ShipPawn.h", r"float MaxForwardSpeed = ([\d.]+)f;")
+    if None in (RANGE, RESPAWN, PERIOD, TOP):
+        return
+
+    base_path = os.path.join(ROOT, "tools", "measurement_baseline.json")
+    if not os.path.exists(base_path):
+        note("no baseline - the escape rows are not checked, which is NOT a pass")
+        return
+    rows = json.loads(io.open(base_path, encoding="utf-8-sig").read())
+    need = ("escape_on", "escape_off", "escape_fighting", "escape_player_down")
+    if any(n not in rows for n in need):
+        fail("escape rows missing from the baseline: %s" % [n for n in need if n not in rows])
+        return
+
+    def flag(name, key):
+        for a in ci_measure.SCENARIOS[name]:
+            if a.startswith(key + "="):
+                return float(a.split("=", 1)[1])
+        return None
+
+    on, off = rows["escape_on"], rows["escape_off"]
+    slack = TOP / 100 * PERIOD
+    quit_on = flag("escape_on", "-ShipQuitAfter")
+    checks = [
+        ("escaped once", on.get("sea_escaped") == 1),
+        ("seen within one sample of the range", on.get("sea_escape_dist_m") is not None
+         and RANGE <= on["sea_escape_dist_m"] <= RANGE + slack),
+        ("a victory", on.get("sea_victories") == 1),
+        ("no runner left", on.get("line_runners_afloat") == 0),
+        ("quit before a new squadron", on.get("sea_escape_t") is not None
+         and on["sea_escape_t"] < quit_on < on["sea_escape_t"] + RESPAWN),
+        ("off: she runs on", (off.get("sea_escaped"), off.get("sea_victories"), off.get("line_runners_afloat")) == (0, 0, 1)),
+    ]
+    fi, pd = rows["escape_fighting"], rows["escape_player_down"]
+    checks += [
+        ("a ship still fighting past the range stays", fi.get("sea_escaped") == 0
+         and flag("escape_fighting", "-EnemyX") / 100 > RANGE),
+        ("a runner waits for the player's next hull", pd.get("sea_escaped") == 1
+         and pd.get("sea_player_rebound_t") is not None and pd.get("sea_escape_t") is not None
+         and pd["sea_player_rebound_t"] <= pd["sea_escape_t"] <= pd["sea_player_rebound_t"] + PERIOD
+         and flag("escape_player_down", "-EnemyX") / 100 > RANGE),
+    ]
+    wrong = [k for k, good in checks if not good]
+    if wrong:
+        fail("the escape against paper: %s" % ", ".join(wrong))
+    else:
+        ok("the escape: %d numbers match the paper" % len(checks))
+
+    # EXACTLY: the escape's own keys, the runner count, and the escaped
+    # hull's quit-line keys, which leave the sea with her.
+    HULL = {"dry_refusals", "enemy_gun_crew_quit", "enemy_rig_quit", "port_ticks_max",
+            "prize_ticks_max", "pursuit_ticks_max", "shot_fired", "shot_left", "shot_max"}
+    MUST = {"sea_escaped", "sea_escape_t", "sea_escape_dist_m", "sea_victories", "line_runners_afloat"} | HULL
+    moved = set(k for k in set(on) | set(off) if on.get(k) != off.get(k))
+    if moved != MUST:
+        fail("escape_on vs escape_off moves %s, not exactly %s" % (sorted(moved), sorted(MUST)))
+    else:
+        ok("escape_on vs escape_off: exactly %d keys move" % len(MUST))
+
+    for name, row in sorted(rows.items()):
+        if name.startswith("escape_"):
+            continue
+        if row.get("sea_escaped", 0):
+            fail("%s: a Crown ship escaped in a row that never broke one off" % name)
+
 def main():
     print("PirateSeas checks - the ones that do not need Unreal\n")
     files = tracked_files()
@@ -1640,6 +1741,7 @@ def main():
     check_comparison()
     check_ledger()
     check_line()
+    check_escape()
     print("")
     if NOTES:
         print("%d check(s) SKIPPED - a skip is not a pass:" % len(NOTES))

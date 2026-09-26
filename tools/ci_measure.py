@@ -586,6 +586,24 @@ SCENARIOS = {
     "ledger_testbreak": LEDGER_BASE + ["-Port=1", "-EnemyBreakTest=5", "-ShipQuitAfter=10",
                                        "-LedgerBook=Saved/CI/ledger_testbreak.book"],
 
+    # THE RUNNER WHO GETS AWAY. One Crown ship 1.9 km off, broken at t=5: she
+    # runs dead before the wind at 6.42 m/s, which nothing on the same polar
+    # can catch, and past EscapeRangeM (2 km) from the player she has escaped -
+    # off the sea, and the squadron tallied without her: a VICTORY. The quit
+    # comes 5 s after the escape and 3 s before a new squadron would stand out.
+    # escape_off is the same run with the rule switched off: she runs for ever.
+    "escape_on": ["-WindBearing=90", "-WindSpeed=12", "-EnemyCount=1", "-EnemyX=190000",
+                  "-EnemyY=0", "-EnemyBreakTest=5", "-ShipQuitAfter=145"],
+    "escape_off": ["-WindBearing=90", "-WindSpeed=12", "-EnemyCount=1", "-EnemyX=190000",
+                   "-EnemyY=0", "-EnemyBreakTest=5", "-ShipQuitAfter=145", "-EnemyEscapeM=0"],
+    # Two guards, each with the row only it can catch: a Crown ship past the
+    # range that has NOT broken off stays in the fight; and a runner does not
+    # escape a player who is on the bottom - she waits for his next hull.
+    "escape_fighting": ["-WindBearing=90", "-WindSpeed=12", "-EnemyCount=1", "-EnemyX=250000",
+                        "-EnemyY=0", "-ShipQuitAfter=10"],
+    "escape_player_down": ["-WindBearing=90", "-WindSpeed=12", "-EnemyCount=1", "-EnemyX=210000",
+                           "-EnemyY=0", "-EnemyBreakTest=5", "-ShipSinkTest=3", "-ShipQuitAfter=40"],
+
     # THE GUNS LAID BY HAND. Three rows around one idea, and each pair says a
     # different thing.
     #
@@ -1368,6 +1386,16 @@ def measure(name, text):
         m["line_station_gap_m"] = float(ln.group(5))
         m["line_runners_afloat"] = int(ln.group(6))
         m["line_station_err_m"] = float(ln.group(7))
+    es = re.search(r"SEALOG TOTAL escaped=(\d+) firstEscape=(-?[0-9.]+) dist=(-?[0-9.]+) victories=(\d+)", text)
+    if es:
+        m["sea_escaped"] = int(es.group(1))
+        m["sea_escape_t"] = float(es.group(2))
+        m["sea_escape_dist_m"] = float(es.group(3))
+        m["sea_victories"] = int(es.group(4))
+    # When the player's NEXT hull was bound, if there was one.
+    bound = re.findall(r"SEALOG player ship=\S+ bound t=([0-9.]+)", text)
+    if len(bound) > 1:
+        m["sea_player_rebound_t"] = float(bound[-1])
     lb = re.search(r"AILOG \S+ BROKEN for the test at t=([0-9.]+) hull=([0-9.]+)/", text)
     if lb:
         m["line_break_t"] = float(lb.group(1))
