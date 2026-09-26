@@ -72,7 +72,7 @@ Apoi apeși **Play**.
 | Mouse | roteşti camera **şi tunurile**; bateria se schimbă singură când treci prova sau pupa |
 | Rotiţa | înălţarea ţevilor, 0,2° pe cârtiţă, între −3° şi +10° |
 | X | fixezi tunurile perpendicular pe navă şi ignori mouse-ul (comutator) |
-| T | comanzi dulgherului palancurile de treapta urmatoare (comutator: a doua apasare retrage comanda); se platesc in rada |
+| T (gamepad: B / cerc) | comanzi dulgherului palancurile de treapta urmatoare (comutator: a doua apasare retrage comanda; ai 3 s si in rada); se platesc in rada |
 
 **Panoul GUNS arata CARE tunuri iti mai sunt**, nu cate, si in TREI stari.
 Patru pipuri pe bord, fiecare despre afetul lui: daca ti-au fost scoase tunul din
@@ -1062,9 +1062,13 @@ apoi 10, apoi 8. Treapta n costa **n x 400**: prima 400, a doua 800 - o prada.
 Palancurile sunt pe NAVA: cartea le duce in croaziera urmatoare, si se duc la
 fund cu ea (inlocuitoarea pleaca de la zero).
 
-**Cum le cumperi.** Tasta **T** da comanda pentru treapta urmatoare; a doua
-apasare o retrage (sta langa R, tasta de lupta, si o apasare gresita nu trebuie
-sa devina bani cheltuiti fara intoarcere). Comanda o plateste rada, din
+**Cum le cumperi.** Tasta **T** (pe gamepad, butonul din dreapta) da comanda
+pentru treapta urmatoare; a doua apasare o retrage. Sta langa R, tasta de lupta,
+si o apasare gresita nu trebuie sa devina bani cheltuiti fara intoarcere - de
+aceea o comanda data de la tasta se plateste abia la **3 s** dupa ce ai dat-o,
+chiar daca esti deja in rada (panoul numara: `T withdraws, 3 s`). Prima
+versiune o platea in jumatate de secunda, si recenzia a aratat ca in port
+„a doua apasare o retrage" era fals. Comanda o plateste rada, din
 vistierie (prazi aduse + lada), **dupa ghiulele si inaintea oamenilor si a
 cocii**: o magazie plina e mai ieftina decat oricare, dar o comanda data
 inseamna ca ai vrut banii pentru ea, nu pentru reparatie. Pret intreg sau
@@ -1110,6 +1114,17 @@ tunurile cu adevarat.
   coca cu 200 in acelasi tic.
 - `tackle_max` - o comanda peste treapta de sus, din carte: refuzata la montare.
 - `tackle_toggle` - T apasat de doua ori prin flag: comandat, apoi retras.
+- `tackle_shotfirst` - 404 in lada, patru ghiulele lipsa: 8 pe ghiulele lasa
+  396, comanda (400) e refuzata. Servita inaintea ghiulelelor ar fi fost
+  cumparata. `tackle_buy` pune acum in competitie si oamenii, si coca: 8 + 400 +
+  4 oameni (80) + 24 de puncte de coca (12).
+- `tackle_pending` - o comanda fara rada in raza: scrisa inapoi deschisa, singurul
+  rand care scrie `order=1`.
+- `tackle_grace` - T apasat in rada, fara bani: refuzul vine la 3,0 s, nu la
+  primul tic (0,5). Iar `tackle_short` arata ca un refuz cade in reparatii in
+  ACELASI tic: portul incepe sa repare la 0,5, nu la 1,0.
+- Pe fiecare rand cu salva, poarta cere si ca salva a avut loc (t=8, 4 ghiulele):
+  „toate tunurile gata" e si ce citeste o baterie care n-a tras niciodata.
 - `ledger_testtackle`, `ledger_testhull` - cele doua flag-uri de test care inca
   n-aveau randul lor: cartea ramane inchisa.
 - `ledger_wreck` cere acum si treapta 5 (taiata la 2): inlocuitoarea pleaca de

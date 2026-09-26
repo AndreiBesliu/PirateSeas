@@ -1014,13 +1014,20 @@ void ASeaGameMode::FitFromBook(AShipPawn* Ship)
 
 bool ASeaGameMode::FillTackleOrder(AShipPawn* Ship, int32 Coffers)
 {
+	// Not yet: a key-placed order still in its grace. Not a refusal - the
+	// order stays open, and the repairs go on in this tick.
+	const float Now = GetWorld()->GetTimeSeconds();
+	if (!Ship->IsTackleOrderPayable(Now))
+	{
+		return false;
+	}
 	const int32 Price = (Ship->GetTackleTier() + 1) * TackleCost;
 	if (Coffers < Price)
 	{
 		++TackleRefusedCoffers;
 		Ship->RefuseTackleOrder(Price);
-		UE_LOG(LogTemp, Display, TEXT("TACKLELOG %s order refused: tier %d costs %d, the coffers hold %d"),
-			*Ship->GetName(), Ship->GetTackleTier() + 1, Price, Coffers);
+		UE_LOG(LogTemp, Display, TEXT("TACKLELOG %s order refused t=%.1f: tier %d costs %d, the coffers hold %d"),
+			*Ship->GetName(), Now, Ship->GetTackleTier() + 1, Price, Coffers);
 		return false;
 	}
 	Spent += Price;

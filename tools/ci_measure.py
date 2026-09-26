@@ -80,7 +80,9 @@ BOOKS = {"ledger_fresh": (None, ".book"), "ledger_carry": ("veteran.book", ".boo
          "ledger_testhull": ("veteran.book", ".book"), "ledger_testtackle": ("veteran.book", ".book"),
          "tackle_none": ("tackle0.book", ".book"), "tackle_carry": ("tackle1.book", ".book"),
          "tackle_buy": ("tacklebuy.book", ".book"), "tackle_top": ("tackletop.book", ".book"),
-         "tackle_short": ("tackleshort.book", ".book"), "tackle_max": ("tacklemax.book", ".book")}
+         "tackle_short": ("tackleshort.book", ".book"), "tackle_max": ("tacklemax.book", ".book"),
+         "tackle_shotfirst": ("tackleshotfirst.book", ".book"),
+         "tackle_pending": ("tacklepending.book", ".book")}
 # The owner's own book. The suite must leave it byte for byte as it found it.
 REAL_BOOK = os.path.join(ROOT, "Saved", "Ledger", "book.txt")
 LEDGER_BASE = ["-WindBearing=120", "-WindSpeed=12", "-EnemyCount=0"]
@@ -306,7 +308,8 @@ SCENARIOS = {
     # read rather than guessed. Measured once end to end: prize manned at 138,
     # home at 359, the captain bears away at 359, gives up a second prize she
     # cannot reach at 539, reaches the roadstead and begins to refit at 764,
-    # and is done at 776. Anything shorter and the run ends with her still on
+    # and is done some 21.5 s of buying later (the 776 this said was from before
+    # shot was bought first). Anything shorter and the run ends with her still on
     # her way, which would read as "the refit does nothing".
     #
     # GUARD: prizes_landed must be 1 in BOTH halves. The whole point is that
@@ -522,10 +525,11 @@ SCENARIOS = {
     "tackle_carry": LEDGER_BASE + ["-Port=1", "-ShipFireTest=8", "-ShipQuitAfter=19",
                                    "-LedgerBook=Saved/CI/tackle_carry.book"],
     # THE PURCHASE, and its PLACE in the port's order: an order carried in the
-    # book, 500 ashore, four rounds short, hull 800, the roadstead where she
-    # starts. Shot first (8), then the tackle (400), then the hull with what is
-    # left (92 -> 184 points): 1 + 1 + 10 ticks. Served after the repairs
-    # instead, the hull would take 100 first and the tackle would be refused.
+    # book, 500 ashore, four rounds short, ten men short, hull 800, the
+    # roadstead where she starts. Shot first (8), then the tackle (400), then
+    # men with what is left (4 of 10, 80), then the hull (12 -> 24 points).
+    # Served after the men instead, 200 would go on men first and the tackle
+    # would be refused; after the hull, the same.
     "tackle_buy": LEDGER_BASE + ["-Port=1", "-PortX=0", "-PortY=0", "-ShipFireTest=8",
                                  "-ShipQuitAfter=19", "-LedgerBook=Saved/CI/tackle_buy.book"],
     # AND THE NEXT CRUISE: what tackle_buy wrote, read by a new process.
@@ -547,6 +551,21 @@ SCENARIOS = {
                                  "-LedgerBook=Saved/CI/tackle_max.book"],
     # THE KEY'S OWN FUNCTION, pressed twice by the flag: ordered, then withdrawn.
     "tackle_toggle": LEDGER_BASE + ["-ShipToggleTackle=2", "-ShipQuitAfter=10"],
+    # SHOT FIRST: 404 ashore, four rounds short. 8 for the rounds leaves 396,
+    # and the order (400) is refused. Served before the shot, it would have
+    # been bought.
+    "tackle_shotfirst": LEDGER_BASE + ["-Port=1", "-PortX=0", "-PortY=0", "-ShipQuitAfter=10",
+                                       "-LedgerBook=Saved/CI/tackle_shotfirst.book"],
+    # AN OPEN ORDER THAT MEETS NO ROADSTEAD in reach is carried out as it came
+    # in: the only row whose book is WRITTEN with order=1.
+    "tackle_pending": LEDGER_BASE + ["-Port=1", "-ShipQuitAfter=10",
+                                     "-LedgerBook=Saved/CI/tackle_pending.book"],
+    # THE GRACE: T pressed at the start, in the roadstead, with nothing in the
+    # coffers. Payable only three seconds later - so the refusal comes at 3.0,
+    # not at the first tick (0.5). Without the grace a press by mistake in port
+    # is money spent before a second press can take it back.
+    "tackle_grace": LEDGER_BASE + ["-Port=1", "-PortX=0", "-PortY=0", "-ShipToggleTackle=1",
+                                   "-ShipQuitAfter=10"],
 
     # THE GUNS LAID BY HAND. Three rows around one idea, and each pair says a
     # different thing.
@@ -1309,6 +1328,15 @@ def measure(name, text):
         m["tackle_orders"] = int(tk.group(4))
         m["tackle_withdrawn"] = int(tk.group(5))
         m["tackle_refused_top"] = int(tk.group(6))
+    tr = re.search(r"TACKLELOG \S+ order refused t=([0-9.]+):", text)
+    if tr:
+        m["tackle_refused_t"] = float(tr.group(1))
+    # When the roadstead first sold anything: a refusal that falls through to
+    # the repairs in the SAME tick shows here, and one that ate the tick would
+    # show half a second later.
+    rf = re.search(r"PORTLOG \S+ begins to refit t=([0-9.]+)", text)
+    if rf:
+        m["refit_first_t"] = float(rf.group(1))
     tt = re.search(r"TACKLELOG TOTAL bought=(\d+) refusedCoffers=(\d+) spent=(\d+)", text)
     if tt:
         m["tackle_bought"] = int(tt.group(1))

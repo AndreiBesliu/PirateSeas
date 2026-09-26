@@ -64,6 +64,7 @@ public:
 	static bool PortRequested();
 	/** Tier n of tackle costs n x this. */
 	int32 GetTackleCost() const { return TackleCost; }
+	int32 GetTackleSpent() const { return TackleSpent; }
 
 	int32 GetVictories() const { return Victories; }
 

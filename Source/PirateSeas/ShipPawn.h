@@ -455,8 +455,9 @@ public:
 	bool IsAimingHigh() const { return bAimHigh; }
 
 	/** Seconds a gun takes to reload, WITH the tackle she carries: the one
-	 *  number both the gun's clock and the gauge read, so the two cannot
-	 *  disagree about what the port sold. */
+	 *  number both the gun's clock (stamped when she fires) and the gauge read.
+	 *  A gun already reloading when a tier is fitted keeps the stamp it was
+	 *  given, so for at most TackleSecondsPerTier its gauge reads empty. */
 	UFUNCTION(BlueprintPure, Category = "Guns")
 	float GetReloadSeconds() const { return ReloadSeconds - TackleTier * TackleSecondsPerTier; }
 
@@ -466,6 +467,17 @@ public:
 	int32 GetTackleTier() const { return TackleTier; }
 	int32 GetTackleMaxTier() const { return TackleMaxTier; }
 	bool IsTackleOrdered() const { return bTackleOrdered; }
+	/** Whether the port sells another tier to this hull - asked by the key,
+	 *  the book (through PlaceTackleOrder) and the panel alike. */
+	bool CanOrderTackle() const { return TackleTier < TackleMaxTier; }
+	/** An order placed by the KEY waits TackleOrderGraceSeconds before the
+	 *  roadstead may fill it, so a press by mistake in port can still be taken
+	 *  back. An order from the book was placed on an earlier cruise: at once. */
+	bool IsTackleOrderPayable(float Now) const { return Now - TackleOrderPlacedAt >= TackleOrderGraceSeconds; }
+	float GetTackleOrderGraceLeft(float Now) const
+	{
+		return FMath::Max(0.f, TackleOrderGraceSeconds - (Now - TackleOrderPlacedAt));
+	}
 	/** T, and -ShipToggleTackle=N for the suite: orders the next tier, or
 	 *  withdraws the order already placed - a press next to R in a fight must
 	 *  not become money spent without a way back. At the top tier there is
@@ -820,6 +832,10 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Guns")
 	int32 TackleMaxTier = 2;
+
+	/** Seconds a key-placed order waits before the roadstead may fill it. */
+	UPROPERTY(EditDefaultsOnly, Category = "Guns")
+	float TackleOrderGraceSeconds = 3.f;
 
 	/** How far the crews can train a gun off the beam, in degrees. */
 	UPROPERTY(EditAnywhere, Category = "Guns")
@@ -1378,11 +1394,14 @@ private:
 	void TickRepairs(float DeltaSeconds);
 	void OnRepairPressed();
 	void OnTacklePressed();
-	/** Whether the port sells another tier to this hull. ONE function, asked by
-	 *  the key and by the book alike: the refusal at the top can only be
-	 *  exercised through the book (the flag that presses the key shuts it),
-	 *  and a second copy of the test would be a guard no row could catch. */
-	bool CanOrderTackle() const { return TackleTier < TackleMaxTier; }
+	/** THE ONE PLACE an order is placed, by the key and by the book: the check
+	 *  at the top, its counter and its line. The refusal at the top can only be
+	 *  exercised through the book (the flag that presses the key shuts it), and
+	 *  a second copy of this branch would be a guard no row could catch - the
+	 *  review found exactly that when only the predicate was shared. */
+	bool PlaceTackleOrder(bool bFromBook);
+	/** When the open order was placed; far in the past for a book order. */
+	float TackleOrderPlacedAt = -1.0e9f;
 	/** The tackle and its order. Counters are cumulative over the run. */
 	int32 TackleTier = 0;
 	bool bTackleOrdered = false;

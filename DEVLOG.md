@@ -4899,3 +4899,52 @@ Coroanei la treapta 2). AI-ul nu cumpara nimic, si e spus.
 
 **Task Completed** (commit + pachet verificat prin rulare, mai jos).
 
+## 26.09.2026 - Ce a gasit recenzia in palancuri
+
+**Task Started.** Prompt: "continua" (recenzia adversariala a feliei, 5 lentile,
+31 de constatari, 36 de agenti, 3,90M tokeni). Model: Opus 5.5.
+
+**27 din 31 confirmate, niciuna grava - dar trei spuneau ca eu mintisem.**
+(1) Scrisesem ca tasta si cartea impart refuzul treptei de sus, deci `tackle_max`
+le prinde pe amandoua. Imparteau doar PREDICATUL; ramura (verificarea,
+contorul, linia) era scrisa de doua ori, iar cea a tastei n-avea niciun rand.
+Acum `PlaceTackleOrder` e singura usa, chemata si de tasta, si de carte. (2)
+„A doua apasare retrage comanda" era fals in rada: comanda se platea in
+jumatate de secunda. O comanda data de la tasta se plateste acum abia dupa 3 s
+(o comanda din carte a fost data intr-o croaziera trecuta si se plateste pe
+loc); panoul numara. (3) Pentru treptele >= 1, „toate tunurile gata la iesire"
+e si ce citeste o baterie care N-A TRAS niciodata - asteptarea trecea pe nimic.
+Poarta cere acum si ca salva a avut loc (t=8, 4 ghiulele), pe fiecare rand cu
+salva.
+
+**Restul, pe rand.** Ordinea „dupa ghiulele, inaintea oamenilor" nu era
+dovedita: `tackle_buy` pune acum in competitie si oamenii, si coca, iar
+`tackle_shotfirst` (404 in lada, 8 pe ghiulele lasa 396) dovedeste partea cu
+ghiulelele. Niciun rand nu scria o comanda deschisa in carte - `tackle_pending`.
+„Refuzul cade in reparatii in acelasi tic" era invizibil (refit_seconds numara
+doar ticurile care cumpara) - cheia noua `refit_first_t` il face numar: 0,5 in
+`tackle_short`, 1,0 daca refuzul ar manca ticul. `Min`-ul din `FitTackleTier`
+pazea o stare pe care nicio cale n-o produce, DUPA ce pretul era incasat - scos;
+poarta tine treapta sub plafon pe fiecare rand. Perechea permitea orice cheie
+`ledger_*`; acum cere EXACT cele 5 chei. `order=2` avea taiere fara rand (acum
+in `wreck.book`). Fara buton de gamepad: FaceButton_Right. Randul COFFERS din
+partidele cu convoi spunea „spent: oameni, coca" si tacea despre ghiulele si
+palancuri. Reteta din OWNER_VERIFY 42 n-avea nicio nava a Coroanei, deci nu
+putea arata ce ii cere owner-ului sa judece - acum sunt doua partide, a doua cu
+escorta. HANDOFF: punctul 15 fusese inserat in mijlocul lui 14; si inca un 600
+/ 776 ramas din deriva lui `refit_on`.
+
+**Respinse (4):** o comanda la plafon incasata fara treapta (invariantul tine,
+si acum si fara Min); o comanda scapata la intrarea in rada inaintea prazii
+(scop); reincarcarea fara podea la numere viitoare ale owner-ului (scop); doua
+enunturi mai vechi despre flag-uri (scop).
+
+**Masurat.** Suita 67 (trei randuri noi: `tackle_shotfirst`, `tackle_pending`,
+`tackle_grace`), 11 MOVED toate pe fixturile schimbate si pe `tackle_cycle`
+care le mosteneste, 0 GONE, niciun rand vechi miscat. **Mutatii: 17 din 17
+prinse** - cele 12 de dinainte plus usa unica fara refuz, fara rabdare, refuzul
+care mananca ticul, comanda servita inaintea ghiulelelor, scriitorul care pierde
+comanda deschisa.
+
+**Task Completed** (commit + pachet verificat prin rulare, mai jos).
+

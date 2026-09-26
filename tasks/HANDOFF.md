@@ -203,8 +203,10 @@ Livrat:
    STINSA) cere si bani in vistierie, nu doar avarii: fara regula asta o nava
    lovita pleca spre port in primele secunde si nu mai vana niciodata.
    Perechea `refit_on`/`refit_off`, dimensionata dintr-o cronologie MASURATA
-   (prada acasa la 359, rada la 764, gata la 776 - de aia ruleaza 800 s):
-   600 cheltuiti contra 0, 20 de oameni si 400 de coca contra nimic.
+   (prada acasa la 359, rada la 764, gata dupa 21,5 s de cumparaturi - de aia
+   ruleaza 800 s): 640 cheltuiti contra 0 - 20 de ghiulele, 20 de oameni si 400
+   de coca contra nimic (scria 600 si 776, de dinainte ca ghiulelele sa se
+   cumpere primele).
 
 8. **Magazia**: `-Shot=N` / `-EnemyShot=N`; fara flag sunt **40** de ghiulele
    (decizia owner-ului din 16.09), si `=0` o face fara fund. Permisiunea e PE
@@ -275,20 +277,23 @@ Livrat:
    `-Ledger=0` in PINNED, douasprezece randuri `ledger_*` pe fisiere din
    `Saved/CI/` copiate din `tools/books/`, garda octet-cu-octet (care si
    restaureaza) pe cartea reala.
+   Designul a iesit dintr-un panel (3 designuri, 2 judecatori): ce vinde portul
+   peste „ca noua" e felia 2 (15); campania respinsa de ambii, fiindca
+   cheia ei era o suma a doua chei existente.
 
 15. **PALANCURILE** (26.09, progresia, felia 2): portul vinde reincarcarea. Doua
    trepte, -2 s fiecare (12 -> 10 -> 8), treapta n costa n x 400. Pe NAVA
    (`AShipPawn::TackleTier`, `GetReloadSeconds()` e singurul numar citit si de
    ceasul tunului, si de panou); cartea o duce (`tackle=`), si duce si comanda
    deschisa (`order=`) - asa suita plaseaza comenzi prin fixturi, fara flag.
-   Tasta T comuta comanda; `-ShipToggleTackle=N` e flag de TEST (inchide cartea).
-   Rada serveste comanda dupa ghiulele si inaintea oamenilor/cocii, pret intreg
-   sau refuz. AI-ul: nimic. Designul: panel 3+2 (firepower / endurance /
+   Tasta T (gamepad: butonul din dreapta) comuta comanda; una data de la tasta se
+   plateste abia dupa 3 s, ca a doua apasare s-o poata retrage si in rada.
+   `-ShipToggleTackle=N` e flag de TEST (inchide cartea). Rada serveste comanda
+   dupa ghiulele si inaintea oamenilor/cocii, pret intreg sau refuz, iar refuzul
+   cade in reparatii in acelasi tic. `PlaceTackleOrder` e singura usa prin care
+   se plaseaza o comanda - si de la tasta, si din carte. AI-ul: nimic. Designul: panel 3+2 (firepower / endurance /
    alegerea), ambii judecatori pe reincarcare; braurile de coca au pierdut
    fiindca perechea lor nu vedea capacul.
-   Designul a iesit dintr-un panel (3 designuri, 2 judecatori): tunurile si
-   metalul purtate de carte sunt felia 2; campania respinsa de ambii, fiindca
-   cheia ei era o suma a doua chei existente.
 
 Urmatorul: de ales cu owner-ul. **Deschise si stiute:**
 - **Reincarcarea e pe tun, dar castigul ei e ingust.** `GunReload[2][4]`

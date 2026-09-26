@@ -366,6 +366,11 @@ void AShipHUD::DrawGuns(AShipPawn* Ship)
 			if (Ship->IsTackleOrdered())
 			{
 				Row += FString::Printf(TEXT("  ORDERED %d, %d"), Next, Next * Sea->GetTackleCost());
+				const float Grace = Ship->GetTackleOrderGraceLeft(GetWorld()->GetTimeSeconds());
+				if (Grace > 0.f)
+				{
+					Row += FString::Printf(TEXT(" - T withdraws, %.0f s"), FMath::CeilToFloat(Grace));
+				}
 				if (!Sea->HasPort())
 				{
 					Row += TEXT(" - no roadstead in this run");
@@ -379,7 +384,7 @@ void AShipHUD::DrawGuns(AShipPawn* Ship)
 			{
 				Row += FString::Printf(TEXT("  refused: %d needed"), Ship->GetTackleLastRefusedPrice());
 			}
-			else if (Ship->GetTackleTier() < Ship->GetTackleMaxTier())
+			else if (Ship->CanOrderTackle())
 			{
 				Row += FString::Printf(TEXT("  (T: order %d, %d)"), Next, Next * Sea->GetTackleCost());
 			}
@@ -419,9 +424,9 @@ void AShipHUD::DrawGuns(AShipPawn* Ship)
 				// number a captain steers by.
 				Extra.Add(TPair<FString, FLinearColor>(
 					Sea->GetSpent() > 0
-						? FString::Printf(TEXT("COFFERS %d  spent %d: %d hands, %d hull"),
-							Sea->GetCoffers(), Sea->GetSpent(), Sea->GetHandsBought(),
-							Sea->GetHullBought())
+						? FString::Printf(TEXT("COFFERS %d  spent %d: %d shot, %d hands, %d hull, %d tackle"),
+							Sea->GetCoffers(), Sea->GetSpent(), Sea->GetShotBought(), Sea->GetHandsBought(),
+							Sea->GetHullBought(), Sea->GetTackleSpent())
 						: FString::Printf(TEXT("COFFERS %d"), Sea->GetCoffers()),
 					Sea->GetCoffers() > 0 ? Good : Faint));
 			}

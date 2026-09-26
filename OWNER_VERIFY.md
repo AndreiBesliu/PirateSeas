@@ -801,8 +801,9 @@ stai acolo. Uita-te la randurile PURSE / LANDED / COFFERS si la bara HULL.
 **Cum arata bine:** Cat prada e pe drum, LANDED e 0 si COFFERS e 0 - n-ai ce
 cheltui. Cand ea intra in rada, LANDED sare la 1200 si COFFERS la fel. Cand
 intri TU in rada, bara HULL urca vizibil, randul COFFERS scade, si textul de
-langa el spune ce ai cumparat (spent 600: 20 hands, 400 hull). Se opreste
-singur cand esti intreg sau cand ai ramas fara bani.
+langa el spune ce ai cumparat (ceva ca `spent 640: 20 shot, 20 hands, 400 hull,
+0 tackle` - cifrele depind de cat ai tras si pe cine ai trimis pe prada). Se
+opreste singur cand esti intreg sau cand ai ramas fara bani.
 
 **Cum arata prost:** Bara HULL urca fara sa fi ajuns nicio prada acasa, adica pe
 gratis. Sau nu urca deloc cat stai in rada. Sau COFFERS scade fara sa se schimbe
@@ -1140,13 +1141,17 @@ daca a porni pe o nava ranita e o miza sau o pedeapsa - asta e jocul, nu cifra.
 
 ## 42. Palancurile: tunuri care se incarca mai repede, cumparate in port
 
-**Ce te uiti:** `PirateSeas.exe -windowed -Convoy=2 -Port=1 -EnemyCount=0`. Ia o
-prada si du-o in rada (ca la 41), apoi apasa **T**: panoul arata
-`TACKLE 0/2 reload 12 s  ORDERED 1, 400`. Intra in rada. Dupa ce portul iti
-umple magazia, platesc palancurile: `TACKLE 1/2 reload 10 s`, COFFERS scade cu
-400. Trage o salva si numara pana se aprind iar pipurile: 10 s, nu 12. Apoi
-apasa T de doua ori pe mare (comanda, retrasa) si vezi ca panoul o spune. La
-pornirea urmatoare (tot cu `-Port=1`), treapta 1 e inca acolo.
+**Ce te uiti, in doua partide, amandoua cu `-Port=1` (cartea le leaga):**
+1. `PirateSeas.exe -windowed -Convoy=2 -Port=1 -EnemyCount=0` - linistit. Ia o
+   prada si du-o in rada (ca la 41), apoi apasa **T**: panoul arata
+   `TACKLE 0/2 reload 12 s  ORDERED 1, 400 - T withdraws, 3 s`. Intra in rada.
+   Dupa ce portul iti umple magazia, platesc palancurile: `TACKLE 1/2 reload
+   10 s`, iar randul COFFERS spune `... 400 tackle`. Trage o salva si numara pana
+   se aprind iar pipurile: 10 s, nu 12. Apasa T de doua ori pe mare (comanda,
+   retrasa) si vezi ca panoul o spune. Inchide.
+2. `PirateSeas.exe -windowed -Convoy=2 -Port=1` - acum cu escorta Coroanei (doua
+   nave). Treapta 1 e inca acolo; lupta cu ele si simte daca tunurile tale revin
+   mai repede decat ale lor.
 
 **Cum arata bine:** Simti ca tunurile tale revin mai repede decat ale Coroanei,
 si ca 400 pe palancuri e o alegere contra reparatiei, nu un bonus gratuit. Panoul

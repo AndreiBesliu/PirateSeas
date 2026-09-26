@@ -708,7 +708,7 @@ void AShipPawn::BeginPlay()
 		if (GetWorld() && GetWorld()->GetTimeSeconds() < 5.f && IsPlayerControlled()
 			&& FParse::Value(FCommandLine::Get(), TEXT("ShipToggleTackle="), Toggles))
 		{
-			for (int32 i = 0; i < FMath::Clamp(Toggles, 0, 8); ++i)
+			for (int32 i = 0; i < FMath::Max(0, Toggles); ++i)
 			{
 				ToggleTackleOrder();
 			}
@@ -1684,22 +1684,35 @@ void AShipPawn::ToggleTackleOrder()
 			*GetName(), TackleTier + 1);
 		return;
 	}
+	if (PlaceTackleOrder(false))
+	{
+		++TackleOrders;
+	}
+}
+
+bool AShipPawn::PlaceTackleOrder(bool bFromBook)
+{
 	if (!CanOrderTackle())
 	{
 		++TackleRefusedTop;
 		UE_LOG(LogTemp, Display, TEXT("TACKLELOG %s refused: tier %d is the best the port sells"),
 			*GetName(), TackleTier);
-		return;
+		return false;
 	}
 	bTackleOrdered = true;
-	++TackleOrders;
-	UE_LOG(LogTemp, Display, TEXT("TACKLELOG %s orders tier %d"), *GetName(), TackleTier + 1);
+	TackleOrderPlacedAt = bFromBook ? -1.0e9f : (GetWorld() ? GetWorld()->GetTimeSeconds() : 0.f);
+	UE_LOG(LogTemp, Display, TEXT("TACKLELOG %s orders tier %d%s"), *GetName(), TackleTier + 1,
+		bFromBook ? TEXT(" (carried in the book)") : TEXT(""));
+	return true;
 }
 
 void AShipPawn::FitTackleTier()
 {
 	bTackleOrdered = false;
-	TackleTier = FMath::Min(TackleTier + 1, TackleMaxTier);
+	// No Min here: an order is only ever open below the top (PlaceTackleOrder
+	// is the one door), and a clamp after the price was charged would hide the
+	// broken invariant instead of showing it. The gate holds tier <= top.
+	++TackleTier;
 	UE_LOG(LogTemp, Display, TEXT("TACKLELOG %s fitted tier %d: reload %.1f s"),
 		*GetName(), TackleTier, GetReloadSeconds());
 }
@@ -1732,14 +1745,11 @@ int32 AShipPawn::FitFromBook(int32 InHands, float InHull, int32 InShot, int32 In
 	HullIntegrity = V;
 	Shot = S;
 	TackleTier = T;
-	// An order carried in the book for a tier the port does not sell is
-	// refused here, the way T would refuse it, and counted the same way.
-	bTackleOrdered = O == 1 && CanOrderTackle();
-	if (O == 1 && !bTackleOrdered)
+	// An order carried in the book goes through the SAME door the key does.
+	bTackleOrdered = false;
+	if (O == 1)
 	{
-		++TackleRefusedTop;
-		UE_LOG(LogTemp, Display, TEXT("TACKLELOG %s refused: the book orders past tier %d, the best the port sells"),
-			*GetName(), T);
+		PlaceTackleOrder(true);
 	}
 	return Cut;
 }
