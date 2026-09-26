@@ -1509,15 +1509,16 @@ def check_line():
 
     # the lines, field by field, every number distinct
     got = ci_measure.measure("fixture",
-        "LogTemp: Display: LINELOG TOTAL broken=3 closed=12.34 runnerTicks=5 runnerGap=678 stationGap=91 runnersAfloat=2\n"
+        "LogTemp: Display: LINELOG TOTAL broken=3 closed=12.34 runnerTicks=5 runnerGap=678 stationGap=91 runnersAfloat=2 stationErr=17\n"
         "LogTemp: Display: AILOG EnemyShipPawn_0 BROKEN for the test at t=10.02 hull=250/1000\n")
     want = {"line_broken": 3, "line_closed_t": 12.34, "line_runner_ticks": 5, "line_runner_gap_m": 678.0,
-            "line_station_gap_m": 91.0, "line_runners_afloat": 2, "line_break_t": 10.02, "line_break_hull": 250.0}
+            "line_station_gap_m": 91.0, "line_runners_afloat": 2, "line_station_err_m": 17.0,
+            "line_break_t": 10.02, "line_break_hull": 250.0}
     bad = {k: (got.get(k), v) for k, v in want.items() if got.get(k) != v}
     if bad:
         fail("the line's lines are not read field by field (got, want): %r" % bad)
     none = ci_measure.measure("fixture",
-        "LogTemp: Display: LINELOG TOTAL broken=0 closed=-1.00 runnerTicks=0 runnerGap=-1 stationGap=-1 runnersAfloat=0\n")
+        "LogTemp: Display: LINELOG TOTAL broken=0 closed=-1.00 runnerTicks=0 runnerGap=-1 stationGap=-1 runnersAfloat=0 stationErr=-1\n")
     if none.get("line_closed_t") != -1.0 or none.get("line_runner_gap_m") != -1.0:
         fail("a line that never closed does not read as -1: %r" % none)
 
@@ -1535,6 +1536,12 @@ def check_line():
     REJOIN = const("ShipAIController.h", r"float RejoinAboveCm = ([\d.]+)f;")
     if None in (HULL, RUN, BREAK, INTERVAL, REJOIN):
         return
+    SPACING = const("SeaGameMode.h", r"float SquadronSpacingCm = ([\d.]+)f;")
+    if SPACING is None:
+        return
+    # the follower's distance from her station point at the spawn: abeam of
+    # the leader by the spacing, and the station an interval astern of him
+    SPAWN_ERR = ((SPACING / 100) ** 2 + (INTERVAL / 100) ** 2) ** 0.5
     if not BREAK < RUN:
         fail("the break test puts the hull at %.2f, not below the %.2f at which a ship runs" % (BREAK, RUN))
 
@@ -1554,8 +1561,12 @@ def check_line():
         fl = ci_measure.SCENARIOS.get(name, [])
         if row.get("line_runner_ticks") != 0:
             fail("%s: a captain dressed on a ship that had broken off (%r ticks)" % (name, row.get("line_runner_ticks")))
-        if (row.get("line_closed_t", -1) != -1) != (row.get("line_skips", 0) >= 1):
-            fail("%s: closed at %r but line_skips %r - the two must agree" % (name, row.get("line_closed_t"), row.get("line_skips")))
+        # ONE direction only: a walk that stepped over someone was latched as
+        # closed. The other direction can go stale honestly - line_skips is
+        # read off live captains, and one that stepped and then sank takes her
+        # depth with her while the latch keeps the moment.
+        if row.get("line_skips", 0) >= 1 and row.get("line_closed_t", -1) == -1:
+            fail("%s: line_skips %r but the line was never latched as closed" % (name, row.get("line_skips")))
         tested = any(a.startswith("-EnemyBreakTest=") for a in fl)
         if not tested and row.get("line_broken", 0) and name not in NATURAL:
             fail("%s: %d Crown ship(s) broke off with no test asking - name the row and the reason"
@@ -1573,12 +1584,17 @@ def check_line():
         ("line_skips", b.get("line_skips") == 1),
         ("line_runner_gap_m", (b.get("line_runner_gap_m") or -1) > REJOIN / 100),
         ("line_station_gap_m", b.get("line_station_gap_m") == -1),
+        ("line_station_err_m", b.get("line_station_err_m") == -1),
         ("line_runners_afloat", b.get("line_runners_afloat") == 1),
         ("no broadside (breaks)", b.get("broadsides") == 0),
     ]
     control = [
-        ("control: a line formed", f.get("line_station_gap_m") is not None
-         and 0 <= f["line_station_gap_m"] < 2 * INTERVAL / 100),
+        # FORMED means closing on the station point, not merely lying near the
+        # ship ahead: abeam at the spawn the gap is already under two intervals,
+        # but the station point (one interval astern) is SPAWN_ERR off. Formed:
+        # under half of that. (Measured 80 m of 192 after 90 s.)
+        ("control: a line formed", f.get("line_station_err_m") is not None
+         and 0 <= f["line_station_err_m"] < SPAWN_ERR / 2),
         ("control: nobody broke off", f.get("line_broken") == 0 and f.get("line_closed_t") == -1),
         ("no broadside (formed)", f.get("broadsides") == 0),
     ]
@@ -1589,12 +1605,26 @@ def check_line():
         ok("line_breaks / line_formed: %d numbers match the paper" % len(checks + control))
 
     MUST = {"line_broken", "line_break_t", "line_break_hull", "line_closed_t", "line_skips",
-            "line_runner_gap_m", "line_station_gap_m", "line_runners_afloat"}
+            "line_runner_gap_m", "line_station_gap_m", "line_runners_afloat", "line_station_err_m"}
     moved = set(k for k in set(b) | set(f) if b.get(k) != f.get(k))
     if moved != MUST:
         fail("line_breaks vs line_formed moves %s, not exactly %s" % (sorted(moved), sorted(MUST)))
     else:
         ok("line_breaks vs line_formed: exactly %d keys move" % len(MUST))
+
+    # THE OLDER PAIR, which was prose until now: a consort that STRIKES. It
+    # must move exactly the closing, its depth and the station of the ship
+    # that lost her leader.
+    c, w = rows.get("line_closes"), rows.get("line_whole")
+    if c and w:
+        moved = set(k for k in set(c) | set(w) if c.get(k) != w.get(k))
+        want = {"line_skips", "line_closed_t", "line_station_gap_m", "line_station_err_m"}
+        if not moved <= want or not {"line_skips", "line_closed_t"} <= moved:
+            fail("line_closes vs line_whole moves %s, not within %s" % (sorted(moved), sorted(want)))
+        else:
+            ok("line_closes vs line_whole: %s" % ", ".join(sorted(moved)))
+    else:
+        fail("line_closes / line_whole are not in the baseline")
 
     tb = rows["ledger_testbreak"]
     if (tb.get("ledger_why"), tb.get("ledger_written")) != (3, 0):

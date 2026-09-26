@@ -4996,3 +4996,39 @@ lupta cu coca peste 30%; stinse implicit, fara rand cu escadra.
 
 **Task Completed** (commit + pachet verificat prin rulare, mai jos).
 
+## 26.09.2026 - Ce a gasit recenzia in linia de bataie
+
+**Task Started.** Prompt: "Continua si verificam alta data" (recenzia
+adversariala a feliei: 5 lentile, 19 constatari, 24 de agenti, 3,30M tokeni).
+Model: Opus 5.5.
+
+**9 confirmate, toate mici; cea care conta era in control.** „Linia s-a format"
+se masura ca distanta pana la nava din fata sub doua intervale - adevarat si la
+nastere, cu navele una langa alta la 150 m. Controlul trecea fara sa se formeze
+nimic. Acum se masoara fata de PUNCTUL de statie (120 m in spatele navei din
+fata): ~192 m la nastere (sqrt(150^2 + 120^2), calculat de poarta din
+SquadronSpacingCm si LineIntervalCm), 80 m dupa 90 s; poarta cere sub jumatate.
+Mutatia care masoara eroarea fata de nava (198) e prinsa. Pragul meu initial
+(jumatate de interval, 60 m) era gresit: linia e formata, dar nu atat de
+stransa - l-am corectat dupa masuratoare, nu inainte.
+
+**Restul:** `LastStationGap` se reseta dupa cinci iesiri timpurii din Tick -
+acum la inceputul Tick-ului (neexercitat de vreun rand: scenariul concret al
+recenzentului a fost respins, 151-ul din `sinking` e al escadrei renascute).
+Regula closed/skips cerea acord in ambele directii intre un zavor care supravie-
+tuieste epavei si un contor citit de pe capitanii vii - pastrata doar directia
+care nu se poate invechi. Perechea veche `line_closes`/`line_whole` era proza
+(„difera intr-o singura cifra") si nu mai era adevarata: acum are poarta ei,
+pe setul exact. Comentarii si docs: flag-ul in tabelul cartii si in linia de
+log, comentariul despre `line_skips`, `IsShipBreakingOff` si negustorii, iar
+OWNER_VERIFY 11 spunea ca a doua nava „vine spre tine" - de fapt preia
+conducerea si se bate de la distanta ei de tragere.
+
+**runnerTicks** - un recenzent a aratat ca stergerea contorului „niciodata" nu e
+prinsa de niciun rand. E adevarat si e natura lui: e martorul garzii, nu garda;
+proba lui e mutatia L1, unde porneste la 4800, cifra de pe hartie.
+
+Suita 70: 0 MOVED, 0 GONE, o cheie noua (`line_station_err_m`).
+
+**Task Completed** (commit + pachet verificat prin rulare, mai jos).
+

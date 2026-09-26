@@ -736,7 +736,10 @@ ducea marea. Comentariul din cod promitea de la inceput "cea din fata ei care
 inca guverneaza"; bucla nu verifica nimic.
 
 Perechea `line_closes` / `line_whole` difera intr-un singur flag,
-`-EnemyStrikeTest=10`, si intr-o singura cifra: `line_skips`, adancimea la care a
+`-EnemyStrikeTest=10`. Pana pe 26.09 difera intr-o singura cifra; acum, cu linia
+`LINELOG`, difera si in momentul inchiderii (`line_closed_t`) si in pozitia navei
+care si-a pierdut liderul - poarta cere exact aceste chei. Cifra de baza e
+`line_skips`, adancimea la care a
 trebuit sa se uite linia peste cei cazuti. 1 cand unul a coborat pavilionul, 0
 cand niciunul, si **tot 1 cu cinci nave in loc de trei** - fiindca e o adancime,
 nu un numar de urmaritori.
@@ -768,7 +771,11 @@ curmezisul, jucatorul nemiscat, 90 s - nimeni nu ajunge in bataia tunurilor
 liderului la un sfert: rupe lupta la 10,03, linia se strange in acelasi tic,
 consorta nu mai tine pozitie dupa nimeni si e lasata la 620 m in urma (pragul
 codului pentru „iesita din statie" e 360). Controlul arata o linie chiar
-formata (198 m intre nave, sub doua intervale). Perechea misca exact opt chei.
+formata - si „formata" se masoara fata de PUNCTUL de statie, 120 m in spatele
+navei din fata, nu fata de nava: la nastere, una langa alta la 150 m, distanta
+intre ele e deja sub doua intervale, dar punctul de statie e la ~192 m. Dupa
+90 s urmaritoarea e la 80 m de el - sub jumatate. Recenzia a prins ca primul
+control trecea si fara sa se formeze nimic. Perechea misca exact noua chei.
 
 **Ce ramane, si e spus:** fugara fuge la nesfarsit - si victoria cere ca TOATE
 navele Coroanei sa fie scufundate. O fugara cu greementul intreg nu e incetinita
@@ -1349,7 +1356,8 @@ pereche de rulări citea împrăștiere și credea că citește semnal.
 | `-ShipSplinters=0` | stinge aschiile de la o lovitura in cocca (implicit APRINSE) |
 | `-ShipHoles=0` | stinge urmele loviturilor de pe cocca (implicit APRINSE) |
 | `-ShipSound=0` | stinge cele patru sunete de tir (implicit APRINSE) |
-| `-Ledger=0` | cartea navei inchisa pentru o rulare: nu se citeste si nu se scrie (implicit DESCHISA in orice partida cu `-Port=1` si fara `-Shot=`/`-ShipHullTest=`/`-ShipToggleTackle=`; `Saved/Ledger/book.txt`) |
+| `-Ledger=0` | cartea navei inchisa pentru o rulare: nu se citeste si nu se scrie (implicit DESCHISA in orice partida cu `-Port=1` si fara flag-urile de test `-Shot=`/`-ShipHullTest=`/`-ShipToggleTackle=`/`-EnemyBreakTest=`; `Saved/Ledger/book.txt`) |
+| `-EnemyBreakTest=N` | la secunda N, prima nava a Coroanei inca in lupta primeste coca la un sfert si rupe lupta; flag de TEST, tine cartea inchisa |
 | `-ShipToggleTackle=N` | apasa T de N ori la pornire (comanda de palancuri, apoi retragerea ei); flag de TEST, tine cartea inchisa |
 | `-LedgerBook=<cale>` | citeste si scrie alt fisier in locul cartii, relativ la proiect (suita: sub `Saved/CI/`) |
 | `-ShipGunBand=LO,HI` | banda de inaltime (cm, fata de linia de plutire) in care o lovitura scoate un tun din afet, pentru toate navele (implicit 0,240; `OWNER_VERIFY` 38) |

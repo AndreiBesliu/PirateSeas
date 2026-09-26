@@ -479,15 +479,20 @@ public:
 	 *  function of her hull, not of when her captain last ticked, so it cannot
 	 *  depend on which captain the engine happens to tick first. */
 	bool IsBreakingOff() const;
-	/** The same question asked about any hull: false for one with no Crown
-	 *  captain (the player's, a merchant's). */
+	/** The same question asked about any hull with an AShipAIController
+	 *  captain - a merchant too, though no caller asks about one (the line is
+	 *  the squadron's) - and false for the player's. */
 	static bool IsShipBreakingOff(const AShipPawn* Ship);
-	/** How far off the ship she dressed on she was in her last tick, cm; -1
-	 *  when she was not keeping station. */
+	/** In her LAST tick: how far she was from the ship she dressed on, and
+	 *  from her station point 120 m astern of it, cm; -1 for both when she did
+	 *  not keep station. Reset at the top of Tick, so a captain that left by
+	 *  any early return reads -1, not an old value. */
 	float GetLastStationGapCm() const { return LastStationGapCm; }
+	float GetLastStationErrCm() const { return LastStationErrCm; }
 
 private:
 	float LastStationGapCm = -1.f;
+	float LastStationErrCm = -1.f;
 	/** Mutable because the walk that does the skipping is const, and
 	 *  making the walk non-const would push the change through every
 	 *  caller for the sake of one counter. */

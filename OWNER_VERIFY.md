@@ -316,8 +316,10 @@ puține lucruri, dar n-am jucat.
 
 **Cum arată bine:** Se pun în șir, una în urma alteia, nu îngrămădite. Nu se
 ciocnesc. Când una e între tine și alta, cea din spate nu trage prin ea. Şi,
-de pe 26.09: când prima rupe lupta (sub o treime de cocă fuge cu vântul în
-pupa), a doua **vine spre tine**, nu o escortează.
+de pe 26.09: când prima rupe lupta (sub 30% din cocă fuge cu vântul în pupa),
+a doua **preia conducerea şi se bate cu tine** - se apropie până la distanţa ei
+de tragere şi trage - în loc s-o escorteze pe prima afară din luptă. (Rău: a
+doua pleacă după prima şi lupta moare.)
 
 **Cum arată prost:** Se ciocnesc, sau se învârt una în jurul alteia, sau vin
 toate trei în linie de front, cot la cot.

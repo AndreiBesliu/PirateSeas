@@ -585,6 +585,10 @@ float AShipAIController::ResolveSailableHeading(float DesiredYawDeg,
 void AShipAIController::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
+	// Before every early return: a captain that does not dress this tick must
+	// not report the distance she kept on some earlier one.
+	LastStationGapCm = -1.f;
+	LastStationErrCm = -1.f;
 
 	AShipPawn* Me = GetShip();
 	if (!Me || Me->IsSunk())
@@ -985,7 +989,6 @@ void AShipAIController::Tick(float DeltaSeconds)
 	// astern of the guns, ninety degrees from where they can ever train.
 	AShipPawn* NextAhead = FindNextAhead(Me);
 	bool bKeepingStation = false;
-	LastStationGapCm = -1.f;
 	// FindNextAhead has already refused anyone who is not steering, so what is
 	// left here is the tactical question only: a ship running for her life does
 	// not dress a line.
@@ -1044,6 +1047,7 @@ void AShipAIController::Tick(float DeltaSeconds)
 				: (AlongErrM < -StationSlackM ? 1.f : 0.f)));
 		bKeepingStation = true;
 		LastStationGapCm = FVector::Dist2D(Me->GetActorLocation(), NextAhead->GetActorLocation());
+		LastStationErrCm = FVector::Dist2D(Me->GetActorLocation(), Station);
 		// NEVER: a captain dressing on a ship that has broken off. The walk
 		// above refuses her; this counts it if it ever does not.
 		if (IsShipBreakingOff(NextAhead))

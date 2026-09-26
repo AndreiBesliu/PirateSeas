@@ -918,7 +918,7 @@ void ASeaGameMode::EnsureBookRead()
 	{
 		BookSlot = EBookSlot::Off;
 		BookWhy = TEXT("testflag");
-		UE_LOG(LogTemp, Display, TEXT("LEDGERLOG shut: -Shot=, -ShipHullTest= or -ShipToggleTackle= sets the ship by hand, and a test is not a cruise"));
+		UE_LOG(LogTemp, Display, TEXT("LEDGERLOG shut: a test flag (-Shot=, -ShipHullTest=, -ShipToggleTackle=, -EnemyBreakTest=) sets the run by hand, and a test is not a cruise"));
 		return;
 	}
 	BookWhy = TEXT("open");
@@ -2382,10 +2382,12 @@ void ASeaGameMode::QuitNow()
 			Gunner ? Gunner->GetGunsReady(true) : 0);
 	}
 
-	// THE LINE OF BATTLE. How many times a consort had to be stepped over
-	// because she had stopped steering - struck, made port, or landed as a
-	// prize. Zero in any ordinary action; non-zero exactly when the line closed
-	// up, which is the whole point of the fix this counts.
+	// THE LINE OF BATTLE. How deep a line walk had to step over consorts that
+	// had stopped steering - struck, made port, landed as a prize, or (since
+	// 26.09) broken off and running. Zero while the line is whole; non-zero
+	// exactly when it closed up. Read off LIVE captains: a captain that did the
+	// stepping and then went down takes her depth with her, which is why the
+	// LINELOG below latches its own numbers on the game mode.
 	{
 		// THE MAXIMUM, not the sum. Summing the per-ship depths gave 2 where one
 		// consort had struck and two ships were following her - which is a count
@@ -2436,16 +2438,22 @@ void ASeaGameMode::QuitNow()
 			}
 		}
 		float StationGapM = -1.f;
+		float StationErrM = -1.f;
 		for (TActorIterator<AShipAIController> It(GetWorld()); It; ++It)
 		{
 			if (It->GetLastStationGapCm() >= 0.f)
 			{
 				StationGapM = FMath::Max(StationGapM, It->GetLastStationGapCm() * 0.01f);
+				StationErrM = FMath::Max(StationErrM, It->GetLastStationErrCm() * 0.01f);
 			}
 		}
+		// stationErr: how far the worst-placed follower lay from her STATION
+		// point. The gap to the ship ahead is under two intervals even at the
+		// spawn, ships abeam; the station error is not, so it is the number
+		// that says a line actually formed.
 		UE_LOG(LogTemp, Display,
-			TEXT("LINELOG TOTAL broken=%d closed=%.2f runnerTicks=%d runnerGap=%.0f stationGap=%.0f runnersAfloat=%d"),
-			LineBroken, LineClosedAt, LineRunnerTicks, RunnerGapM, StationGapM, RunnersAfloat);
+			TEXT("LINELOG TOTAL broken=%d closed=%.2f runnerTicks=%d runnerGap=%.0f stationGap=%.0f runnersAfloat=%d stationErr=%.0f"),
+			LineBroken, LineClosedAt, LineRunnerTicks, RunnerGapM, StationGapM, RunnersAfloat, StationErrM);
 	}
 
 	// ALWAYS, even in a run with no convoy in it: a counted zero. A money

@@ -1358,7 +1358,8 @@ def measure(name, text):
         m["refit_first_t"] = float(rf.group(1))
     # THE LINE OF BATTLE, latched on the game mode and printed on every row.
     ln = re.search(r"LINELOG TOTAL broken=(\d+) closed=(-?[0-9.]+) runnerTicks=(\d+) "
-                   r"runnerGap=(-?[0-9.]+) stationGap=(-?[0-9.]+) runnersAfloat=(\d+)", text)
+                   r"runnerGap=(-?[0-9.]+) stationGap=(-?[0-9.]+) runnersAfloat=(\d+) "
+                   r"stationErr=(-?[0-9.]+)", text)
     if ln:
         m["line_broken"] = int(ln.group(1))
         m["line_closed_t"] = float(ln.group(2))
@@ -1366,6 +1367,7 @@ def measure(name, text):
         m["line_runner_gap_m"] = float(ln.group(4))
         m["line_station_gap_m"] = float(ln.group(5))
         m["line_runners_afloat"] = int(ln.group(6))
+        m["line_station_err_m"] = float(ln.group(7))
     lb = re.search(r"AILOG \S+ BROKEN for the test at t=([0-9.]+) hull=([0-9.]+)/", text)
     if lb:
         m["line_break_t"] = float(lb.group(1))
