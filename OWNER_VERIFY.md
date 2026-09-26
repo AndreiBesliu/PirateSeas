@@ -9,6 +9,11 @@ Lista are 42 de puncte și de şase zile n-a fost atinsă. Nu-ţi cer să o parc
 **Mai jos sunt singurele lucruri care contează acum**, în ordinea în care
 contează; restul e arhivă, etichetată ca atare la sfârşitul paginii.
 
+**Cum pornești jocul pentru verificări:** dosarul `Joaca\` din proiect, dublu-clic.
+`PirateSeas.exe` singur te pune direct în luptă; `2 - Port si prazi, fara
+inamici` e cel pentru punctele 41 și 42 (partea 1), `3 - ... cu escorta` pentru
+partea 2 din 42.
+
 ### O decizie care e a ta
 
 **Banda de avarie a tunurilor — punctul 38.** Acum, 12 din 41 de lovituri în
@@ -1105,8 +1110,9 @@ pe uscat intr-o lada. Panoul spune `CRUISE N  chest ashore M`. Fara `-Port=1`,
 sau cu `-Shot=` / `-ShipHullTest=`, cartea nu se citeste si nu se scrie -
 celelalte puncte din lista nu o ating.
 
-**Ce te uiti:** Porneste de doua ori cu ACELEASI flag-uri:
-`PirateSeas.exe -windowed -Convoy=2 -Port=1 -EnemyCount=0`. Prima data: ia o
+**Ce te uiti:** Porneste de doua ori acelasi lansator, `Joaca - Port si prazi,
+fara inamici.bat` (convoiul iese la ~500 m, rada la 900 m sub vantul lui). Prima
+data: ia o
 prada (tirul inalt in greement, apoi stai 20 s langa ea ca sa treaca oamenii),
 las-o sa ajunga in rada, dar tu NU intra, si inchide jocul dupa ce banii au
 ajuns (randul LANDED). A doua oara: verifica ca pornesti cu banii in lada
@@ -1142,14 +1148,14 @@ daca a porni pe o nava ranita e o miza sau o pedeapsa - asta e jocul, nu cifra.
 ## 42. Palancurile: tunuri care se incarca mai repede, cumparate in port
 
 **Ce te uiti, in doua partide, amandoua cu `-Port=1` (cartea le leaga):**
-1. `PirateSeas.exe -windowed -Convoy=2 -Port=1 -EnemyCount=0` - linistit. Ia o
+1. `Joaca - Port si prazi, fara inamici.bat` - linistit. Ia o
    prada si du-o in rada (ca la 41), apoi apasa **T**: panoul arata
    `TACKLE 0/2 reload 12 s  ORDERED 1, 400 - T withdraws, 3 s`. Intra in rada.
    Dupa ce portul iti umple magazia, platesc palancurile: `TACKLE 1/2 reload
    10 s`, iar randul COFFERS spune `... 400 tackle`. Trage o salva si numara pana
    se aprind iar pipurile: 10 s, nu 12. Apasa T de doua ori pe mare (comanda,
    retrasa) si vezi ca panoul o spune. Inchide.
-2. `PirateSeas.exe -windowed -Convoy=2 -Port=1` - acum cu escorta Coroanei (doua
+2. `Joaca - Port si prazi, cu escorta.bat` - acum cu escorta Coroanei (doua
    nave). Treapta 1 e inca acolo; lupta cu ele si simte daca tunurile tale revin
    mai repede decat ale lor.
 

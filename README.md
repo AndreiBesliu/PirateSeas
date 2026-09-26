@@ -11,6 +11,13 @@ Python al engine-ului.
 
 ## Cum îl joci, fără editor
 
+**Cu dublu-clic: dosarul `Joaca\`.** `PirateSeas.exe` pornit singur te pune direct
+în lupta implicită (două nave ale Coroanei, fără port); tot restul jocului -
+convoiul, rada, cartea navei, palancurile - cere flag-uri. Lansatoarele le pun:
+`1 - Lupta, ca pana acum`, `2 - Port si prazi, fara inamici` (convoiul la ~500 m,
+rada, cartea deschisă), `3 - ... cu escorta`, `4 - ... de la zero` (cartea
+închisă). Orice flag în plus se poate adăuga după numele lansatorului.
+
 ```
 Packaged\Windows\PirateSeas.exe -windowed
 ```

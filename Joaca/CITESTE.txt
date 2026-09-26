@@ -1,0 +1,12 @@
+Dublu-clic pe unul dintre fisierele .bat din dosarul asta.
+
+1 - lupta implicita (ce face PirateSeas.exe singur).
+2 - port si prazi, fara inamici: aici se vad cartea navei (41) si palancurile (42).
+3 - la fel, cu escorta Coroanei.
+4 - la fel ca 2, de la zero: cartea navei nu e nici citita, nici scrisa.
+
+In 2 si 3 convoiul iese la vreo 500 m de tine, rada e la 900 m sub vantul lui.
+Panoul din dreapta-jos arata CONVOY, CRUISE (cartea), TACKLE (palancurile) si COFFERS.
+T comanda palancuri; se platesc cand intri in rada. Cartea navei e in
+Packaged\Windows\PirateSeas\Saved\Ledger\book.txt - sterge-o ca sa incepi de la zero.
+Lansatoarele cer ca jocul sa fie impachetat in Packaged\ (vezi README, "Cum il joci").
