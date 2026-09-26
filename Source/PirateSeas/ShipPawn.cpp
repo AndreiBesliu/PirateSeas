@@ -699,6 +699,22 @@ void AShipPawn::BeginPlay()
 		Sea->FitFromBook(this);
 	}
 
+	// -ShipToggleTackle=N presses T N times on the player's first hull, so the
+	// suite drives the very function the key does. A TEST flag: the game mode
+	// keeps the book shut in any run that carries it, because an order placed
+	// by a flag and filled from the chest would be test state in the book.
+	{
+		int32 Toggles = 0;
+		if (GetWorld() && GetWorld()->GetTimeSeconds() < 5.f && IsPlayerControlled()
+			&& FParse::Value(FCommandLine::Get(), TEXT("ShipToggleTackle="), Toggles))
+		{
+			for (int32 i = 0; i < FMath::Clamp(Toggles, 0, 8); ++i)
+			{
+				ToggleTackleOrder();
+			}
+		}
+	}
+
 	// -Shot=N gives the PLAYER a magazine of N rounds, -EnemyShot=N a Crown
 	// ship one; either at 0 makes that ship's magazine bottomless, which is how
 	// the behaviour from before the default can still be measured against it.
@@ -1218,7 +1234,8 @@ bool AShipPawn::FireBroadside(bool bStarboard, AActor* AimAt, bool bHigh)
 		++Fired;
 		// HER OWN clock, not the battery's. This is the whole of what the owner
 		// asked for: a gun that did not fire is still loaded and does not wait.
-		GunReload[SideIndex][g] = ReloadSeconds;
+		// Through the accessor: the tackle she carries is part of the number.
+		GunReload[SideIndex][g] = GetReloadSeconds();
 
 		if (HullCollision)
 		{
@@ -1656,7 +1673,49 @@ bool AShipPawn::DetachPrizeCrew(int32 Count)
 	return true;
 }
 
-int32 AShipPawn::FitFromBook(int32 InHands, float InHull, int32 InShot)
+void AShipPawn::ToggleTackleOrder()
+{
+	TackleLastRefusedPrice = 0;
+	if (bTackleOrdered)
+	{
+		bTackleOrdered = false;
+		++TackleWithdrawn;
+		UE_LOG(LogTemp, Display, TEXT("TACKLELOG %s order for tier %d withdrawn"),
+			*GetName(), TackleTier + 1);
+		return;
+	}
+	if (!CanOrderTackle())
+	{
+		++TackleRefusedTop;
+		UE_LOG(LogTemp, Display, TEXT("TACKLELOG %s refused: tier %d is the best the port sells"),
+			*GetName(), TackleTier);
+		return;
+	}
+	bTackleOrdered = true;
+	++TackleOrders;
+	UE_LOG(LogTemp, Display, TEXT("TACKLELOG %s orders tier %d"), *GetName(), TackleTier + 1);
+}
+
+void AShipPawn::FitTackleTier()
+{
+	bTackleOrdered = false;
+	TackleTier = FMath::Min(TackleTier + 1, TackleMaxTier);
+	UE_LOG(LogTemp, Display, TEXT("TACKLELOG %s fitted tier %d: reload %.1f s"),
+		*GetName(), TackleTier, GetReloadSeconds());
+}
+
+void AShipPawn::RefuseTackleOrder(int32 Price)
+{
+	bTackleOrdered = false;
+	TackleLastRefusedPrice = Price;
+}
+
+void AShipPawn::OnTacklePressed()
+{
+	ToggleTackleOrder();
+}
+
+int32 AShipPawn::FitFromBook(int32 InHands, float InHull, int32 InShot, int32 InTackle, int32 InOrder)
 {
 	// Each value cut to what THIS hull holds, and each cut counted: 72 men on a
 	// 60-berth ship is a book from another ship or a hand-edited one, and either
@@ -1665,10 +1724,23 @@ int32 AShipPawn::FitFromBook(int32 InHands, float InHull, int32 InShot)
 	const int32 H = FMath::Clamp(InHands, 0, HandsMax);
 	const float V = FMath::Clamp(InHull, 1.f, MaxHullIntegrity);
 	const int32 S = FMath::Clamp(InShot, 0, ShotMax);
-	const int32 Cut = (H != InHands ? 1 : 0) + (V != InHull ? 1 : 0) + (S != InShot ? 1 : 0);
+	const int32 T = FMath::Clamp(InTackle, 0, TackleMaxTier);
+	const int32 O = FMath::Clamp(InOrder, 0, 1);
+	const int32 Cut = (H != InHands ? 1 : 0) + (V != InHull ? 1 : 0) + (S != InShot ? 1 : 0)
+		+ (T != InTackle ? 1 : 0) + (O != InOrder ? 1 : 0);
 	Hands = H;
 	HullIntegrity = V;
 	Shot = S;
+	TackleTier = T;
+	// An order carried in the book for a tier the port does not sell is
+	// refused here, the way T would refuse it, and counted the same way.
+	bTackleOrdered = O == 1 && CanOrderTackle();
+	if (O == 1 && !bTackleOrdered)
+	{
+		++TackleRefusedTop;
+		UE_LOG(LogTemp, Display, TEXT("TACKLELOG %s refused: the book orders past tier %d, the best the port sells"),
+			*GetName(), T);
+	}
 	return Cut;
 }
 
@@ -3056,6 +3128,8 @@ void AShipPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 		this, &AShipPawn::OnAimHighReleased);
 	PlayerInputComponent->BindAction(TEXT("Repair"), IE_Pressed,
 		this, &AShipPawn::OnRepairPressed);
+	PlayerInputComponent->BindAction(TEXT("Tackle"), IE_Pressed,
+		this, &AShipPawn::OnTacklePressed);
 	PlayerInputComponent->BindAxis(TEXT("Elevate"), this, &AShipPawn::OnElevate);
 	PlayerInputComponent->BindAction(TEXT("LayAbeam"), IE_Pressed,
 		this, &AShipPawn::OnLayLockPressed);

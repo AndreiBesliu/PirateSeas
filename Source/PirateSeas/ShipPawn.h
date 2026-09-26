@@ -305,9 +305,11 @@ public:
 	/** Powder and shot bought in port. Returns true if there was room. */
 	bool LoadShot(int32 Rounds);
 
-	/** THE SHIP'S BOOK, applied: hands, hull and shot as the last cruise left
-	 *  them, each cut to what this hull can hold. Returns how many were cut. */
-	int32 FitFromBook(int32 InHands, float InHull, int32 InShot);
+	/** THE SHIP'S BOOK, applied: hands, hull, shot, tackle and an open order
+	 *  as the last cruise left them, each cut to what this hull can hold.
+	 *  Returns how many were cut. An order for a tier past the top is dropped
+	 *  and counted as refused, not as a cut. */
+	int32 FitFromBook(int32 InHands, float InHull, int32 InShot, int32 InTackle, int32 InOrder);
 
 	/** Timber and tar: hull integrity the SEA cannot give back. Returns how
 	 *  much was actually put in, which is less than asked for when she is
@@ -452,9 +454,32 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Guns")
 	bool IsAimingHigh() const { return bAimHigh; }
 
-	/** Seconds a side takes to reload, so a gauge can show the fraction. */
+	/** Seconds a gun takes to reload, WITH the tackle she carries: the one
+	 *  number both the gun's clock and the gauge read, so the two cannot
+	 *  disagree about what the port sold. */
 	UFUNCTION(BlueprintPure, Category = "Guns")
-	float GetReloadSeconds() const { return ReloadSeconds; }
+	float GetReloadSeconds() const { return ReloadSeconds - TackleTier * TackleSecondsPerTier; }
+
+	/** THE GUN TACKLE (progression, slice 2). Better tackle runs a gun out
+	 *  faster; each tier takes TackleSecondsPerTier off every gun's reload. It
+	 *  is on the SHIP: the book carries it, and it goes down with her. */
+	int32 GetTackleTier() const { return TackleTier; }
+	int32 GetTackleMaxTier() const { return TackleMaxTier; }
+	bool IsTackleOrdered() const { return bTackleOrdered; }
+	/** T, and -ShipToggleTackle=N for the suite: orders the next tier, or
+	 *  withdraws the order already placed - a press next to R in a fight must
+	 *  not become money spent without a way back. At the top tier there is
+	 *  nothing to order: refused and counted. */
+	void ToggleTackleOrder();
+	/** The roadstead filled the order: one tier up, the order closed. */
+	void FitTackleTier();
+	/** The roadstead could not pay: the order closed, the price remembered for
+	 *  the panel until the next press. */
+	void RefuseTackleOrder(int32 Price);
+	int32 GetTackleOrders() const { return TackleOrders; }
+	int32 GetTackleWithdrawn() const { return TackleWithdrawn; }
+	int32 GetTackleRefusedTop() const { return TackleRefusedTop; }
+	int32 GetTackleLastRefusedPrice() const { return TackleLastRefusedPrice; }
 
 	/** How fast the crew sets or takes in sail, in trim units per second.
 	 *  (This comment once described GetNoGoAngleDeg instead, which would have
@@ -787,6 +812,14 @@ protected:
 	/** How long a gun crew takes to sponge, load and run out again. */
 	UPROPERTY(EditAnywhere, Category = "Guns")
 	float ReloadSeconds = 12.f;
+
+	/** What one tier of tackle takes off it, and how many tiers the port
+	 *  sells. Balance numbers, the owner's: OWNER_VERIFY 42. */
+	UPROPERTY(EditDefaultsOnly, Category = "Guns")
+	float TackleSecondsPerTier = 2.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Guns")
+	int32 TackleMaxTier = 2;
 
 	/** How far the crews can train a gun off the beam, in degrees. */
 	UPROPERTY(EditAnywhere, Category = "Guns")
@@ -1344,6 +1377,19 @@ private:
 	void LoseHands(int32 Count, const TCHAR* Why);
 	void TickRepairs(float DeltaSeconds);
 	void OnRepairPressed();
+	void OnTacklePressed();
+	/** Whether the port sells another tier to this hull. ONE function, asked by
+	 *  the key and by the book alike: the refusal at the top can only be
+	 *  exercised through the book (the flag that presses the key shuts it),
+	 *  and a second copy of the test would be a guard no row could catch. */
+	bool CanOrderTackle() const { return TackleTier < TackleMaxTier; }
+	/** The tackle and its order. Counters are cumulative over the run. */
+	int32 TackleTier = 0;
+	bool bTackleOrdered = false;
+	int32 TackleOrders = 0;
+	int32 TackleWithdrawn = 0;
+	int32 TackleRefusedTop = 0;
+	int32 TackleLastRefusedPrice = 0;
 	/** True only while a grounding wound is being delivered, so its log lines
 	 *  are tagged GROUNDLOG and never counted as gunnery. */
 	bool bGroundingBlow = false;

@@ -76,7 +76,11 @@ BOOKS = {"ledger_fresh": (None, ".book"), "ledger_carry": ("veteran.book", ".boo
          "ledger_bad": ("bad.book", ".book"), "ledger_torn": ("torn.book", ".book"),
          "ledger_garbage": ("garbage.book", ".book"), "ledger_tmp": ("veteran.book", ".book.tmp"),
          "ledger_noport": ("veteran.book", ".book"), "ledger_testflag": ("veteran.book", ".book"),
-         "ledger_side": ("spend.book", ".book")}
+         "ledger_side": ("spend.book", ".book"),
+         "ledger_testhull": ("veteran.book", ".book"), "ledger_testtackle": ("veteran.book", ".book"),
+         "tackle_none": ("tackle0.book", ".book"), "tackle_carry": ("tackle1.book", ".book"),
+         "tackle_buy": ("tacklebuy.book", ".book"), "tackle_top": ("tackletop.book", ".book"),
+         "tackle_short": ("tackleshort.book", ".book"), "tackle_max": ("tacklemax.book", ".book")}
 # The owner's own book. The suite must leave it byte for byte as it found it.
 REAL_BOOK = os.path.join(ROOT, "Saved", "Ledger", "book.txt")
 LEDGER_BASE = ["-WindBearing=120", "-WindSpeed=12", "-EnemyCount=0"]
@@ -292,10 +296,11 @@ SCENARIOS = {
     # that changed what a prize was worth would mean the money was never banked
     # where the commits before this one say it was.
     #
-    # And the arithmetic is on the line so it can be read: twenty men at twenty
-    # apiece is four hundred, four hundred points of hull at a half is two
-    # hundred, six hundred spent out of twelve hundred landed, six hundred
-    # left.
+    # And the arithmetic is on the line so it can be read: twenty rounds at two
+    # is forty (the magazine has been finite since 16.09, and shot is bought
+    # first), twenty men at twenty apiece is four hundred, four hundred points
+    # of hull at a half is two hundred: 640 spent out of 1200 landed, 560 left,
+    # 21.5 s. (This comment said 600/600 until a review read the baseline.)
     #
     # EIGHT HUNDRED SECONDS, and the number comes from a timeline that was
     # read rather than guessed. Measured once end to end: prize manned at 138,
@@ -495,6 +500,53 @@ SCENARIOS = {
                     "-EnemyX=60000", "-EnemyY=20000", "-EnemyHull=600", "-AIRefit=1",
                     "-Port=1", "-PortX=60000", "-PortY=20000", "-ShipQuitAfter=30",
                     "-LedgerBook=Saved/CI/ledger_side.book"],
+    # The other two test flags, each with the row only it can catch: every
+    # name in the shut rule has one.
+    "ledger_testhull": LEDGER_BASE + ["-Port=1", "-ShipHullTest=600", "-ShipQuitAfter=10",
+                                      "-LedgerBook=Saved/CI/ledger_testhull.book"],
+    "ledger_testtackle": LEDGER_BASE + ["-Port=1", "-ShipToggleTackle=1", "-ShipQuitAfter=10",
+                                        "-LedgerBook=Saved/CI/ledger_testtackle.book"],
+
+    # THE GUN TACKLE (progression, slice 2). One broadside at t=8 (-ShipFireTest
+    # fires the starboard battery with no target), a quit at 19: a gun that
+    # reloads in 12 s is ready at 20 and is NOT ready yet; one that reloads in
+    # 10 is ready at 18 and IS. So guns_ready_stbd - read off the game's own
+    # clock at the quit - says which tier the guns really have, and every
+    # number here is worked out on paper by the gate first.
+    #
+    # tackle_carry against tackle_none is the PAIR: a book with tier 1 against
+    # the same book at tier 0. They differ in the tackle and the book families
+    # and in guns_ready_stbd, and in nothing else.
+    "tackle_none": LEDGER_BASE + ["-Port=1", "-ShipFireTest=8", "-ShipQuitAfter=19",
+                                  "-LedgerBook=Saved/CI/tackle_none.book"],
+    "tackle_carry": LEDGER_BASE + ["-Port=1", "-ShipFireTest=8", "-ShipQuitAfter=19",
+                                   "-LedgerBook=Saved/CI/tackle_carry.book"],
+    # THE PURCHASE, and its PLACE in the port's order: an order carried in the
+    # book, 500 ashore, four rounds short, hull 800, the roadstead where she
+    # starts. Shot first (8), then the tackle (400), then the hull with what is
+    # left (92 -> 184 points): 1 + 1 + 10 ticks. Served after the repairs
+    # instead, the hull would take 100 first and the tackle would be refused.
+    "tackle_buy": LEDGER_BASE + ["-Port=1", "-PortX=0", "-PortY=0", "-ShipFireTest=8",
+                                 "-ShipQuitAfter=19", "-LedgerBook=Saved/CI/tackle_buy.book"],
+    # AND THE NEXT CRUISE: what tackle_buy wrote, read by a new process.
+    "tackle_cycle": LEDGER_BASE + ["-Port=1", "-ShipFireTest=8", "-ShipQuitAfter=19",
+                                   "-LedgerBook=Saved/CI/tackle_buy.book"],
+    # TIER 2 costs twice tier 1 - exactly the 800 in the chest, so nothing is
+    # left to buy back the four rounds the broadside at t=8 fires while she is
+    # still in the roadstead (with 900 the port did, and the arithmetic would
+    # depend on where she drifted). Reloads in 8: ready at 16, so a quit at 17
+    # tells tier 2 from tier 1 (18).
+    "tackle_top": LEDGER_BASE + ["-Port=1", "-PortX=0", "-PortY=0", "-ShipFireTest=8",
+                                 "-ShipQuitAfter=17", "-LedgerBook=Saved/CI/tackle_top.book"],
+    # AN ORDER THE CHEST CANNOT PAY (300 < 400): refused, the order closed, and
+    # the repairs go on in the same tick with the money it did not take.
+    "tackle_short": LEDGER_BASE + ["-Port=1", "-PortX=0", "-PortY=0", "-ShipQuitAfter=40",
+                                   "-LedgerBook=Saved/CI/tackle_short.book"],
+    # AN ORDER PAST THE TOP, carried in the book: refused at the fit.
+    "tackle_max": LEDGER_BASE + ["-Port=1", "-ShipQuitAfter=10",
+                                 "-LedgerBook=Saved/CI/tackle_max.book"],
+    # THE KEY'S OWN FUNCTION, pressed twice by the flag: ordered, then withdrawn.
+    "tackle_toggle": LEDGER_BASE + ["-ShipToggleTackle=2", "-ShipQuitAfter=10"],
 
     # THE GUNS LAID BY HAND. Three rows around one idea, and each pair says a
     # different thing.
@@ -1216,7 +1268,7 @@ def measure(name, text):
     lc = re.search(r"LEDGERLOG CLOSE slot=(\w+) why=(\w+) reason=\w+ written=(\d+) roundtrip=(\d+) "
                    r"cruise=(\d+) ship=(\d+) hands=(\d+) hull=(\d+) shot=(\d+) chest=(\d+) "
                    r"wrecks=(\d+) wreckCharge=(\d+) refused=(\d+) rejected=(\d+) "
-                   r"setAside=(\d+) recovered=(\d+)", text)
+                   r"setAside=(\d+) recovered=(\d+) tackle=(\d+) order=(\d+)", text)
     if lc:
         m["ledger_slot"] = {"off": 0, "given": 1, "default": 2}.get(lc.group(1), 9)
         # Why it is shut: 0 open, 1 pinned (-Ledger=0), 2 no roadstead, 3 a
@@ -1237,6 +1289,8 @@ def measure(name, text):
             m["ledger_rejected"] = int(lc.group(14))
             m["ledger_set_aside"] = int(lc.group(15))
             m["ledger_recovered"] = int(lc.group(16))
+            m["ledger_tackle_out"] = int(lc.group(17))
+            m["ledger_order_out"] = int(lc.group(18))
     lost = re.findall(r"LEDGERLOG \S+ lost: a new hull costs (\d+), the chest paid (\d+)", text)
     if lost:
         m["ledger_ship_cost"] = max(int(c) for c, _ in lost)
@@ -1244,9 +1298,25 @@ def measure(name, text):
     side = re.search(r"PORTLOG SIDE refused=(\d+)", text)
     if side:
         m["refit_refused_side"] = int(side.group(1))
+    # THE GUN TACKLE, the player's hull by NAME (the bare AShipPawn class), as
+    # own_shot_left is read; and the port's side of it.
+    tk = re.search(r"TACKLELOG ShipPawn_\d+ tier=(\d+)/\d+ reload=([0-9.]+) ordered=(\d+) "
+                   r"orders=(\d+) withdrawn=(\d+) refusedTop=(\d+)", text)
+    if tk:
+        m["tackle_tier"] = int(tk.group(1))
+        m["tackle_reload"] = float(tk.group(2))
+        m["tackle_ordered"] = int(tk.group(3))
+        m["tackle_orders"] = int(tk.group(4))
+        m["tackle_withdrawn"] = int(tk.group(5))
+        m["tackle_refused_top"] = int(tk.group(6))
+    tt = re.search(r"TACKLELOG TOTAL bought=(\d+) refusedCoffers=(\d+) spent=(\d+)", text)
+    if tt:
+        m["tackle_bought"] = int(tt.group(1))
+        m["tackle_refused_coffers"] = int(tt.group(2))
+        m["tackle_spent"] = int(tt.group(3))
     lo = re.search(r"LEDGERLOG OPEN ship=\S+ loaded=(\d+) rejected=\d+ cruise=(\d+) "
                    r"hands=(\d+)/\d+ hull=(\d+)/\d+ shot=(\d+)/\d+ chest=(\d+) "
-                   r"wrecks=(\d+) clamped=(\d+)", text)
+                   r"wrecks=(\d+) clamped=(\d+) tackle=(\d+)/\d+ order=(\d+)", text)
     if lo:
         m["ledger_loaded"] = int(lo.group(1))
         m["ledger_cruise"] = int(lo.group(2))
@@ -1256,6 +1326,8 @@ def measure(name, text):
         m["ledger_chest_in"] = int(lo.group(6))
         m["ledger_wrecks_in"] = int(lo.group(7))
         m["ledger_clamped"] = int(lo.group(8))
+        m["ledger_tackle_in"] = int(lo.group(9))
+        m["ledger_order_in"] = int(lo.group(10))
     return m
 
 

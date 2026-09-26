@@ -355,6 +355,44 @@ void AShipHUD::DrawGuns(AShipPawn* Ship)
 				FString::Printf(TEXT("CRUISE %d  chest ashore %d"), Sea->GetCruise(), Sea->GetChestOut()),
 				Sea->GetChestOut() > 0 ? Good : Faint));
 		}
+		// THE TACKLE: what she carries, what is ordered, and whether THIS run
+		// can fill it - said, not left for the player to find out in port.
+		if (Ship && (Ship->GetTackleTier() > 0 || Ship->IsTackleOrdered() || Sea->HasPort()
+			|| Ship->GetTackleLastRefusedPrice() > 0))
+		{
+			const int32 Next = Ship->GetTackleTier() + 1;
+			FString Row = FString::Printf(TEXT("TACKLE %d/%d  reload %.0f s"),
+				Ship->GetTackleTier(), Ship->GetTackleMaxTier(), Ship->GetReloadSeconds());
+			if (Ship->IsTackleOrdered())
+			{
+				Row += FString::Printf(TEXT("  ORDERED %d, %d"), Next, Next * Sea->GetTackleCost());
+				if (!Sea->HasPort())
+				{
+					Row += TEXT(" - no roadstead in this run");
+				}
+				else if (!Sea->IsPurseSide(Ship))
+				{
+					Row += TEXT(" - this roadstead sells to the Crown");
+				}
+			}
+			else if (Ship->GetTackleLastRefusedPrice() > 0)
+			{
+				Row += FString::Printf(TEXT("  refused: %d needed"), Ship->GetTackleLastRefusedPrice());
+			}
+			else if (Ship->GetTackleTier() < Ship->GetTackleMaxTier())
+			{
+				Row += FString::Printf(TEXT("  (T: order %d, %d)"), Next, Next * Sea->GetTackleCost());
+			}
+			Extra.Add(TPair<FString, FLinearColor>(Row, Ship->IsTackleOrdered() ? Warn : Faint));
+			// The money that decides the order, where the convoy block would
+			// not show it: a run with a roadstead and no convoy.
+			if (Sea->HasPort() && Sea->GetConvoySize() <= 0)
+			{
+				Extra.Add(TPair<FString, FLinearColor>(
+					FString::Printf(TEXT("COFFERS %d"), Sea->GetCoffers()),
+					Sea->GetCoffers() > 0 ? Good : Faint));
+			}
+		}
 		// The mission, when there is one. A raider who cannot see the tally
 		// cannot decide whether the next merchant is worth the beat.
 		if (Sea->GetConvoySize() > 0)

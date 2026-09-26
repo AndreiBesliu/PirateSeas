@@ -5,7 +5,7 @@ arată bine și de ce nu pot eu.
 
 ## Prima pagină — citește doar asta (25.09)
 
-Lista are 41 de puncte și de şase zile n-a fost atinsă. Nu-ţi cer să o parcurgi.
+Lista are 42 de puncte și de şase zile n-a fost atinsă. Nu-ţi cer să o parcurgi.
 **Mai jos sunt singurele lucruri care contează acum**, în ordinea în care
 contează; restul e arhivă, etichetată ca atare la sfârşitul paginii.
 
@@ -32,7 +32,7 @@ avansul stins pentru toată lumea. Loviturile (cocă + greement) scad de la **11
 m, avansul valorează cam un sfert din ce nimereşte ea. Dacă vrei ca jucatorul
 să primească un ajutor de avans, spune; dacă nu, rămâne aşa.
 
-### Opt lucruri de văzut, în ordinea asta
+### Nouă lucruri de văzut, în ordinea asta
 
 1. **37 — aşchiile de la o lovitură.** Reparat pe 25.09: coca are coliziunea
    ei, ghiuleaua se opreşte pe lemn (0,00 m, măsurat pe 37 de lovituri). Ce nu
@@ -52,6 +52,9 @@ să primească un ajutor de avans, spune; dacă nu, rămâne aşa.
    jocul continuă de unde l-ai închis (nava rănită, oamenii lipsă, banii în
    ladă). Fără radă nu se atinge nimic, deci punctele 1–7 de mai sus nu o
    deschid. Dacă se simte a miză sau a pedeapsă.
+9. **42 — palancurile.** Nou, 26.09: tasta T comandă tunuri care se încarcă mai
+   repede (12 → 10 → 8 s), plătite în radă. Trei numere de ale tale: −2 s pe
+   treaptă, 400/800, şi că la treapta 2 tragi de 1,5 ori mai des decât Coroana.
 
 ### Restul
 
@@ -807,8 +810,9 @@ nimic pe nava. Sau cele patru randuri se suprapun peste ce e sub ele - am
 adaugat doua randuri noi in coltul ala.
 
 **De ce nu pot eu:** Pot masura fiecare cifra - cat s-a cheltuit, cati oameni,
-cata coca, in cate secunde - si le-am masurat: 20 de oameni si 400 de puncte
-pentru 600, in 20 de secunde. Daca "ma intorc in port sa ma refac" se simte ca o
+cata coca, in cate secunde - si le-am masurat: 20 de ghiulele, 20 de oameni si
+400 de puncte pentru 640, in 21,5 secunde (scria 600 in 20 s, de dinainte ca
+magazia sa fie finita). Daca "ma intorc in port sa ma refac" se simte ca o
 decizie sau ca o corvoada, nu pot sti.
 
 **Ce stiu deja si n-am ascuns:** preturile (20 pe om, 0,5 pe punct de coca) sunt
@@ -1133,3 +1137,34 @@ sterge `Saved\Ledger\book.txt` - langa jocul impachetat e
 (douasprezece randuri, fiecare calculat pe hartie de poarta), ca suita nu-ti
 atinge cartea si ca jocul impachetat o scrie si o citeste inapoi. Nu pot simti
 daca a porni pe o nava ranita e o miza sau o pedeapsa - asta e jocul, nu cifra.
+
+## 42. Palancurile: tunuri care se incarca mai repede, cumparate in port
+
+**Ce te uiti:** `PirateSeas.exe -windowed -Convoy=2 -Port=1 -EnemyCount=0`. Ia o
+prada si du-o in rada (ca la 41), apoi apasa **T**: panoul arata
+`TACKLE 0/2 reload 12 s  ORDERED 1, 400`. Intra in rada. Dupa ce portul iti
+umple magazia, platesc palancurile: `TACKLE 1/2 reload 10 s`, COFFERS scade cu
+400. Trage o salva si numara pana se aprind iar pipurile: 10 s, nu 12. Apoi
+apasa T de doua ori pe mare (comanda, retrasa) si vezi ca panoul o spune. La
+pornirea urmatoare (tot cu `-Port=1`), treapta 1 e inca acolo.
+
+**Cum arata bine:** Simti ca tunurile tale revin mai repede decat ale Coroanei,
+si ca 400 pe palancuri e o alegere contra reparatiei, nu un bonus gratuit. Panoul
+iti spune mereu ce ai, ce ai comandat si daca rada din partida asta ti-l poate
+vinde.
+
+**Cum arata prost:** 2 s nu se simt (atunci treapta e prea mica), sau la treapta
+2 lupta devine prea usoara (8 s contra 12: tragi de 1,5 ori mai des decat
+Coroana, care n-are palancuri). Sau T, langa R, te incurca in lupta. Sau randul
+TACKLE aglomereaza panoul.
+
+**Ce hotarasti tu, daca vrei:** (1) -2 s pe treapta si doua trepte; (2) pretul,
+400 si 800; (3) tasta T; (4) daca si Coroana ar trebui sa aiba palancuri (azi
+nu, si AI-ul nu cumpara nimic) - o felie separata.
+
+**De ce nu pot eu:** pot masura ca treapta scurteaza fiecare tun exact cu 2 s
+(tunurile sunt gata la 18 si nu la 20, pe ceasul jocului), ca portul o vinde
+dupa ghiulele si inaintea reparatiilor, ca o refuza fara bani si ca o duce
+cartea. Nu pot simti daca 10 s fata de 12 schimba o lupta, sau daca T e o tasta
+buna.
+

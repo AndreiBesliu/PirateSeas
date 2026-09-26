@@ -62,6 +62,8 @@ public:
 	bool IsPurseSide(const AShipPawn* Ship) const;
 	/** -Port=N>0. One reading, shared by the port itself and the book. */
 	static bool PortRequested();
+	/** Tier n of tackle costs n x this. */
+	int32 GetTackleCost() const { return TackleCost; }
 
 	int32 GetVictories() const { return Victories; }
 
@@ -337,6 +339,11 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Port")
 	int32 ShotPerTick = 8;
 
+	/** Gun tackle: tier n costs n x this, so the second tier is a prize. A
+	 *  balance number, the owner's: OWNER_VERIFY 42. */
+	UPROPERTY(EditDefaultsOnly, Category = "Port")
+	int32 TackleCost = 400;
+
 	/** How far off the convoy -RaiderSide= puts the raider, in metres, along
 	 *  the wind. -RaiderOffingM=. */
 	UPROPERTY(EditDefaultsOnly, Category = "Convoy")
@@ -378,10 +385,17 @@ private:
 	/** Hulls the roadstead refused because they were not on the purse's side,
 	 *  once each. */
 	TSet<FName> RefusedSide;
+	/** The shipwright's orders, filled or refused. */
+	bool FillTackleOrder(AShipPawn* Ship, int32 Coffers);
+	int32 TackleBought = 0;
+	int32 TackleRefusedCoffers = 0;
+	int32 TackleSpent = 0;
 	bool bBookLoaded = false;
 	/** False for a first cruise, a refused book, or a book written with no
 	 *  ship afloat: then the first hull sails as she was built. */
 	bool bBookShip = false;
+	int32 BookTackle = 0;
+	int32 BookOrder = 0;
 	int32 BookHands = 0;
 	float BookHull = 0.f;
 	int32 BookShot = 0;
@@ -391,8 +405,9 @@ private:
 	bool bBookFitted = false;
 	FString BookFittedTo;
 	bool bBookClosed = false;
-	/** Never counters, printed on the CLOSE line: a second hull asking to be
-	 *  fitted, a file that was not a book, values cut to what the hull holds. */
+	/** Never counters: a second hull asking to be fitted and a file that was
+	 *  not a book (on the CLOSE line), values cut to what the hull holds (on
+	 *  the OPEN line - the first version of this comment said CLOSE). */
 	int32 BookRefused = 0;
 	int32 BookRejected = 0;
 	int32 BookClamped = 0;

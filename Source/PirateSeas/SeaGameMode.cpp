@@ -74,6 +74,8 @@ namespace
 		int32 Hands = 0;
 		float Hull = 0.f;
 		int32 Shot = 0;
+		int32 Tackle = 0;
+		int32 Order = 0;
 		int32 Cruises = 0;
 		int32 Wrecks = 0;
 		int32 Chest = 0;
@@ -81,7 +83,8 @@ namespace
 		bool operator==(const FBookPage& O) const
 		{
 			return bOk == O.bOk && bShip == O.bShip && Hands == O.Hands && Hull == O.Hull
-				&& Shot == O.Shot && Cruises == O.Cruises && Wrecks == O.Wrecks && Chest == O.Chest;
+				&& Shot == O.Shot && Tackle == O.Tackle && Order == O.Order
+				&& Cruises == O.Cruises && Wrecks == O.Wrecks && Chest == O.Chest;
 		}
 	};
 
@@ -137,10 +140,16 @@ namespace
 		const FString* H = Kv.Find(TEXT("hands"));
 		const FString* V = Kv.Find(TEXT("hull"));
 		const FString* S = Kv.Find(TEXT("shot"));
-		if (H || V || S)
+		// The tackle and an open order belong to the ship: OPTIONAL (a book
+		// written before the port sold tackle has neither, and is still a
+		// book), but never without the ship they are on.
+		const FString* T = Kv.Find(TEXT("tackle"));
+		const FString* Ord = Kv.Find(TEXT("order"));
+		if (H || V || S || T || Ord)
 		{
 			int32 Hull = 0;
-			if (!ReadBookInt(H, P.Hands) || !ReadBookInt(V, Hull) || !ReadBookInt(S, P.Shot))
+			if (!ReadBookInt(H, P.Hands) || !ReadBookInt(V, Hull) || !ReadBookInt(S, P.Shot)
+				|| (T && !ReadBookInt(T, P.Tackle)) || (Ord && !ReadBookInt(Ord, P.Order)))
 			{
 				return FBookPage();
 			}
@@ -157,7 +166,8 @@ namespace
 			P.Cruises, P.Wrecks, P.Chest);
 		if (P.bShip)
 		{
-			T += FString::Printf(TEXT("hands=%d\nhull=%.0f\nshot=%d\n"), P.Hands, P.Hull, P.Shot);
+			T += FString::Printf(TEXT("hands=%d\nhull=%.0f\nshot=%d\ntackle=%d\norder=%d\n"),
+				P.Hands, P.Hull, P.Shot, P.Tackle, P.Order);
 		}
 		return T + TEXT("end=1\n");
 	}
@@ -886,6 +896,7 @@ void ASeaGameMode::EnsureBookRead()
 	// next with nothing on the sea able to refill it.
 	int32 TestShot = 0;
 	float TestHull = 0.f;
+	int32 TestToggle = 0;
 	if (!PortRequested())
 	{
 		BookSlot = EBookSlot::Off;
@@ -894,11 +905,12 @@ void ASeaGameMode::EnsureBookRead()
 		return;
 	}
 	if (FParse::Value(FCommandLine::Get(), TEXT("Shot="), TestShot)
-		|| FParse::Value(FCommandLine::Get(), TEXT("ShipHullTest="), TestHull))
+		|| FParse::Value(FCommandLine::Get(), TEXT("ShipHullTest="), TestHull)
+		|| FParse::Value(FCommandLine::Get(), TEXT("ShipToggleTackle="), TestToggle))
 	{
 		BookSlot = EBookSlot::Off;
 		BookWhy = TEXT("testflag");
-		UE_LOG(LogTemp, Display, TEXT("LEDGERLOG shut: -Shot= or -ShipHullTest= sets the ship by hand, and a test is not a cruise"));
+		UE_LOG(LogTemp, Display, TEXT("LEDGERLOG shut: -Shot=, -ShipHullTest= or -ShipToggleTackle= sets the ship by hand, and a test is not a cruise"));
 		return;
 	}
 	BookWhy = TEXT("open");
@@ -948,6 +960,8 @@ void ASeaGameMode::EnsureBookRead()
 	}
 	bBookLoaded = true;
 	bBookShip = Page.bShip;
+	BookTackle = Page.Tackle;
+	BookOrder = Page.Order;
 	BookHands = Page.Hands;
 	BookHull = Page.Hull;
 	BookShot = Page.Shot;
@@ -985,16 +999,35 @@ void ASeaGameMode::FitFromBook(AShipPawn* Ship)
 	BookFittedTo = Ship->GetName();
 	if (bBookLoaded && bBookShip)
 	{
-		BookClamped = Ship->FitFromBook(BookHands, BookHull, BookShot);
+		BookClamped = Ship->FitFromBook(BookHands, BookHull, BookShot, BookTackle, BookOrder);
 	}
 	// READ BACK OFF THE HULL, not off the page: the page is what was asked, the
 	// hull is what she got. The -EnemyHull lesson - a value written and then
 	// quietly overwritten reads fine in the line that wrote it.
 	UE_LOG(LogTemp, Display,
-		TEXT("LEDGERLOG OPEN ship=%s loaded=%d rejected=%d cruise=%d hands=%d/%d hull=%.0f/%.0f shot=%d/%d chest=%d wrecks=%d clamped=%d"),
+		TEXT("LEDGERLOG OPEN ship=%s loaded=%d rejected=%d cruise=%d hands=%d/%d hull=%.0f/%.0f shot=%d/%d chest=%d wrecks=%d clamped=%d tackle=%d/%d order=%d"),
 		*Ship->GetName(), bBookLoaded ? 1 : 0, BookRejected, GetCruise(),
 		Ship->GetHands(), Ship->GetHandsMax(), Ship->GetHullIntegrity(), Ship->GetMaxHullIntegrity(),
-		Ship->GetShot(), Ship->GetShotMax(), ChestIn, BookWrecks, BookClamped);
+		Ship->GetShot(), Ship->GetShotMax(), ChestIn, BookWrecks, BookClamped,
+		Ship->GetTackleTier(), Ship->GetTackleMaxTier(), Ship->IsTackleOrdered() ? 1 : 0);
+}
+
+bool ASeaGameMode::FillTackleOrder(AShipPawn* Ship, int32 Coffers)
+{
+	const int32 Price = (Ship->GetTackleTier() + 1) * TackleCost;
+	if (Coffers < Price)
+	{
+		++TackleRefusedCoffers;
+		Ship->RefuseTackleOrder(Price);
+		UE_LOG(LogTemp, Display, TEXT("TACKLELOG %s order refused: tier %d costs %d, the coffers hold %d"),
+			*Ship->GetName(), Ship->GetTackleTier() + 1, Price, Coffers);
+		return false;
+	}
+	Spent += Price;
+	TackleSpent += Price;
+	++TackleBought;
+	Ship->FitTackleTier();
+	return true;
 }
 
 bool ASeaGameMode::PortRequested()
@@ -1087,6 +1120,8 @@ void ASeaGameMode::CloseBook(EEndPlayReason::Type Reason)
 			// hand edit (the reader cuts it to 1 and counts the cut).
 			Out.Hull = FMath::Max(1.f, FMath::RoundToFloat(Ship->GetHullIntegrity()));
 			Out.Shot = Ship->GetShot();
+			Out.Tackle = Ship->GetTackleTier();
+			Out.Order = Ship->IsTackleOrdered() ? 1 : 0;
 		}
 		// Beside it and then over it, so a quit that dies half-way through the
 		// write leaves the last good book standing rather than half of a new one.
@@ -1111,10 +1146,11 @@ void ASeaGameMode::CloseBook(EEndPlayReason::Type Reason)
 		}
 	}
 	UE_LOG(LogTemp, Display,
-		TEXT("LEDGERLOG CLOSE slot=%s why=%s reason=%s written=%d roundtrip=%d cruise=%d ship=%d hands=%d hull=%.0f shot=%d chest=%d wrecks=%d wreckCharge=%d refused=%d rejected=%d setAside=%d recovered=%d"),
+		TEXT("LEDGERLOG CLOSE slot=%s why=%s reason=%s written=%d roundtrip=%d cruise=%d ship=%d hands=%d hull=%.0f shot=%d chest=%d wrecks=%d wreckCharge=%d refused=%d rejected=%d setAside=%d recovered=%d tackle=%d order=%d"),
 		BookSlotName(BookSlot == EBookSlot::Off, BookSlot == EBookSlot::Given), *BookWhy, Why, Written, Roundtrip,
 		Out.Cruises, Out.bShip ? 1 : 0, Out.Hands, Out.Hull, Out.Shot, Out.Chest, Out.Wrecks,
-		WreckCharge, BookRefused, BookRejected, bBookSetAside ? 1 : 0, bBookRecovered ? 1 : 0);
+		WreckCharge, BookRefused, BookRejected, bBookSetAside ? 1 : 0, bBookRecovered ? 1 : 0,
+		Out.Tackle, Out.Order);
 }
 
 void ASeaGameMode::BindShip(AShipPawn* Ship)
@@ -1699,6 +1735,14 @@ void ASeaGameMode::RefitInPort()
 				bBought = true;
 			}
 		}
+		// THE SHIPWRIGHT'S ORDER, after powder and shot and before men and hull:
+		// a captain who ordered tackle meant the money for it, and a whole
+		// magazine costs less than either. Full price or refused; a refusal
+		// closes the order and falls through to the repairs in the SAME tick.
+		else if (Ship->IsTackleOrdered() && FillTackleOrder(Ship, Coffers))
+		{
+			bBought = true;
+		}
 		// Then men. A ship with no crew cannot use a sound hull, and the
 		// cheaper thing should be the one she gets when the money is short.
 		else if (Ship->GetHandsShort() > 0 && Coffers >= HandCost && Ship->RecruitHand())
@@ -2167,6 +2211,11 @@ void ASeaGameMode::QuitNow()
 			TEXT("SHOTLOG %s magazine shot=%d/%d fired=%d dry=%d"),
 			*It->GetName(), It->GetShot(), It->GetShotMax(), It->GetShotFired(),
 			It->GetDryRefusals());
+		UE_LOG(LogTemp, Display,
+			TEXT("TACKLELOG %s tier=%d/%d reload=%.1f ordered=%d orders=%d withdrawn=%d refusedTop=%d"),
+			*It->GetName(), It->GetTackleTier(), It->GetTackleMaxTier(), It->GetReloadSeconds(),
+			It->IsTackleOrdered() ? 1 : 0, It->GetTackleOrders(), It->GetTackleWithdrawn(),
+			It->GetTackleRefusedTop());
 		// The scars she carries at quit: added over the run, still drawn, and
 		// how many the cap threw away. added summed over every hull must equal
 		// hull_hits, and the gate says so.
@@ -2336,6 +2385,8 @@ void ASeaGameMode::QuitNow()
 		Spent, GetCoffers(), HandsBought, GetHullBought(), ShotBought, RefitSeconds);
 	// Always, a counted zero: hulls the roadstead would not sell to.
 	UE_LOG(LogTemp, Display, TEXT("PORTLOG SIDE refused=%d"), RefusedSide.Num());
+	UE_LOG(LogTemp, Display, TEXT("TACKLELOG TOTAL bought=%d refusedCoffers=%d spent=%d"),
+		TackleBought, TackleRefusedCoffers, TackleSpent);
 	UE_LOG(LogTemp, Display, TEXT("SEALOG quitting at t=%.1fs"),
 		GetWorld()->GetTimeSeconds());
 	if (GEngine)

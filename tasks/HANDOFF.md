@@ -75,7 +75,7 @@ vânt în plante şi greement, `-Hour=` pentru ora din zi.
   din `OWNER_VERIFY` 38 (banda tunurilor nu mai contine tunurile).
 - **Porţile:**
   - `python tools/ci_checks.py` — fără motor, rulează şi în CI hosted
-  - `python tools/ci_measure.py` — 54 scenarii headless vs `tools/measurement_baseline.json`
+  - `python tools/ci_measure.py` — 64 scenarii headless vs `tools/measurement_baseline.json`
   - `python tools/ci_measure.py --record` — rescrie linia de bază, DELIBERAT, în
     acelaşi commit care o mişcă
   - `python tools/png_diff.py a.png b.png x0 y0 x1 y1` — compară o casetă
@@ -275,6 +275,17 @@ Livrat:
    `-Ledger=0` in PINNED, douasprezece randuri `ledger_*` pe fisiere din
    `Saved/CI/` copiate din `tools/books/`, garda octet-cu-octet (care si
    restaureaza) pe cartea reala.
+
+15. **PALANCURILE** (26.09, progresia, felia 2): portul vinde reincarcarea. Doua
+   trepte, -2 s fiecare (12 -> 10 -> 8), treapta n costa n x 400. Pe NAVA
+   (`AShipPawn::TackleTier`, `GetReloadSeconds()` e singurul numar citit si de
+   ceasul tunului, si de panou); cartea o duce (`tackle=`), si duce si comanda
+   deschisa (`order=`) - asa suita plaseaza comenzi prin fixturi, fara flag.
+   Tasta T comuta comanda; `-ShipToggleTackle=N` e flag de TEST (inchide cartea).
+   Rada serveste comanda dupa ghiulele si inaintea oamenilor/cocii, pret intreg
+   sau refuz. AI-ul: nimic. Designul: panel 3+2 (firepower / endurance /
+   alegerea), ambii judecatori pe reincarcare; braurile de coca au pierdut
+   fiindca perechea lor nu vedea capacul.
    Designul a iesit dintr-un panel (3 designuri, 2 judecatori): tunurile si
    metalul purtate de carte sunt felia 2; campania respinsa de ambii, fiindca
    cheia ei era o suma a doua chei existente.
@@ -360,7 +371,7 @@ atmosfera, iar dara face cititul.
 
 ## Ce aşteaptă ochiul owner-ului
 
-`OWNER_VERIFY.md` are **41** de puncte; **16–36 şi 39–41 n-au fost confirmate niciodată**, 37 e reparat, 38 e o DECIZIE a lui
+`OWNER_VERIFY.md` are **42** de puncte; **16–36 şi 39–42 n-au fost confirmate niciodată**, 37 e reparat, 38 e o DECIZIE a lui
 — sunt judecăţi vizuale pe care nu le pot face eu. (Scria 34 aici, şi numărul a
 rămas în urmă de două ori la rând: cele mai NOI puncte sunt exact cele pe care
 un cititor al acestei linii nu le-ar fi deschis.) Punctul 20 nu mai e o

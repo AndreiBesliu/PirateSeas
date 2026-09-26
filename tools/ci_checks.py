@@ -1055,12 +1055,15 @@ def check_ledger():
     # regex groups swapped cannot read as right.
     close = ("LogTemp: Display: LEDGERLOG CLOSE slot=given why=open reason=quit written=1 roundtrip=1 "
              "cruise=4 ship=1 hands=47 hull=611 shot=39 chest=602 wrecks=3 wreckCharge=17 "
-             "refused=2 rejected=5 setAside=1 recovered=1\n")
+             "refused=2 rejected=5 setAside=1 recovered=1 tackle=2 order=1\n")
     opened = ("LogTemp: Display: LEDGERLOG OPEN ship=ShipPawn_0 loaded=1 rejected=0 cruise=6 "
-              "hands=44/60 hull=622/1000 shot=33/40 chest=605 wrecks=7 clamped=8\n")
+              "hands=44/60 hull=622/1000 shot=33/40 chest=605 wrecks=7 clamped=8 tackle=1/2 order=0\n")
     lost = "LogTemp: Display: LEDGERLOG ShipPawn_0 lost: a new hull costs 1780, the chest paid 999\n"
     side = "LogTemp: Display: PORTLOG SIDE refused=4\n"
-    got = ci_measure.measure("fixture", opened + close + lost + side)
+    tack = ("LogTemp: Display: TACKLELOG EnemyShipPawn_0 tier=0/2 reload=12.0 ordered=0 orders=0 withdrawn=0 refusedTop=0\n"
+            "LogTemp: Display: TACKLELOG ShipPawn_0 tier=1/2 reload=10.0 ordered=1 orders=3 withdrawn=2 refusedTop=4\n"
+            "LogTemp: Display: TACKLELOG TOTAL bought=6 refusedCoffers=9 spent=1200\n")
+    got = ci_measure.measure("fixture", opened + close + lost + side + tack)
     want = {"ledger_closes": 1, "ledger_slot": 1, "ledger_why": 0, "ledger_written": 1,
             "ledger_roundtrip": 1, "ledger_cruise_out": 4, "ledger_ship_out": 1,
             "ledger_hands_out": 47, "ledger_hull_out": 611, "ledger_shot_out": 39,
@@ -1069,7 +1072,11 @@ def check_ledger():
             "ledger_recovered": 1, "ledger_loaded": 1, "ledger_cruise": 6,
             "ledger_hands_in": 44, "ledger_hull_in": 622, "ledger_shot_in": 33,
             "ledger_chest_in": 605, "ledger_wrecks_in": 7, "ledger_clamped": 8,
-            "ledger_ship_cost": 1780, "ledger_paid": 999, "refit_refused_side": 4}
+            "ledger_ship_cost": 1780, "ledger_paid": 999, "refit_refused_side": 4,
+            "ledger_tackle_out": 2, "ledger_order_out": 1, "ledger_tackle_in": 1, "ledger_order_in": 0,
+            "tackle_tier": 1, "tackle_reload": 10.0, "tackle_ordered": 1, "tackle_orders": 3,
+            "tackle_withdrawn": 2, "tackle_refused_top": 4, "tackle_bought": 6,
+            "tackle_refused_coffers": 9, "tackle_spent": 1200}
     bad = {k: (got.get(k), v) for k, v in want.items() if got.get(k) != v}
     if bad:
         fail("the book's lines are not read field by field (got, want): %r" % bad)
@@ -1079,7 +1086,8 @@ def check_ledger():
     for word, code in (("pinned", 1), ("noport", 2), ("testflag", 3)):
         off = ci_measure.measure("fixture", "LogTemp: Display: LEDGERLOG CLOSE slot=off why=%s reason=quit "
                                  "written=0 roundtrip=0 cruise=0 ship=0 hands=0 hull=0 shot=0 chest=0 "
-                                 "wrecks=0 wreckCharge=0 refused=0 rejected=0 setAside=0 recovered=0\n" % word)
+                                 "wrecks=0 wreckCharge=0 refused=0 rejected=0 setAside=0 recovered=0 "
+                                 "tackle=0 order=0\n" % word)
         if off.get("ledger_slot") != 0 or off.get("ledger_why") != code or "ledger_hands_out" in off:
             fail("a book shut for '%s' reads as something else: %r" % (word, off))
 
@@ -1131,7 +1139,17 @@ def check_ledger():
     SHOT_COST = const("SeaGameMode.h", r"int32 ShotCost = (\d+);")
     HULL_TICK = const("SeaGameMode.h", r"float HullPointsPerTick = ([\d.]+)f;")
     SHOT_TICK = const("SeaGameMode.h", r"int32 ShotPerTick = (\d+);")
-    if None in (HANDS, HULL, SHOT, HAND_COST, HULL_COST, SHOT_COST, HULL_TICK, SHOT_TICK):
+    RELOAD = const("ShipPawn.h", r"float ReloadSeconds = ([\d.]+)f;")
+    TACKLE_S = const("ShipPawn.h", r"float TackleSecondsPerTier = ([\d.]+)f;")
+    TACKLE_MAX = const("ShipPawn.h", r"int32 TackleMaxTier = (\d+);")
+    TACKLE_COST = const("SeaGameMode.h", r"int32 TackleCost = (\d+);")
+    pawn_src = io.open(os.path.join(ROOT, "Source", "PirateSeas", "ShipPawn.cpp"), encoding="utf-8").read()
+    gm = re.search(r"GGunMuzzleY\[\] = \{([^}]*)\}", pawn_src)
+    GUNS = len([x for x in gm.group(1).split(",") if x.strip()]) if gm else None
+    if GUNS is None:
+        fail("cannot count the guns a side (GGunMuzzleY) - the paper arithmetic has no inputs")
+    if None in (HANDS, HULL, SHOT, HAND_COST, HULL_COST, SHOT_COST, HULL_TICK, SHOT_TICK,
+                RELOAD, TACKLE_S, TACKLE_MAX, TACKLE_COST, GUNS):
         return
 
     def page(name):
@@ -1145,12 +1163,15 @@ def check_ledger():
                 kv[k.strip().lower()] = v.strip()
         num = lambda k: kv.get(k, "").isdigit() and 1 <= len(kv[k]) <= 9
         ship = [k for k in ("hands", "hull", "shot") if k in kv]
+        extra = [k for k in ("tackle", "order") if k in kv]
         ok_ = (kv.get("book") == "1" and kv.get("end") == "1"
                and all(num(k) for k in ("cruises", "wrecks", "chest"))
-               and len(ship) in (0, 3) and all(num(k) for k in ship))
+               and (len(ship) == 3 or (not ship and not extra))
+               and all(num(k) for k in ship + extra))
         return kv if ok_ else None
 
-    FRESH = {"ledger_hands_in": HANDS, "ledger_hull_in": HULL, "ledger_shot_in": SHOT}
+    FRESH = {"ledger_hands_in": HANDS, "ledger_hull_in": HULL, "ledger_shot_in": SHOT,
+             "ledger_tackle_in": 0, "ledger_order_in": 0}
 
     def opened_from(kv):
         """What OPEN must show: a refused page sails as built; a book, each
@@ -1159,11 +1180,16 @@ def check_ledger():
             return dict(FRESH, ledger_loaded=0, ledger_chest_in=0, ledger_cruise=1,
                         ledger_wrecks_in=0, ledger_clamped=0)
         h, v, sh = int(kv["hands"]), float(kv["hull"]), int(kv["shot"])
+        t, o = int(kv.get("tackle", 0)), int(kv.get("order", 0))
         ch, cv, cs = min(max(h, 0), HANDS), min(max(v, 1), HULL), min(max(sh, 0), SHOT)
+        ct, co = min(max(t, 0), TACKLE_MAX), min(max(o, 0), 1)
         return {"ledger_loaded": 1, "ledger_hands_in": ch, "ledger_hull_in": cv,
                 "ledger_shot_in": cs, "ledger_chest_in": int(kv["chest"]),
                 "ledger_cruise": int(kv["cruises"]) + 1, "ledger_wrecks_in": int(kv["wrecks"]),
-                "ledger_clamped": (ch != h) + (cv != v) + (cs != sh)}
+                "ledger_tackle_in": ct,
+                # an order for a tier past the top is refused at the fit
+                "ledger_order_in": 1 if co == 1 and ct < TACKLE_MAX else 0,
+                "ledger_clamped": (ch != h) + (cv != v) + (cs != sh) + (ct != t) + (co != o)}
 
     def shut_because(fl):
         """The game's rule, stated again: which rows must leave the book shut."""
@@ -1171,7 +1197,7 @@ def check_ledger():
             return 1                                    # pinned
         if not any(a.startswith("-Port=") and a != "-Port=0" for a in fl):
             return 2                                    # no roadstead
-        if any(a.startswith(("-Shot=", "-ShipHullTest=")) for a in fl):
+        if any(a.startswith(("-Shot=", "-ShipHullTest=", "-ShipToggleTackle=")) for a in fl):
             return 3                                    # a test flag
         return 0
 
@@ -1223,6 +1249,7 @@ def check_ledger():
         closed = {"ledger_hands_out": o["ledger_hands_in"], "ledger_hull_out": o["ledger_hull_in"],
                   "ledger_shot_out": o["ledger_shot_in"], "ledger_chest_out": o["ledger_chest_in"],
                   "ledger_cruise_out": o["ledger_cruise"], "ledger_wrecks_out": o["ledger_wrecks_in"],
+                  "ledger_tackle_out": o["ledger_tackle_in"], "ledger_order_out": o["ledger_order_in"],
                   "ledger_ship_out": 1}
         expect(name, dict(o, **closed, **WRITES))
     expect("ledger_tmp", {"ledger_recovered": 1})
@@ -1270,7 +1297,7 @@ def check_ledger():
                                 ledger_wreck_charge=paid, ledger_chest_out=wr["ledger_chest_in"] - paid,
                                 ledger_wrecks_out=wr["ledger_wrecks_in"] + 1, ledger_ship_out=1,
                                 ledger_hands_out=HANDS, ledger_hull_out=HULL, ledger_shot_out=SHOT,
-                                **WRITES))
+                                ledger_tackle_out=0, ledger_order_out=0, **WRITES))
 
     # ---- the purse's side: the port refuses her, her captain does not count it
     sd = opened_from(page("spend.book"))
@@ -1287,6 +1314,123 @@ def check_ledger():
         fail("ledger_carry does not differ from ledger_fresh - the book fits nothing")
     elif not outside:
         ok("ledger_carry vs ledger_fresh: %d ledger_* keys move, nothing else" % len(moved))
+
+    # ================================================= THE GUN TACKLE
+    # Every tackle row, worked out here first: what the book fits, what the
+    # port sells and in what order, which tier the guns end with, and so
+    # whether they are loaded at the quit - one broadside at -ShipFireTest,
+    # every gun of the side, ready when fire + reload <= quit.
+    tackle_rows = [n for n in ci_measure.SCENARIOS if n.startswith("tackle_")]
+    missing = [n for n in tackle_rows if n not in rows]
+    if missing:
+        fail("the tackle rows are not in the baseline: %s" % ", ".join(missing))
+        return
+
+    def flag(fl, name, default=None):
+        for a in fl:
+            if a.startswith(name + "="):
+                return float(a.split("=", 1)[1])
+        return default
+
+    def ready(fl, tier):
+        fire, quit_ = flag(fl, "-ShipFireTest"), flag(fl, "-ShipQuitAfter")
+        if fire is None:
+            return None
+        return GUNS if fire + (RELOAD - tier * TACKLE_S) <= quit_ else 0
+
+    def tackle_expect(name, tier, extra):
+        fl = ci_measure.SCENARIOS[name]
+        want = dict(extra, tackle_tier=tier, tackle_reload=RELOAD - tier * TACKLE_S)
+        r = ready(fl, tier)
+        if r is not None:
+            want["guns_ready_stbd"] = r
+        expect(name, want)
+
+    # the carried tier, and the pair's effect
+    for name in ("tackle_none", "tackle_carry"):
+        o = opened_from(page(ci_measure.BOOKS[name][0]))
+        tackle_expect(name, o["ledger_tackle_in"], dict(o, ledger_tackle_out=o["ledger_tackle_in"],
+                                                        ledger_order_out=o["ledger_order_in"], **WRITES))
+
+    # the purchase, AFTER shot and BEFORE the hull
+    b = opened_from(page("tacklebuy.book"))
+    if b["ledger_order_in"] != 1:
+        fail("tacklebuy.book carries no order - the purchase is not exercised")
+    shot_buy = SHOT - b["ledger_shot_in"]
+    price = (b["ledger_tackle_in"] + 1) * TACKLE_COST
+    left = b["ledger_chest_in"] - shot_buy * SHOT_COST - price
+    hull_buy = min(HULL - b["ledger_hull_in"], left / HULL_COST)
+    if left < 0 or hull_buy >= HULL - b["ledger_hull_in"]:
+        fail("tacklebuy.book no longer puts the order and the repairs in competition")
+    if b["ledger_chest_in"] - shot_buy * SHOT_COST - (HULL - b["ledger_hull_in"]) * HULL_COST >= price:
+        fail("tacklebuy.book can afford the tackle even after a full repair - the ORDER of service is not tested")
+    ticks = -(-shot_buy // SHOT_TICK) + 1 + -(-hull_buy // HULL_TICK)
+    spent = shot_buy * SHOT_COST + price + hull_buy * HULL_COST
+    tackle_expect("tackle_buy", b["ledger_tackle_in"] + 1, dict(
+        b, tackle_bought=1, tackle_spent=price, tackle_refused_coffers=0,
+        refit_spent=spent, refit_shot_bought=shot_buy, refit_hull_bought=hull_buy,
+        refit_seconds=ticks * 0.5, ledger_chest_out=b["ledger_chest_in"] - spent,
+        ledger_hull_out=b["ledger_hull_in"] + hull_buy, ledger_tackle_out=b["ledger_tackle_in"] + 1,
+        ledger_order_out=0, **WRITES))
+
+    # the next cruise opens with it
+    bo = rows["tackle_buy"]
+    tackle_expect("tackle_cycle", bo.get("ledger_tackle_out") or 0, {
+        "ledger_tackle_in": bo.get("ledger_tackle_out"), "ledger_order_in": bo.get("ledger_order_out"),
+        "ledger_chest_in": bo.get("ledger_chest_out"), "ledger_hull_in": bo.get("ledger_hull_out"),
+        "ledger_shot_in": bo.get("ledger_shot_out"), "ledger_loaded": 1})
+
+    # tier 2 at twice the price
+    t = opened_from(page("tackletop.book"))
+    price2 = (t["ledger_tackle_in"] + 1) * TACKLE_COST
+    tackle_expect("tackle_top", t["ledger_tackle_in"] + 1, dict(
+        t, tackle_bought=1, tackle_spent=price2, refit_spent=price2, refit_seconds=0.5,
+        ledger_chest_out=t["ledger_chest_in"] - price2, ledger_order_out=0, **WRITES))
+    if ready(ci_measure.SCENARIOS["tackle_top"], t["ledger_tackle_in"] + 1) == \
+            ready(ci_measure.SCENARIOS["tackle_top"], t["ledger_tackle_in"]):
+        fail("tackle_top's quit cannot tell tier 2 from tier 1")
+
+    # an order the chest cannot pay: refused, closed, and the repairs go on
+    sh = opened_from(page("tackleshort.book"))
+    if sh["ledger_chest_in"] >= (sh["ledger_tackle_in"] + 1) * TACKLE_COST:
+        fail("tackleshort.book can pay for the tackle - the refusal is not exercised")
+    hull_s = min(HULL - sh["ledger_hull_in"], sh["ledger_chest_in"] / HULL_COST)
+    tackle_expect("tackle_short", sh["ledger_tackle_in"], dict(
+        sh, tackle_refused_coffers=1, tackle_bought=0, refit_hull_bought=hull_s,
+        refit_spent=hull_s * HULL_COST, refit_seconds=-(-hull_s // HULL_TICK) * 0.5,
+        ledger_chest_out=sh["ledger_chest_in"] - hull_s * HULL_COST, ledger_order_out=0,
+        tackle_ordered=0, **WRITES))
+
+    # an order past the top, carried in the book: refused at the fit
+    mx = opened_from(page("tacklemax.book"))
+    tackle_expect("tackle_max", mx["ledger_tackle_in"], dict(
+        mx, tackle_refused_top=1, ledger_order_out=0, tackle_ordered=0, **WRITES))
+
+    # the key's own function: ordered, then withdrawn
+    tackle_expect("tackle_toggle", 0, {"tackle_orders": 1, "tackle_withdrawn": 1, "tackle_ordered": 0})
+    expect("ledger_testtackle", {"tackle_orders": 1, "tackle_ordered": 1, "ledger_why": 3, "ledger_written": 0})
+
+    # no tackle anywhere it was not asked for
+    for name, row in sorted(rows.items()):
+        if name.startswith(("tackle_", "ledger_testtackle")):
+            continue
+        if row.get("tackle_tier", 0) or row.get("tackle_orders", 0) or row.get("tackle_bought", 0):
+            fail("%s: tackle in a row that never asked for it: %r"
+                 % (name, {k: v for k, v in row.items() if k.startswith("tackle_")}))
+        if "tackle_reload" in row and row["tackle_reload"] != RELOAD:
+            fail("%s: reload %.1f without tackle, not %.1f" % (name, row["tackle_reload"], RELOAD))
+
+    # the pair: tier 1 against tier 0 - the book and the tackle move, and the
+    # guns; nothing else does
+    n_row, c_row = rows["tackle_none"], rows["tackle_carry"]
+    moved = sorted(k for k in set(n_row) | set(c_row) if n_row.get(k) != c_row.get(k))
+    outside = [k for k in moved if not k.startswith(("ledger_", "tackle_")) and k != "guns_ready_stbd"]
+    if outside:
+        fail("tackle_carry moves keys outside the tackle's family: %s" % outside)
+    if "guns_ready_stbd" not in moved:
+        fail("tackle_carry does not change when the guns are loaded - the tackle does nothing")
+    elif not outside:
+        ok("tackle_carry vs tackle_none: %d keys move, the guns among them, nothing else" % len(moved))
 
 def main():
     print("PirateSeas checks - the ones that do not need Unreal\n")

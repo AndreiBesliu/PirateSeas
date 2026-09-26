@@ -4827,3 +4827,75 @@ cartii reale si restaurarea ei. Neexercitat si spus: podeaua de coca 1 la scrier
 
 **Task Completed** (commit + pachet verificat prin rulare, mai jos).
 
+## 26.09.2026 - Progresia, felia 2: palancurile
+
+**Task Started.** Prompt: "continua" (sesiune noua; rationamentul refacut de la
+zero, apoi un panel de design pentru felia 2: 3 designeri, 2 judecatori, 1,62M
+tokeni). Model: Opus 5.5.
+
+**Golul.** Cartea (felia 1) ducea starea navei si lada, dar lada putea doar
+repara: nu pierdeai ce castigasei, nici nu deveneai mai tare.
+
+**Designul.** Trei unghiuri: puterea de foc (exercitiu la tunuri), anduranta
+(brauri de bordaj - MaxHullIntegrity), alegerea insasi (comanda la dulgher).
+Ambii judecatori au ales RELOAD-ul, din motive diferite: e singurul numar de
+foc pe care nimic altceva nu e calibrat (solverul, RangeBias si valoarea prazii
+nu-l citesc), si se simte la fiecare salva. Braurile au pierdut la amandoi:
+perechea lor nu vedea capacul (o mutatie care numara braul fara sa ridice
+capacul dadea acelasi 980). Am ales echipamentul (palancuri), nu exercitiul:
+sta pe NAVA si se duce la fund cu ea, indiferent ce oameni sunt la bord.
+
+**Ce s-a construit.** Doua trepte, -2 s fiecare (12 -> 10 -> 8), treapta n
+costa n x 400. `GetReloadSeconds()` e singurul numar - il citesc si ceasul
+tunului (ShipPawn.cpp, amprenta dupa tragere) si panoul. Tasta T comuta
+comanda (a doua apasare o retrage: sta langa R). Rada o serveste DUPA ghiulele
+si INAINTEA oamenilor si a cocii; pret intreg sau refuz, si refuzul cade in
+reparatii in acelasi tic. Panoul spune ce ai, ce ai comandat si daca rada din
+partida asta poate vinde (fara rada / vinde Coroanei / refuzat), si arata
+COFFERS in partidele cu rada fara convoi.
+
+**Gaura comuna a tuturor designurilor, inchisa altfel.** Fiecare propunea un
+flag de test care sa apese tasta - si fiecare flag ar fi putut cheltui lada
+reala si scrie cartea owner-ului. Aici COMANDA DESCHISA sta in carte
+(`order=1`, langa `tackle=`): suita plaseaza comenzi prin fixturi, fara flag; o
+comanda neplatita la iesire te asteapta la urmatoarea rada. Singurul flag,
+`-ShipToggleTackle=N`, apasa aceeasi functie ca tasta si e flag de TEST (inchide
+cartea). Cele doua flag-uri de test mai vechi, `-Shot=` si `-ShipHullTest=`,
+aveau un singur rand intre ele - acum fiecare are randul lui.
+
+**O garda fara rand, rezolvata prin cod, nu prin plasa.** Refuzul treptei de sus
+la apasarea T nu putea fi exercitat: flag-ul care apasa T inchide cartea, deci
+nicio nava de treapta 2 nu-l poate primi. Tasta si cartea intreaba acum ACEEASI
+functie (`CanOrderTackle`), deci randul `tackle_max` (comanda din carte peste
+treapta de sus) le prinde pe amandoua.
+
+**Masurat, zece randuri noi**, fiecare cifra pe hartie in poarta (constantele
+citite din headere, tunurile pe bord numarate din `GGunMuzzleY`): o salva la t=8,
+iesirea la 19 - un tun de 12 s NU e gata, unul de 10 s E, pe ceasul jocului.
+Perechea `tackle_carry`/`tackle_none` misca 5 chei, tunurile gata printre ele, si
+nimic altceva; `tackle_buy` 8 + 400 + 92 = 500, 12 tic-uri, coca 984, iar poarta
+verifica si ca fixtura pune comanda si reparatia in competitie (servita dupa
+reparatii ar fi fost refuzata); `tackle_top` 800 exact (cu 900, portul
+recumpara ghiulelele trase in rada si aritmetica depindea de unde plutea
+nava - scos din fixtura); `tackle_short` refuzat si reparat cu 200; `tackle_max`
+refuzat la montare; `tackle_toggle` comandat si retras. Suita: 64 de scenarii, 1
+MOVED (`ledger_wreck.ledger_clamped` 2 -> 3: fixtura cere acum si treapta 5),
+0 GONE, niciun rand existent miscat la treapta 0.
+
+**Mutatii: 12 din 12 prinse** - ceasul fara palancuri, accesorul fara palancuri,
+vanzare fara bani, comanda refuzata ramasa deschisa, comanda servita dupa
+reparatii, pret plat, treapta de sus mereu comandabila, tasta fara retragere,
+fara taiere la treapta, scriitorul fara treapta, flag-ul de comutare care nu
+inchide cartea, cartea care uita comanda.
+
+**In trecere, reparat:** deriva gasita de panel - `refit_on` era scris „600
+cheltuiti, 600 ramasi" in README, OWNER_VERIFY si comentariul suitei; linia de
+baza are 640/560/21,5 s de cand magazia e finita si ghiulelele se cumpara
+primele. Si comentariul din SeaGameMode.h care punea `clamped` pe linia CLOSE.
+
+Ce nu pot: sa simt daca 10 s fata de 12 schimba o lupta, si daca T e tasta
+buna - `OWNER_VERIFY` 42, cu trei numere ale lui (−2 s, 400/800, 1,5 x rata
+Coroanei la treapta 2). AI-ul nu cumpara nimic, si e spus.
+
+**Task Completed** (commit + pachet verificat prin rulare, mai jos).
+

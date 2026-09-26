@@ -72,6 +72,7 @@ Apoi apeși **Play**.
 | Mouse | roteşti camera **şi tunurile**; bateria se schimbă singură când treci prova sau pupa |
 | Rotiţa | înălţarea ţevilor, 0,2° pe cârtiţă, între −3° şi +10° |
 | X | fixezi tunurile perpendicular pe navă şi ignori mouse-ul (comutator) |
+| T | comanzi dulgherului palancurile de treapta urmatoare (comutator: a doua apasare retrage comanda); se platesc in rada |
 
 **Panoul GUNS arata CARE tunuri iti mai sunt**, nu cate, si in TREI stari.
 Patru pipuri pe bord, fiecare despre afetul lui: daca ti-au fost scoase tunul din
@@ -899,8 +900,9 @@ lovita pornea spre port in primele secunde, inainte sa fi castigat un ban, si
 statea intr-o rada goala toata partida fara sa vaneze nimic.
 
 Masurat cap-coada, cu `refit_on`: prada luata la 138 s, acasa la 359 (1200 in
-vistierie), pleaca spre port, ajunge la 764, cumpara **20 de oameni si 400 de
-puncte de coca pentru 600**, si iese din nou in larg la 776 cu 600 ramasi.
+vistierie), pleaca spre port, ajunge la 764, cumpara **20 de ghiulele, 20 de
+oameni si 400 de puncte de coca pentru 640** (ghiulelele, primele, de cand
+magazia e finita), si iese din nou in larg cu 560 ramasi, dupa 21,5 s de refit.
 
 
 ### Portul: unde o pradă devine bani şi oamenii se întorc
@@ -1045,12 +1047,73 @@ citite din headere:
   dispusa sa se refaca, nascuta in rada lui: portul o refuza (`refit_spent` 0),
   capitanul ei nu socoteste lada (`port_ticks_max` 0).
 
-**Ce nu face inca:** portul nu vinde nimic peste „ca noua" - lada poate doar
-repara, deci progresul de azi e ca nu mai pierzi ce ai castigat, nu ca devii mai
-puternic; asta e felia urmatoare (tunuri si metal cumparate in port si purtate
-de carte). Oamenii plecati intr-o prada inca pe mare la iesire nu sunt in carte:
-nu sunt la bord. Tunurile scoase din afet, greementul si carma nu sunt in carte.
-O partida de la zero: `-Ledger=0`, sau sterge fisierul.
+**Ce nu face inca:** oamenii plecati intr-o prada inca pe mare la iesire nu sunt
+in carte: nu sunt la bord. Tunurile scoase din afet, greementul si carma nu sunt
+in carte. O partida de la zero: `-Ledger=0`, sau sterge fisierul. Ce vinde
+portul PESTE „ca noua" e sectiunea urmatoare.
+
+## Palancurile: portul vinde tunuri care se incarca mai repede
+
+**Progresia, felia 2.** Pana aici lada putea doar repara: nu pierdeai ce
+castigasei, dar nici nu deveneai mai tare. Acum dulgherul din rada vinde
+palancuri mai bune - tunul iese in bataie mai repede, deci se incarca mai
+repede. Doua trepte, fiecare scade **2 s** din reincarcarea fiecarui tun: 12 s,
+apoi 10, apoi 8. Treapta n costa **n x 400**: prima 400, a doua 800 - o prada.
+Palancurile sunt pe NAVA: cartea le duce in croaziera urmatoare, si se duc la
+fund cu ea (inlocuitoarea pleaca de la zero).
+
+**Cum le cumperi.** Tasta **T** da comanda pentru treapta urmatoare; a doua
+apasare o retrage (sta langa R, tasta de lupta, si o apasare gresita nu trebuie
+sa devina bani cheltuiti fara intoarcere). Comanda o plateste rada, din
+vistierie (prazi aduse + lada), **dupa ghiulele si inaintea oamenilor si a
+cocii**: o magazie plina e mai ieftina decat oricare, dar o comanda data
+inseamna ca ai vrut banii pentru ea, nu pentru reparatie. Pret intreg sau
+refuz: fara bani destui comanda se inchide, iar reparatiile merg inainte in
+acelasi tic cu banii pe care nu i-a luat. Panoul spune tot: `TACKLE 1/2 reload
+10 s`, `ORDERED 2, 800`, `- no roadstead in this run`, `- this roadstead sells
+to the Crown`, `refused: 800 needed`; si, intr-o partida cu rada fara convoi,
+randul `COFFERS` care altfel nu se vedea.
+
+**Comanda deschisa sta in carte** (`order=1`, langa `tackle=`). Asa o comanda
+data si neplatita pana la iesire te asteapta la urmatoarea rada - si asa suita
+plaseaza comenzi prin fisierele ei de proba, fara niciun flag care ar putea
+scrie cartea ta. Singurul flag, `-ShipToggleTackle=N`, apasa T de N ori pe
+aceeasi functie ca tasta, si e un flag de TEST: tine cartea inchisa in partida
+lui, ca `-Shot=` si `-ShipHullTest=`.
+
+**Decizia.** Cu 500 in lada, patru ghiulele lipsa si coca la 800: fara comanda,
+portul te face intreg si iti ramane ceva; cu comanda, pleci cu tunuri de 10 s pe
+o coca de 984 si cu lada goala. Si daca te scufunzi, palancurile se duc cu nava.
+
+**Ce face AI-ul: nimic, si e spus.** Coroana n-are tasta si n-are carte; poarta
+ei de tragere citeste deja ceasul fiecarui tun, deci o doctrina de palancuri
+pentru ea e o felie separata. Consecinta e de echilibru, a owner-ului: la
+treapta 2 jucatorul trage de 1,5 ori mai des decat Coroana (OWNER_VERIFY 42).
+
+**Masurat, zece randuri noi**, fiecare cifra calculata de poarta pe hartie
+inainte sa se uite la rand. O salva la t=8 (`-ShipFireTest`), iesirea la 19: un
+tun de 12 s e gata la 20, deci NU e gata; unul de 10 s e gata la 18, deci E -
+`guns_ready_stbd`, citit din ceasul jocului la iesire, spune ce treapta au
+tunurile cu adevarat.
+- `tackle_carry` / `tackle_none` - perechea: treapta 1 din carte contra treptei
+  0. Difera in cartea si palancurile ei si in tunurile gata (4 contra 0), si in
+  nimic altceva.
+- `tackle_buy` - comanda din carte, 500 in lada, patru ghiulele lipsa, coca 800,
+  rada unde pornesti: ghiulele 8, palancuri 400, coca cu ce ramane (92 -> 184 de
+  puncte) - 500, 12 tic-uri, 6,0 s, coca 984. Servita dupa reparatii, comanda ar
+  fi fost refuzata: poarta verifica si ca fixtura pune cele doua in competitie.
+- `tackle_cycle` - ce a scris `tackle_buy`, citit de alt proces: treapta 1,
+  tunurile gata la 19.
+- `tackle_top` - treapta 2 cu exact 800 in lada; tunuri de 8 s, gata la 16, deci
+  iesirea la 17 deosebeste treapta 2 de 1.
+- `tackle_short` - comanda cu 300 in lada: refuzata, inchisa, si portul repara
+  coca cu 200 in acelasi tic.
+- `tackle_max` - o comanda peste treapta de sus, din carte: refuzata la montare.
+- `tackle_toggle` - T apasat de doua ori prin flag: comandat, apoi retras.
+- `ledger_testtackle`, `ledger_testhull` - cele doua flag-uri de test care inca
+  n-aveau randul lor: cartea ramane inchisa.
+- `ledger_wreck` cere acum si treapta 5 (taiata la 2): inlocuitoarea pleaca de
+  la 0.
 
 ## Echipajul
 
@@ -1240,7 +1303,8 @@ pereche de rulări citea împrăștiere și credea că citește semnal.
 | `-ShipSplinters=0` | stinge aschiile de la o lovitura in cocca (implicit APRINSE) |
 | `-ShipHoles=0` | stinge urmele loviturilor de pe cocca (implicit APRINSE) |
 | `-ShipSound=0` | stinge cele patru sunete de tir (implicit APRINSE) |
-| `-Ledger=0` | cartea navei inchisa pentru o rulare: nu se citeste si nu se scrie (implicit DESCHISA in orice partida cu `-Port=1` si fara `-Shot=`/`-ShipHullTest=`; `Saved/Ledger/book.txt`) |
+| `-Ledger=0` | cartea navei inchisa pentru o rulare: nu se citeste si nu se scrie (implicit DESCHISA in orice partida cu `-Port=1` si fara `-Shot=`/`-ShipHullTest=`/`-ShipToggleTackle=`; `Saved/Ledger/book.txt`) |
+| `-ShipToggleTackle=N` | apasa T de N ori la pornire (comanda de palancuri, apoi retragerea ei); flag de TEST, tine cartea inchisa |
 | `-LedgerBook=<cale>` | citeste si scrie alt fisier in locul cartii, relativ la proiect (suita: sub `Saved/CI/`) |
 | `-ShipGunBand=LO,HI` | banda de inaltime (cm, fata de linia de plutire) in care o lovitura scoate un tun din afet, pentru toate navele (implicit 0,240; `OWNER_VERIFY` 38) |
 | `-WindBearing=N` | fixează DIRECȚIA vântului, altfel „mal sub vânt" nu e reproductibil |
@@ -1528,9 +1592,9 @@ toată nava, fiindcă `ObjectBounds` întorcea zero pentru mesh-ul ăla.
 - echipajul e o singură rezervă împărțită între tunuri și reparații: manevra
   velelor nu e încă o stație, coca nu se repară pe mare, nimeni nu se
   recrutează și nimeni nu se plătește
-- punga cumpara oameni, coca SI ghiulele, dar NU tunuri si nu nave mai bune;
-  cartea navei (25.09) duce starea si lada dintr-o rulare in alta, dar lada nu
-  cumpara nimic peste „ca noua"
+- punga cumpara oameni, coca, ghiulele si palancuri (26.09, doua trepte de
+  reincarcare), dar NU tunuri in plus si nu nave mai bune; cartea le duce pe
+  toate dintr-o rulare in alta
 - preturile sunt alese ca sa se raporteze la valoarea unei prazi, nu masurate
   din ceva real
 - nimeni nu recapturează o pradă care merge singură spre radă
