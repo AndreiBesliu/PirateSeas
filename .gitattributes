@@ -12,3 +12,7 @@
 *.glb    binary
 *.blend  binary
 *.png    binary
+
+# cmd.exe reads a batch file with LF endings mostly right and sometimes not
+# (labels, long lines): the double-click launchers in Joaca\ stay CRLF.
+*.bat text eol=crlf

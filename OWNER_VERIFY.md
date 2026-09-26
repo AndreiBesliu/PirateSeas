@@ -1110,7 +1110,7 @@ pe uscat intr-o lada. Panoul spune `CRUISE N  chest ashore M`. Fara `-Port=1`,
 sau cu `-Shot=` / `-ShipHullTest=`, cartea nu se citeste si nu se scrie -
 celelalte puncte din lista nu o ating.
 
-**Ce te uiti:** Porneste de doua ori acelasi lansator, `Joaca - Port si prazi,
+**Ce te uiti:** Porneste de doua ori acelasi lansator, `Joaca\2 - Port si prazi,
 fara inamici.bat` (convoiul iese la ~500 m, rada la 900 m sub vantul lui). Prima
 data: ia o
 prada (tirul inalt in greement, apoi stai 20 s langa ea ca sa treaca oamenii),
@@ -1148,14 +1148,14 @@ daca a porni pe o nava ranita e o miza sau o pedeapsa - asta e jocul, nu cifra.
 ## 42. Palancurile: tunuri care se incarca mai repede, cumparate in port
 
 **Ce te uiti, in doua partide, amandoua cu `-Port=1` (cartea le leaga):**
-1. `Joaca - Port si prazi, fara inamici.bat` - linistit. Ia o
+1. `Joaca\2 - Port si prazi, fara inamici.bat` - linistit. Ia o
    prada si du-o in rada (ca la 41), apoi apasa **T**: panoul arata
    `TACKLE 0/2 reload 12 s  ORDERED 1, 400 - T withdraws, 3 s`. Intra in rada.
    Dupa ce portul iti umple magazia, platesc palancurile: `TACKLE 1/2 reload
    10 s`, iar randul COFFERS spune `... 400 tackle`. Trage o salva si numara pana
    se aprind iar pipurile: 10 s, nu 12. Apasa T de doua ori pe mare (comanda,
    retrasa) si vezi ca panoul o spune. Inchide.
-2. `Joaca - Port si prazi, cu escorta.bat` - acum cu escorta Coroanei (doua
+2. `Joaca\3 - Port si prazi, cu escorta.bat` - acum cu escorta Coroanei (doua
    nave). Treapta 1 e inca acolo; lupta cu ele si simte daca tunurile tale revin
    mai repede decat ale lor.
 
