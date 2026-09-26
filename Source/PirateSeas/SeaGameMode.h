@@ -62,6 +62,7 @@ public:
 	bool IsPurseSide(const AShipPawn* Ship) const;
 	/** -Port=N>0. One reading, shared by the port itself and the book. */
 	static bool PortRequested();
+	int32 GetEscaped() const { return Escaped; }
 	/** THE LINE, counted where no wreck can take the count with her. */
 	void NoteBreakOff() { ++LineBroken; }
 	void NoteLineClosed(float T) const
@@ -205,6 +206,14 @@ protected:
 	 *  it off. The distance is the owner's number: OWNER_VERIFY 11. */
 	UPROPERTY(EditDefaultsOnly, Category = "Sea")
 	float EscapeRangeM = 2000.f;
+
+	/** And at the EDGE of the water. The chaser makes the same speed as the
+	 *  runner dead before the wind, so a player who keeps chasing holds her
+	 *  under the range for good; past the water box she would fall out of the
+	 *  world down a path no tally hears. Within this margin of the box's edge
+	 *  she has got away to open sea. */
+	UPROPERTY(EditDefaultsOnly, Category = "Sea")
+	float EscapeEdgeMarginM = 300.f;
 
 	/** Nothing may stick up above this depth at the spawn point. Compared
 	 *  against a hull's whole BOUNDING BOX, not its origin: a wreck plunges
@@ -606,8 +615,15 @@ private:
 	void SampleEscapes();
 	void TallySquadron(float Now);
 	int32 Escaped = 0;
+	int32 EscapedAtEdge = 0;
 	float FirstEscapeAt = -1.f;
 	float FirstEscapeDistM = -1.f;
+	/** The ocean's collision box, read once off the water body: centre and the
+	 *  smaller half extent. -1 when there is no water body to read. */
+	bool bWaterBoxRead = false;
+	FVector WaterBoxCentre = FVector::ZeroVector;
+	float WaterBoxHalfCm = -1.f;
+	void ReadWaterBox();
 
 	/** -ConvoyStrikeTest=N: the first merchant still running strikes at N
 	 *  seconds, through Strike() and nothing else, so the whole path from a

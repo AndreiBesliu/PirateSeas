@@ -777,19 +777,29 @@ intre ele e deja sub doua intervale, dar punctul de statie e la ~192 m. Dupa
 90 s urmaritoarea e la 80 m de el - sub jumatate. Recenzia a prins ca primul
 control trecea si fara sa se formeze nimic. Perechea misca exact noua chei.
 
-**Si fugara SCAPA.** Masurat: cu vantul drept in pupa face 6,42 m/s, iar polara
-aceleiasi nave are varful de 6,41 m/s la 141 de grade - adica sub 5 m/s spre sub
-vant. O fugara cu greementul intreg nu poate fi prinsa niciodata, iar victoria
-cerea ca TOATE navele Coroanei sa fie scufundate: lupta implicita ramanea fara
-victorie si fara escadra urmatoare. Acum o fugara ajunsa la peste **2000 m** de
-coca jucatorului (numarul owner-ului, `-EnemyEscapeM=`) a scapat: iese de pe
-apa, iar escadra se socoteste fara ea - aceeasi socoteala ca la o scufundare.
-Nu scapa dintr-un jucator aflat la fund: il asteapta pe urmatoarea lui coca.
-Perechea `escape_on` / `escape_off` (o nava la 1,9 km, rupta la t=5): scapa la
-140 s, la 2001 m - prinsa in primul esantion de dupa prag - si vine victoria;
-cu regula stinsa fuge mai departe. Poarta cere si doua garzi, fiecare cu randul
-ei: o nava care inca LUPTA dincolo de 2 km nu scapa; o fugara cu jucatorul la
-fund scapa abia la 36,0 s, dupa ce coca noua a lui e legata la 35,8.
+**Si fugara SCAPA.** Masurat: cu vantul drept in pupa face 6,42 m/s - si un
+urmaritor pe aceeasi coca face exact la fel (prima versiune a textului asta
+spunea „sub 5 m/s", fiindca lua varful polarei de la 141 de grade; recenzia a
+aratat ca drept in pupa polara da tot 6,42). Deci o fugara cu greementul intreg
+nu poate fi prinsa: doar tinuta la aceeasi distanta. Iar victoria cerea ca TOATE
+navele Coroanei sa fie scufundate: lupta implicita ramanea fara victorie si fara
+escadra urmatoare. Acum o fugara scapa in doua feluri, amandoua socotite ca o
+scufundare (`TallySquadron`): la peste **2000 m** de coca vie a jucatorului
+(`-EnemyEscapeM=`, numarul owner-ului) - adica atunci cand el renunta la
+urmarire - sau la **300 m de marginea apei** (cutia oceanului are 5 km pe
+jumatate), unde ajunge daca el o urmareste pana acolo; altfel ar fi cazut din
+lume pe un drum pe care nicio socoteala nu-l aude. Iese de pe apa, iar panoul
+spune `SQUADRON 1 of 2 afloat, 1 got away`. Nu scapa dintr-un jucator aflat la
+fund, si o coca ce se scufunda nu „scapa" niciodata.
+
+Randurile: `escape_on` / `escape_off` (o nava la 1,9 km, rupta la t=5): scapa la
+140 s, la 2001 m - prinsa in primul esantion de dupa prag - si vine victoria; cu
+regula stinsa fuge mai departe. Garzile, fiecare cu randul ei: o nava care inca
+LUPTA dincolo de 2 km nu scapa (`escape_fighting`); cu jucatorul la fund,
+fugara scapa abia la 36,0 s, dupa ce coca noua a lui e legata la 35,8
+(`escape_player_down`); o coca scuttled la 2,1 km nu scapa, si da o singura
+victorie (`escape_wreck`); la marginea apei, cu raza scoasa din joc, scapa la
+367 s si 4702 m (`escape_edge`).
 
 ## Nava inamică
 

@@ -1650,9 +1650,10 @@ def check_escape():
     got = ci_measure.measure("fixture",
         "LogTemp: Display: SEALOG player ship=ShipPawn_0 bound t=0.0\n"
         "LogTemp: Display: SEALOG player ship=ShipPawn_1 bound t=35.8\n"
-        "LogTemp: Display: SEALOG TOTAL escaped=2 firstEscape=36.5 dist=2083 victories=3\n")
+        "LogTemp: Display: SEALOG TOTAL escaped=2 firstEscape=36.5 dist=2083 victories=3 edge=1\n"
+        "LogTemp: Display: SEALOG escape edge: water box half 4999 m, margin 300 m\n")
     want = {"sea_escaped": 2, "sea_escape_t": 36.5, "sea_escape_dist_m": 2083.0, "sea_victories": 3,
-            "sea_player_rebound_t": 35.8}
+            "sea_player_rebound_t": 35.8, "sea_escaped_edge": 1, "sea_water_half_m": 4999.0}
     bad = {k: (got.get(k), v) for k, v in want.items() if got.get(k) != v}
     if bad:
         fail("the escape lines are not read field by field (got, want): %r" % bad)
@@ -1668,15 +1669,21 @@ def check_escape():
     RESPAWN = const("SeaGameMode.h", r"float EnemyRespawnDelay = ([\d.]+)f;")
     PERIOD = const("SeaGameMode.cpp", r"&ASeaGameMode::SampleEscapes, ([\d.]+)f, true")
     TOP = const("ShipPawn.h", r"float MaxForwardSpeed = ([\d.]+)f;")
-    if None in (RANGE, RESPAWN, PERIOD, TOP):
+    MARGIN = const("SeaGameMode.h", r"float EscapeEdgeMarginM = ([\d.]+)f;")
+    if None in (RANGE, RESPAWN, PERIOD, TOP, MARGIN):
         return
+    # The half second is the design, stated here - not read back from the
+    # source it checks, where a slower sampler would have widened its own
+    # tolerance and passed.
+    if PERIOD != 0.5:
+        fail("SampleEscapes runs every %.2f s, not the half second this gate is written for" % PERIOD)
 
     base_path = os.path.join(ROOT, "tools", "measurement_baseline.json")
     if not os.path.exists(base_path):
         note("no baseline - the escape rows are not checked, which is NOT a pass")
         return
     rows = json.loads(io.open(base_path, encoding="utf-8-sig").read())
-    need = ("escape_on", "escape_off", "escape_fighting", "escape_player_down")
+    need = ("escape_on", "escape_off", "escape_fighting", "escape_player_down", "escape_wreck", "escape_edge")
     if any(n not in rows for n in need):
         fail("escape rows missing from the baseline: %s" % [n for n in need if n not in rows])
         return
@@ -1709,6 +1716,20 @@ def check_escape():
          and pd["sea_player_rebound_t"] <= pd["sea_escape_t"] <= pd["sea_player_rebound_t"] + PERIOD
          and flag("escape_player_down", "-EnemyX") / 100 > RANGE),
     ]
+    wr, ed = rows["escape_wreck"], rows["escape_edge"]
+    edge_range, edge_quit = flag("escape_edge", "-EnemyEscapeM"), flag("escape_edge", "-ShipQuitAfter")
+    half = ed.get("sea_water_half_m")
+    checks += [
+        ("a foundering hull past the range does not escape", (wr.get("sea_escaped"), wr.get("sea_victories"),
+         wr.get("ships_sunk")) == (0, 1, 1) and flag("escape_wreck", "-EnemyX") / 100 > RANGE),
+        ("escape_on went by the range", on.get("sea_escaped_edge") == 0),
+        ("she gets away at the edge of the water", (ed.get("sea_escaped"), ed.get("sea_escaped_edge"),
+         ed.get("sea_victories")) == (1, 1, 1)),
+        ("at the edge, not by the range", half is not None and ed.get("sea_escape_dist_m") is not None
+         and half - MARGIN <= ed["sea_escape_dist_m"] < edge_range),
+        ("edge: quit before a new squadron", ed.get("sea_escape_t") is not None
+         and ed["sea_escape_t"] < edge_quit < ed["sea_escape_t"] + RESPAWN),
+    ]
     wrong = [k for k, good in checks if not good]
     if wrong:
         fail("the escape against paper: %s" % ", ".join(wrong))
@@ -1719,7 +1740,10 @@ def check_escape():
     # hull's quit-line keys, which leave the sea with her.
     HULL = {"dry_refusals", "enemy_gun_crew_quit", "enemy_rig_quit", "port_ticks_max",
             "prize_ticks_max", "pursuit_ticks_max", "shot_fired", "shot_left", "shot_max"}
-    MUST = {"sea_escaped", "sea_escape_t", "sea_escape_dist_m", "sea_victories", "line_runners_afloat"} | HULL
+    # sea_water_half_m: with the rule switched off the sampler never runs, so
+    # the water box is never read.
+    MUST = {"sea_escaped", "sea_escape_t", "sea_escape_dist_m", "sea_victories", "line_runners_afloat",
+            "sea_water_half_m"} | HULL
     moved = set(k for k in set(on) | set(off) if on.get(k) != off.get(k))
     if moved != MUST:
         fail("escape_on vs escape_off moves %s, not exactly %s" % (sorted(moved), sorted(MUST)))

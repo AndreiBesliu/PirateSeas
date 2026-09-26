@@ -603,6 +603,17 @@ SCENARIOS = {
                         "-EnemyY=0", "-ShipQuitAfter=10"],
     "escape_player_down": ["-WindBearing=90", "-WindSpeed=12", "-EnemyCount=1", "-EnemyX=210000",
                            "-EnemyY=0", "-EnemyBreakTest=5", "-ShipSinkTest=3", "-ShipQuitAfter=40"],
+    # A FOUNDERING Crown hull 2.1 km off is broken off by her hull (0) and past
+    # the range - and must NOT escape: she sank, and was tallied as sunk once.
+    "escape_wreck": ["-WindBearing=90", "-WindSpeed=12", "-EnemyCount=1", "-EnemyX=210000",
+                     "-EnemyY=0", "-EnemySinkTest=5", "-ShipQuitAfter=12"],
+    # THE EDGE OF THE WATER: the range put out of reach (-EnemyEscapeM=9000),
+    # the runner born 2.4 km out and running straight for the box's edge -
+    # which is where a runner held by a chaser ends up. She gets away there,
+    # and the squadron is tallied.
+    "escape_edge": ["-WindBearing=90", "-WindSpeed=12", "-EnemyCount=1", "-EnemyX=0",
+                    "-EnemyY=240000", "-EnemyBreakTest=5", "-EnemyEscapeM=9000",
+                    "-ShipQuitAfter=372"],
 
     # THE GUNS LAID BY HAND. Three rows around one idea, and each pair says a
     # different thing.
@@ -1386,12 +1397,16 @@ def measure(name, text):
         m["line_station_gap_m"] = float(ln.group(5))
         m["line_runners_afloat"] = int(ln.group(6))
         m["line_station_err_m"] = float(ln.group(7))
-    es = re.search(r"SEALOG TOTAL escaped=(\d+) firstEscape=(-?[0-9.]+) dist=(-?[0-9.]+) victories=(\d+)", text)
+    es = re.search(r"SEALOG TOTAL escaped=(\d+) firstEscape=(-?[0-9.]+) dist=(-?[0-9.]+) victories=(\d+) edge=(\d+)", text)
     if es:
+        m["sea_escaped_edge"] = int(es.group(5))
         m["sea_escaped"] = int(es.group(1))
         m["sea_escape_t"] = float(es.group(2))
         m["sea_escape_dist_m"] = float(es.group(3))
         m["sea_victories"] = int(es.group(4))
+    wb = re.search(r"SEALOG escape edge: water box half ([0-9.]+) m, margin ([0-9.]+) m", text)
+    if wb:
+        m["sea_water_half_m"] = float(wb.group(1))
     # When the player's NEXT hull was bound, if there was one.
     bound = re.findall(r"SEALOG player ship=\S+ bound t=([0-9.]+)", text)
     if len(bound) > 1:

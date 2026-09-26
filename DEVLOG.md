@@ -5069,3 +5069,38 @@ fara prag, comutatorul necitit.
 
 **Task Completed** (commit + pachet verificat prin rulare, mai jos).
 
+## 26.09.2026 - Ce a gasit recenzia in scapare: premisa de viteza era gresita
+
+**Task Started.** Prompt: "Continua si verificam alta data" (recenzia
+adversariala: 5 lentile, 10 constatari, 14 agenti, 2,19M tokeni). Model: Opus 5.5.
+
+**Premisa mea era gresita, si doc-urile o spuneau.** Scrisesem ca urmaritorul
+face „sub 5 m/s spre sub vant", luand varful polarei de la 141 de grade si
+componenta lui. Dar drept in pupa polara da tot 6,42 - exact cat fugara. Deci
+un jucator care o urmareste o TINE la distanta constanta, sub 2 km pentru
+totdeauna: scaparea nu venea, iar urmarita pana la marginea apei (cutia are 5 km
+pe jumatate) fugara cadea din lume pe un drum pe care nicio socoteala nu-l aude -
+din nou fara victorie si fara escadra urmatoare. Acum scapa si la 300 m de
+marginea apei (`EscapeEdgeMarginM`, cutia citita o data de pe corpul de apa).
+Rand: `escape_edge` - raza scoasa din joc (-EnemyEscapeM=9000), nascuta la
+2,4 km, fuge spre margine: scapa la 367 s si 4702 m, victoria vine.
+
+**Garda epavei n-avea rand.** O coca a Coroanei scuttled la 2,1 km are coca 0,
+deci „a rupt lupta" dupa predicat, si e dincolo de raza: fara `IsSunk()` ar fi
+„scapat" si ar fi dat a doua VICTORIE pentru aceeasi escadra. `escape_wreck`:
+nu scapa, o singura victorie. Mutatia e prinsa.
+
+**Restul.** Perioada de esantionare era citita de poarta din sursa pe care o
+verifica - un esantionator mai lent isi largea singur toleranta; acum jumatatea
+de secunda e scrisa in poarta. Panoul spune `SQUADRON 1 of 2 afloat, 1 got away`
+(o coca la 2 km care dispare fara niciun cuvant arata a defect). Comentariul
+LINELOG, HANDOFF si OWNER_VERIFY 11 corectate; distanta de 2000 m e acum si pe
+prima pagina a OWNER_VERIFY, langa numerele palancurilor.
+
+**Masurat.** Suita 76: 0 MOVED, 0 GONE, doua randuri noi. Perechea
+`escape_on`/`escape_off` misca exact 15 chei (se adauga `sea_water_half_m`: cu
+regula stinsa cutia apei nu se citeste). **Mutatii: 2 din 2 prinse** (epava care
+scapa, fara margine) - 8 din 8 pe toata felia.
+
+**Task Completed** (commit + pachet verificat prin rulare, mai jos).
+

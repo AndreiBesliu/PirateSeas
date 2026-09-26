@@ -37,6 +37,12 @@ avansul stins pentru toată lumea. Loviturile (cocă + greement) scad de la **11
 m, avansul valorează cam un sfert din ce nimereşte ea. Dacă vrei ca jucatorul
 să primească un ajutor de avans, spune; dacă nu, rămâne aşa.
 
+### Numere noi, de-ale tale (26.09)
+
+- **2000 m** - de la ce distanţă de tine scapă o navă a Coroanei care a rupt
+  lupta (şi atunci vine victoria). Punctul 11.
+- **−2 s pe treaptă, 400/800** - palancurile. Punctul 42.
+
 ### Nouă lucruri de văzut, în ordinea asta
 
 1. **37 — aşchiile de la o lovitură.** Reparat pe 25.09: coca are coliziunea
@@ -321,8 +327,10 @@ a doua **preia conducerea şi se bate cu tine** - se apropie până la distanţa
 de tragere şi trage - în loc s-o escorteze pe prima afară din luptă. (Rău: a
 doua pleacă după prima şi lupta moare.) Iar fugara nu te mai ține fără
 victorie: la peste **2000 m** de tine a scăpat, iese de pe apă şi, dacă cealaltă
-e scufundată, vine VICTORY şi escadra următoare. 2000 m e numărul tău
-(`-EnemyEscapeM=`): dacă vrei s-o poţi urmări mai mult, mai mare.
+e scufundată, vine VICTORY şi escadra următoare; panoul scrie „1 got away".
+Dacă o urmăreşti, nu o prinzi (merge exact cât tine), dar la marginea apei
+tot scapă. 2000 m e numărul tău (`-EnemyEscapeM=`): mai mare, dacă vrei s-o
+poţi ţine mai mult sub tunuri.
 
 **Cum arată prost:** Se ciocnesc, sau se învârt una în jurul alteia, sau vin
 toate trei în linie de front, cot la cot.

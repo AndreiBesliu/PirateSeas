@@ -1420,8 +1420,34 @@ void ASeaGameMode::TallySquadron(float Now)
 	}
 }
 
+void ASeaGameMode::ReadWaterBox()
+{
+	bWaterBoxRead = true;
+	for (TActorIterator<AWaterBody> It(GetWorld()); It; ++It)
+	{
+		UWaterBodyComponent* Component = It->GetWaterBodyComponent();
+		for (UPrimitiveComponent* Prim : Component ? Component->GetCollisionComponents() : TArray<UPrimitiveComponent*>())
+		{
+			if (Prim)
+			{
+				const FBoxSphereBounds B = Prim->Bounds;
+				WaterBoxCentre = B.Origin;
+				WaterBoxHalfCm = FMath::Min(B.BoxExtent.X, B.BoxExtent.Y);
+				UE_LOG(LogTemp, Display, TEXT("SEALOG escape edge: water box half %.0f m, margin %.0f m"),
+					WaterBoxHalfCm * 0.01f, EscapeEdgeMarginM);
+				return;
+			}
+		}
+	}
+	UE_LOG(LogTemp, Warning, TEXT("SEALOG escape edge: no water box found, only the range applies"));
+}
+
 void ASeaGameMode::SampleEscapes()
 {
+	if (!bWaterBoxRead)
+	{
+		ReadWaterBox();
+	}
 	const AShipPawn* Player = PlayerShip.Get();
 	if (!IsValid(Player) || Player->IsSunk())
 	{
@@ -1435,19 +1461,27 @@ void ASeaGameMode::SampleEscapes()
 			continue;
 		}
 		const float DistM = FVector::Dist2D(Ship->GetActorLocation(), Player->GetActorLocation()) * 0.01f;
-		if (DistM <= EscapeRangeM)
+		const FVector FromCentre = Ship->GetActorLocation() - WaterBoxCentre;
+		const bool bAtEdge = WaterBoxHalfCm > 0.f
+			&& FMath::Max(FMath::Abs(FromCentre.X), FMath::Abs(FromCentre.Y))
+				> WaterBoxHalfCm - EscapeEdgeMarginM * 100.f;
+		if (DistM <= EscapeRangeM && !bAtEdge)
 		{
 			continue;
 		}
 		const float Now = GetWorld()->GetTimeSeconds();
 		++Escaped;
+		if (bAtEdge && DistM <= EscapeRangeM)
+		{
+			++EscapedAtEdge;
+		}
 		if (FirstEscapeAt < 0.f)
 		{
 			FirstEscapeAt = Now;
 			FirstEscapeDistM = DistM;
 		}
-		UE_LOG(LogTemp, Display, TEXT("SEALOG %s ESCAPED t=%.1f dist=%.0f range=%.0f"),
-			*Ship->GetName(), Now, DistM, EscapeRangeM);
+		UE_LOG(LogTemp, Display, TEXT("SEALOG %s ESCAPED t=%.1f dist=%.0f range=%.0f why=%s"),
+			*Ship->GetName(), Now, DistM, EscapeRangeM, DistM > EscapeRangeM ? TEXT("range") : TEXT("edge"));
 		Ship->Destroy();
 		TallySquadron(Now);
 		// One per sample: the next half second takes any other.
@@ -2455,8 +2489,8 @@ void ASeaGameMode::QuitNow()
 		// ship that broke off to the nearest consort astern of her that is still
 		// fighting - the line having left her behind. stationGap: the widest
 		// distance any captain kept station at in the last tick. runnersAfloat:
-		// Crown ships running and still afloat - a victory needs every one of
-		// them sunk, and a runner with her rig whole is not slowed by her hull.
+		// Crown ships running and still afloat - until SampleEscapes lets them
+		// go (past EscapeRangeM from the player, or at the edge of the water).
 		const TArray<AShipPawn*> Order = GetOrderOfBattle();
 		float RunnerGapM = -1.f;
 		int32 RunnersAfloat = 0;
@@ -2501,8 +2535,8 @@ void ASeaGameMode::QuitNow()
 		UE_LOG(LogTemp, Display,
 			TEXT("LINELOG TOTAL broken=%d closed=%.2f runnerTicks=%d runnerGap=%.0f stationGap=%.0f runnersAfloat=%d stationErr=%.0f"),
 			LineBroken, LineClosedAt, LineRunnerTicks, RunnerGapM, StationGapM, RunnersAfloat, StationErrM);
-		UE_LOG(LogTemp, Display, TEXT("SEALOG TOTAL escaped=%d firstEscape=%.1f dist=%.0f victories=%d"),
-			Escaped, FirstEscapeAt, FirstEscapeDistM, Victories);
+		UE_LOG(LogTemp, Display, TEXT("SEALOG TOTAL escaped=%d firstEscape=%.1f dist=%.0f victories=%d edge=%d"),
+			Escaped, FirstEscapeAt, FirstEscapeDistM, Victories, EscapedAtEdge);
 	}
 
 	// ALWAYS, even in a run with no convoy in it: a counted zero. A money

@@ -343,8 +343,12 @@ void AShipHUD::DrawGuns(AShipPawn* Ship)
 		const int32 Total = FMath::Max(Afloat, Sea->GetSquadronSize());
 		if (Total > 1)
 		{
+			// Said, because an escaped ship leaves the sea: without it the
+			// player would see a hull 2 km off simply vanish.
 			Extra.Add(TPair<FString, FLinearColor>(
-				FString::Printf(TEXT("SQUADRON  %d of %d afloat"), Afloat, Total),
+				Sea->GetEscaped() > 0
+					? FString::Printf(TEXT("SQUADRON  %d of %d afloat, %d got away"), Afloat, Total, Sea->GetEscaped())
+					: FString::Printf(TEXT("SQUADRON  %d of %d afloat"), Afloat, Total),
 				Afloat > 1 ? Warn : Faint));
 		}
 		// The book, when there is one: which cruise this is and what is ashore.
