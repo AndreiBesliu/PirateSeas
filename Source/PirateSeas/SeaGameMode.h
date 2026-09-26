@@ -62,6 +62,16 @@ public:
 	bool IsPurseSide(const AShipPawn* Ship) const;
 	/** -Port=N>0. One reading, shared by the port itself and the book. */
 	static bool PortRequested();
+	/** THE LINE, counted where no wreck can take the count with her. */
+	void NoteBreakOff() { ++LineBroken; }
+	void NoteLineClosed(float T) const
+	{
+		if (LineClosedAt < 0.f)
+		{
+			LineClosedAt = T;
+		}
+	}
+	void NoteRunnerTick() { ++LineRunnerTicks; }
 	/** Tier n of tackle costs n x this. */
 	int32 GetTackleCost() const { return TackleCost; }
 	int32 GetTackleSpent() const { return TackleSpent; }
@@ -565,6 +575,19 @@ private:
 	float EnemyStrikeTestAt = -1.f;
 	FTimerHandle EnemyStrikeTestTimer;
 	void StrikeEnemyForTest();
+
+	/** -EnemyBreakTest=N: the first Crown ship still fighting has her hull set to
+	 *  BreakTestHullFraction of whole at N seconds, below DisengageHullFraction,
+	 *  so she breaks off at a KNOWN moment. A test constant, not a balance one. */
+	float EnemyBreakTestAt = -1.f;
+	FTimerHandle EnemyBreakTestTimer;
+	void BreakEnemyForTest();
+	float BreakTestHullFraction = 0.25f;
+	/** Latched: transitions into breaking off, the first moment any line walk
+	 *  stepped over a ship, ticks a captain dressed on a runner (never). */
+	int32 LineBroken = 0;
+	mutable float LineClosedAt = -1.f;
+	int32 LineRunnerTicks = 0;
 
 	/** -ConvoyStrikeTest=N: the first merchant still running strikes at N
 	 *  seconds, through Strike() and nothing else, so the whole path from a

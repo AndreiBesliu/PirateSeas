@@ -315,7 +315,9 @@ puține lucruri, dar n-am jucat.
 **Ce te uiți:** Pornești cu `-EnemyCount=3` și te uiți cum se apropie.
 
 **Cum arată bine:** Se pun în șir, una în urma alteia, nu îngrămădite. Nu se
-ciocnesc. Când una e între tine și alta, cea din spate nu trage prin ea.
+ciocnesc. Când una e între tine și alta, cea din spate nu trage prin ea. Şi,
+de pe 26.09: când prima rupe lupta (sub o treime de cocă fuge cu vântul în
+pupa), a doua **vine spre tine**, nu o escortează.
 
 **Cum arată prost:** Se ciocnesc, sau se învârt una în jurul alteia, sau vin
 toate trei în linie de front, cot la cot.

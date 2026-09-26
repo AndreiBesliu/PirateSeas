@@ -4948,3 +4948,51 @@ comanda deschisa.
 
 **Task Completed** (commit + pachet verificat prin rulare, mai jos).
 
+## 26.09.2026 - Linia de bataie se strange peste o nava care rupe lupta
+
+**Task Started.** Prompt: "Continua si verificam alta data". Model: Opus 5.5.
+Felia aleasa dintr-un panel de patru unghiuri (Coroana care raspunde, urmatoarea
+cumparatura, AI-ul pe aceleasi reguli, datoriile stiute; 1,83M tokeni). Doi
+judecatori impartiti: valoarea a pus linia de bataie prima, fezabilitatea
+„valva" (Coroana primeste palancuri dupa prazile tale). Am ales linia: e pe
+drumul IMPLICIT al owner-ului (Joaca 1 si 3), nu-i cere nicio decizie noua cat
+timp n-a verificat nimic, iar valva ar fi raspuns singura la o intrebare lasata
+lui (42.4), ar fi urcat fara drum in jos si se sprijinea pe un flag de test care
+inca poate scrie cartea.
+
+**Defectul.** O nava a Coroanei nu coboara pavilionul: sub 30% coca fuge cu
+vantul in pupa si nu se mai intoarce. `FindNextAhead` sarea peste cele
+scufundate, cu pavilionul coborat sau aduse ca prada - nu si peste cea care fuge.
+Cand fugea LIDERUL, consorta isi tinea pozitia dupa el si il escorta afara din
+lupta. Acum un singur predicat, `IsBreakingOff()`, e citit si de alegerea
+tacticii, si de mersul pe linie al fiecarei consorte; e o functie de coca, nu de
+ordinea in care ticaie capitanii.
+
+**Masurat.** `-EnemyBreakTest=N` pune coca primei nave inca in lupta la un sfert
+(sub 30%), direct, fara TakeDamage - deci fara gauri, aschii, morti sau sunete
+care sa miste alte chei; e flag de test si inchide cartea (`ledger_testbreak`).
+`LINELOG TOTAL` la fiecare iesire, zavorat pe game mode: broken, closed,
+runnerTicks (contorul „niciodata"), runnerGap, stationGap, runnersAfloat.
+Perechea `line_breaks` / `line_formed` (escadra implicita la 1,5 km, vantul
+de-a curmezis, 90 s, nimeni in bataia tunurilor) misca EXACT opt chei: rupe la
+10,02, linia se strange la 10,03, consorta lasata la 620 m (pragul de „iesita
+din statie" e 360), controlul arata o linie chiar formata (198 m, sub doua
+intervale). Suita: 70 de scenarii, 0 MOVED, 0 GONE - niciun rand vechi nu avea
+o nava care rupe lupta cu alta in spate, deci niciunul nu vedea defectul.
+
+**Mutatii: 8 din 8 prinse** - fara skip, predicatul intrebat pe coca proprie,
+momentul inchiderii rescris la fiecare mers, testul pe ultima nava, zerourile
+nescrise, flag-ul care nu inchide cartea, distanta masurata pana la fugara
+insasi, ruptura nenumarata. Cu skip-ul scos, contorul „niciodata" a pornit exact
+la cifra de pe hartie: 60 x (90 - 10) = **4800** de tick-uri de pozitie tinuta
+dupa o fugara, consorta la 186 m de ea.
+
+**Numit, nu reparat:** fugara fuge la nesfarsit, iar victoria cere ca toate
+navele Coroanei sa fie scufundate - o fugara cu greementul intreg poate tine
+lupta implicita fara victorie. `line_runners_afloat` le numara; regula „o fugara
+desprinsa conteaza ca scapata" e felia urmatoare (distanta e numarul
+owner-ului). Si: doctrinele `-AIPrize=1` / `-AIRefit=1` pot scoate liderul din
+lupta cu coca peste 30%; stinse implicit, fara rand cu escadra.
+
+**Task Completed** (commit + pachet verificat prin rulare, mai jos).
+

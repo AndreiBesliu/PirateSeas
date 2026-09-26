@@ -288,6 +288,19 @@ bool AShipAIController::ShotIsBlocked(const AShipPawn* Me, const FVector& FireDi
 	return false;
 }
 
+bool AShipAIController::IsBreakingOff() const
+{
+	const AShipPawn* Me = GetShip();
+	return Me && Me->GetHullIntegrity() / FMath::Max(1.f, Me->GetMaxHullIntegrity())
+		<= DisengageHullFraction;
+}
+
+bool AShipAIController::IsShipBreakingOff(const AShipPawn* Ship)
+{
+	const AShipAIController* Captain = Ship ? Cast<AShipAIController>(Ship->GetController()) : nullptr;
+	return Captain && Captain->IsBreakingOff();
+}
+
 AShipPawn* AShipAIController::FindNextAhead(const AShipPawn* Me) const
 {
 	// The order of battle is the game mode's spawn order. Each ship keeps
@@ -322,9 +335,16 @@ AShipPawn* AShipAIController::FindNextAhead(const AShipPawn* Me) const
 		// Skipping her passes the station up the line to the last ship that is
 		// actually navigating, which is what a line does when a consort falls
 		// out: it closes up.
-		if (!IsValid(Ship) || Ship->IsOutOfTheFight() || Ship->HasLandedAsPrize())
+		//
+		// And a ship that has BROKEN OFF, which a Crown ship does instead of
+		// striking: she runs with the wind astern and never comes back. Dressing
+		// on her, the line escorted its own beaten leader out of the fight - the
+		// consort left with her exactly when the player had won the first duel.
+		if (!IsValid(Ship) || Ship->IsOutOfTheFight() || Ship->HasLandedAsPrize()
+			|| IsShipBreakingOff(Ship))
 		{
 			++SkippedHere;
+			Sea->NoteLineClosed(GetWorld()->GetTimeSeconds());
 			continue;
 		}
 		Ahead = Ship;
@@ -815,10 +835,20 @@ void AShipAIController::Tick(float DeltaSeconds)
 	const float BearingToTarget = DirToTarget.Rotation().Yaw;
 
 	// --- pick a tactic --------------------------------------------------
-	const float HullFraction = Me->GetHullIntegrity()
-		/ FMath::Max(1.f, Me->GetMaxHullIntegrity());
-	if (HullFraction <= DisengageHullFraction)
+	if (IsBreakingOff())
 	{
+		// Counted on the game mode, once per transition, so a wreck does not
+		// take the count down with her.
+		if (Tactic != EShipTactic::Disengage)
+		{
+			if (ASeaGameMode* SeaMode = GetWorld()->GetAuthGameMode<ASeaGameMode>())
+			{
+				SeaMode->NoteBreakOff();
+			}
+			UE_LOG(LogTemp, Display, TEXT("AILOG %s breaks off at t=%.2f hull=%.0f/%.0f"),
+				*Me->GetName(), GetWorld()->GetTimeSeconds(), Me->GetHullIntegrity(),
+				Me->GetMaxHullIntegrity());
+		}
 		Tactic = EShipTactic::Disengage;
 	}
 	else if (RangeM > EngageRangeM)
@@ -955,6 +985,7 @@ void AShipAIController::Tick(float DeltaSeconds)
 	// astern of the guns, ninety degrees from where they can ever train.
 	AShipPawn* NextAhead = FindNextAhead(Me);
 	bool bKeepingStation = false;
+	LastStationGapCm = -1.f;
 	// FindNextAhead has already refused anyone who is not steering, so what is
 	// left here is the tactical question only: a ship running for her life does
 	// not dress a line.
@@ -1012,6 +1043,16 @@ void AShipAIController::Tick(float DeltaSeconds)
 			: (AlongErrM > StationSlackM ? -1.f
 				: (AlongErrM < -StationSlackM ? 1.f : 0.f)));
 		bKeepingStation = true;
+		LastStationGapCm = FVector::Dist2D(Me->GetActorLocation(), NextAhead->GetActorLocation());
+		// NEVER: a captain dressing on a ship that has broken off. The walk
+		// above refuses her; this counts it if it ever does not.
+		if (IsShipBreakingOff(NextAhead))
+		{
+			if (ASeaGameMode* SeaMode = GetWorld()->GetAuthGameMode<ASeaGameMode>())
+			{
+				SeaMode->NoteRunnerTick();
+			}
+		}
 
 		if (!bReportedStation)
 		{

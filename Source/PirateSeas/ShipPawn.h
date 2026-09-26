@@ -305,6 +305,11 @@ public:
 	/** Powder and shot bought in port. Returns true if there was room. */
 	bool LoadShot(int32 Rounds);
 
+	/** -EnemyBreakTest: the hull set straight, as -EnemyHull does it - no
+	 *  TakeDamage, so no holes, chips, casualties or sounds that would move
+	 *  other families of keys. */
+	void SetHullForTest(float Hull) { HullIntegrity = FMath::Clamp(Hull, 1.f, MaxHullIntegrity); }
+
 	/** THE SHIP'S BOOK, applied: hands, hull, shot, tackle and an open order
 	 *  as the last cruise left them, each cut to what this hull can hold.
 	 *  Returns how many were cut. An order for a tier past the top is dropped

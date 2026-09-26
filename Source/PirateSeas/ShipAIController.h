@@ -474,7 +474,20 @@ public:
 	 *  apart. This one goes to zero the moment the filter is removed. */
 	int32 GetLineSkips() const { return LineSkips; }
 
+	/** BREAKING OFF: her hull at or below DisengageHullFraction. ONE predicate,
+	 *  read by her own choice of tactic and by every consort's line walk. A
+	 *  function of her hull, not of when her captain last ticked, so it cannot
+	 *  depend on which captain the engine happens to tick first. */
+	bool IsBreakingOff() const;
+	/** The same question asked about any hull: false for one with no Crown
+	 *  captain (the player's, a merchant's). */
+	static bool IsShipBreakingOff(const AShipPawn* Ship);
+	/** How far off the ship she dressed on she was in her last tick, cm; -1
+	 *  when she was not keeping station. */
+	float GetLastStationGapCm() const { return LastStationGapCm; }
+
 private:
+	float LastStationGapCm = -1.f;
 	/** Mutable because the walk that does the skipping is const, and
 	 *  making the walk non-const would push the change through every
 	 *  caller for the sake of one counter. */

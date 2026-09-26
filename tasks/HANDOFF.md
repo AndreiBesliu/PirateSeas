@@ -75,7 +75,7 @@ vânt în plante şi greement, `-Hour=` pentru ora din zi.
   din `OWNER_VERIFY` 38 (banda tunurilor nu mai contine tunurile).
 - **Porţile:**
   - `python tools/ci_checks.py` — fără motor, rulează şi în CI hosted
-  - `python tools/ci_measure.py` — 64 scenarii headless vs `tools/measurement_baseline.json`
+  - `python tools/ci_measure.py` — 70 scenarii headless vs `tools/measurement_baseline.json`
   - `python tools/ci_measure.py --record` — rescrie linia de bază, DELIBERAT, în
     acelaşi commit care o mişcă
   - `python tools/png_diff.py a.png b.png x0 y0 x1 y1` — compară o casetă
@@ -330,8 +330,19 @@ Urmatorul: de ales cu owner-ul. **Deschise si stiute:**
 - ~~**Rada repara pe oricine e in cerc.**~~ **INCHIS 25.09:** rada vinde doar
   partii pungii, iar doctrina AI de port socoteste punga doar a partii ei;
   randul `ledger_side` exercita ambele gărzi, separat.
-- Linia de bataie lasa urmaritorii pe un lider care a incetat sa navigheze, si
-  commitul de impachetare n-a fost citit de nicio lentila.
+- ~~Linia de bataie lasa urmaritorii pe un lider care a incetat sa navigheze~~
+  **INCHIS 26.09:** jumatatea „a coborat pavilionul" din 297c8ba, jumatatea „a
+  rupt lupta" acum (`IsBreakingOff`, perechea `line_breaks`/`line_formed`).
+  Commitul de impachetare n-a fost citit de nicio lentila.
+- **Fugara blocheaza victoria.** O nava a Coroanei care a rupt lupta fuge la
+  nesfarsit (coca nu se repara pe mare, iar coca nu o incetineste), iar
+  victoria cere ca toate sa fie scufundate (`CountEnemiesAfloat`). In lupta
+  implicita asta poate opri si escadra urmatoare. `line_runners_afloat` le
+  numara; felia urmatoare: o fugara desprinsa peste o distanta (numarul
+  owner-ului) conteaza ca scapata.
+- Doctrinele `-AIPrize=1` si `-AIRefit=1` pot scoate LIDERUL din lupta cu coca
+  peste 30%; amandoua stinse implicit si fara rand cu escadra - linia nu se
+  strange peste el in cazurile astea.
 
 - **`RangeBias` e o constanta si nu poate fi.** Dupa ce bara de cadere a invatat
   inaltimea gurii de tun, reziduul ei isi schimba SEMNUL pe la sapte grade: +4%

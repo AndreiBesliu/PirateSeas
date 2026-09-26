@@ -383,6 +383,12 @@ void ASeaGameMode::BeginPlay()
 		GetWorldTimerManager().SetTimer(EnemyStrikeTestTimer, this,
 			&ASeaGameMode::StrikeEnemyForTest, EnemyStrikeTestAt, false);
 	}
+	FParse::Value(FCommandLine::Get(), TEXT("EnemyBreakTest="), EnemyBreakTestAt);
+	if (EnemyBreakTestAt > 0.f)
+	{
+		GetWorldTimerManager().SetTimer(EnemyBreakTestTimer, this,
+			&ASeaGameMode::BreakEnemyForTest, EnemyBreakTestAt, false);
+	}
 	FString Side;
 	if (FParse::Value(FCommandLine::Get(), TEXT("ShipSinkSide="), Side))
 	{
@@ -904,9 +910,11 @@ void ASeaGameMode::EnsureBookRead()
 		UE_LOG(LogTemp, Display, TEXT("LEDGERLOG shut: no roadstead in this run, nothing to carry a ship to"));
 		return;
 	}
+	float TestBreak = 0.f;
 	if (FParse::Value(FCommandLine::Get(), TEXT("Shot="), TestShot)
 		|| FParse::Value(FCommandLine::Get(), TEXT("ShipHullTest="), TestHull)
-		|| FParse::Value(FCommandLine::Get(), TEXT("ShipToggleTackle="), TestToggle))
+		|| FParse::Value(FCommandLine::Get(), TEXT("ShipToggleTackle="), TestToggle)
+		|| FParse::Value(FCommandLine::Get(), TEXT("EnemyBreakTest="), TestBreak))
 	{
 		BookSlot = EBookSlot::Off;
 		BookWhy = TEXT("testflag");
@@ -1188,6 +1196,25 @@ void ASeaGameMode::StrikeEnemyForTest()
 	}
 	UE_LOG(LogTemp, Warning,
 		TEXT("AILOG the strike test found no enemy still in the fight"));
+}
+
+void ASeaGameMode::BreakEnemyForTest()
+{
+	// The FIRST ship still fighting, as the strike test: the one the rest of the
+	// line dresses on.
+	for (const TWeakObjectPtr<AShipPawn>& Ptr : Squadron)
+	{
+		AShipPawn* Ship = Ptr.Get();
+		if (IsValid(Ship) && !Ship->IsOutOfTheFight() && !AShipAIController::IsShipBreakingOff(Ship))
+		{
+			Ship->SetHullForTest(BreakTestHullFraction * Ship->GetMaxHullIntegrity());
+			UE_LOG(LogTemp, Display, TEXT("AILOG %s BROKEN for the test at t=%.2f hull=%.0f/%.0f"),
+				*Ship->GetName(), GetWorld()->GetTimeSeconds(), Ship->GetHullIntegrity(),
+				Ship->GetMaxHullIntegrity());
+			return;
+		}
+	}
+	UE_LOG(LogTemp, Warning, TEXT("AILOG the break test found no enemy still in the fight"));
 }
 
 TArray<AShipPawn*> ASeaGameMode::GetOrderOfBattle() const
@@ -2374,6 +2401,51 @@ void ASeaGameMode::QuitNow()
 			Skips = FMath::Max(Skips, It->GetLineSkips());
 		}
 		UE_LOG(LogTemp, Display, TEXT("AILOG TOTAL line_skips=%d"), Skips);
+
+		// THE LINE, on every row and zeros included. runnerGap: from the first
+		// ship that broke off to the nearest consort astern of her that is still
+		// fighting - the line having left her behind. stationGap: the widest
+		// distance any captain kept station at in the last tick. runnersAfloat:
+		// Crown ships running and still afloat - a victory needs every one of
+		// them sunk, and a runner with her rig whole is not slowed by her hull.
+		const TArray<AShipPawn*> Order = GetOrderOfBattle();
+		float RunnerGapM = -1.f;
+		int32 RunnersAfloat = 0;
+		int32 FirstRunner = INDEX_NONE;
+		for (int32 i = 0; i < Order.Num(); ++i)
+		{
+			if (AShipAIController::IsShipBreakingOff(Order[i]))
+			{
+				++RunnersAfloat;
+				if (FirstRunner == INDEX_NONE)
+				{
+					FirstRunner = i;
+				}
+			}
+		}
+		if (FirstRunner != INDEX_NONE)
+		{
+			for (int32 i = FirstRunner + 1; i < Order.Num(); ++i)
+			{
+				if (!Order[i]->IsOutOfTheFight() && !AShipAIController::IsShipBreakingOff(Order[i]))
+				{
+					const float D = FVector::Dist2D(Order[FirstRunner]->GetActorLocation(),
+						Order[i]->GetActorLocation()) * 0.01f;
+					RunnerGapM = RunnerGapM < 0.f ? D : FMath::Min(RunnerGapM, D);
+				}
+			}
+		}
+		float StationGapM = -1.f;
+		for (TActorIterator<AShipAIController> It(GetWorld()); It; ++It)
+		{
+			if (It->GetLastStationGapCm() >= 0.f)
+			{
+				StationGapM = FMath::Max(StationGapM, It->GetLastStationGapCm() * 0.01f);
+			}
+		}
+		UE_LOG(LogTemp, Display,
+			TEXT("LINELOG TOTAL broken=%d closed=%.2f runnerTicks=%d runnerGap=%.0f stationGap=%.0f runnersAfloat=%d"),
+			LineBroken, LineClosedAt, LineRunnerTicks, RunnerGapM, StationGapM, RunnersAfloat);
 	}
 
 	// ALWAYS, even in a run with no convoy in it: a counted zero. A money

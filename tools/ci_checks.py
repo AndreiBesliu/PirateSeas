@@ -1197,7 +1197,7 @@ def check_ledger():
             return 1                                    # pinned
         if not any(a.startswith("-Port=") and a != "-Port=0" for a in fl):
             return 2                                    # no roadstead
-        if any(a.startswith(("-Shot=", "-ShipHullTest=", "-ShipToggleTackle=")) for a in fl):
+        if any(a.startswith(("-Shot=", "-ShipHullTest=", "-ShipToggleTackle=", "-EnemyBreakTest=")) for a in fl):
             return 3                                    # a test flag
         return 0
 
@@ -1489,6 +1489,118 @@ def check_ledger():
         if row.get("tackle_tier", 0) > TACKLE_MAX:
             fail("%s: tackle tier %d above the top %d" % (name, row["tackle_tier"], TACKLE_MAX))
 
+def check_line():
+    """THE LINE CLOSES OVER A SHIP THAT BREAKS OFF.
+
+    The pair line_breaks / line_formed differs in one flag and must move
+    EXACTLY the line's keys; every number on line_breaks is worked out from
+    the header constants first. On every row: nobody ever dresses on a runner
+    (runnerTicks 0), the line is recorded as closed exactly when some walk
+    stepped over a ship, and nothing breaks off where no test asked for it
+    unless the row is named here with the reason.
+    """
+    import re
+    sys.path.insert(0, os.path.join(ROOT, "tools"))
+    try:
+        import ci_measure
+    except Exception as e:
+        fail("cannot import ci_measure: %s" % e)
+        return
+
+    # the lines, field by field, every number distinct
+    got = ci_measure.measure("fixture",
+        "LogTemp: Display: LINELOG TOTAL broken=3 closed=12.34 runnerTicks=5 runnerGap=678 stationGap=91 runnersAfloat=2\n"
+        "LogTemp: Display: AILOG EnemyShipPawn_0 BROKEN for the test at t=10.02 hull=250/1000\n")
+    want = {"line_broken": 3, "line_closed_t": 12.34, "line_runner_ticks": 5, "line_runner_gap_m": 678.0,
+            "line_station_gap_m": 91.0, "line_runners_afloat": 2, "line_break_t": 10.02, "line_break_hull": 250.0}
+    bad = {k: (got.get(k), v) for k, v in want.items() if got.get(k) != v}
+    if bad:
+        fail("the line's lines are not read field by field (got, want): %r" % bad)
+    none = ci_measure.measure("fixture",
+        "LogTemp: Display: LINELOG TOTAL broken=0 closed=-1.00 runnerTicks=0 runnerGap=-1 stationGap=-1 runnersAfloat=0\n")
+    if none.get("line_closed_t") != -1.0 or none.get("line_runner_gap_m") != -1.0:
+        fail("a line that never closed does not read as -1: %r" % none)
+
+    def const(path, pattern):
+        src = io.open(os.path.join(ROOT, "Source", "PirateSeas", path), encoding="utf-8").read()
+        mm = re.search(pattern, src)
+        if not mm:
+            fail("cannot read %r out of %s" % (pattern, path))
+            return None
+        return float(mm.group(1))
+    HULL = const("ShipPawn.h", r"float MaxHullIntegrity = ([\d.]+)f;")
+    RUN = const("ShipAIController.h", r"float DisengageHullFraction = ([\d.]+)f;")
+    BREAK = const("SeaGameMode.h", r"float BreakTestHullFraction = ([\d.]+)f;")
+    INTERVAL = const("ShipAIController.h", r"float LineIntervalCm = ([\d.]+)f;")
+    REJOIN = const("ShipAIController.h", r"float RejoinAboveCm = ([\d.]+)f;")
+    if None in (HULL, RUN, BREAK, INTERVAL, REJOIN):
+        return
+    if not BREAK < RUN:
+        fail("the break test puts the hull at %.2f, not below the %.2f at which a ship runs" % (BREAK, RUN))
+
+    base_path = os.path.join(ROOT, "tools", "measurement_baseline.json")
+    if not os.path.exists(base_path):
+        note("no baseline - the line's rows are not checked, which is NOT a pass")
+        return
+    rows = json.loads(io.open(base_path, encoding="utf-8-sig").read())
+    for n in ("line_formed", "line_breaks", "ledger_testbreak"):
+        if n not in rows:
+            fail("%s is not in the baseline" % n)
+            return
+
+    # rows where a Crown ship breaks off without the test, each with its reason
+    NATURAL = {}
+    for name, row in sorted(rows.items()):
+        fl = ci_measure.SCENARIOS.get(name, [])
+        if row.get("line_runner_ticks") != 0:
+            fail("%s: a captain dressed on a ship that had broken off (%r ticks)" % (name, row.get("line_runner_ticks")))
+        if (row.get("line_closed_t", -1) != -1) != (row.get("line_skips", 0) >= 1):
+            fail("%s: closed at %r but line_skips %r - the two must agree" % (name, row.get("line_closed_t"), row.get("line_skips")))
+        tested = any(a.startswith("-EnemyBreakTest=") for a in fl)
+        if not tested and row.get("line_broken", 0) and name not in NATURAL:
+            fail("%s: %d Crown ship(s) broke off with no test asking - name the row and the reason"
+                 % (name, row["line_broken"]))
+
+    tick = 1.0 / 60
+    b, f = rows["line_breaks"], rows["line_formed"]
+    at = next(float(a.split("=", 1)[1]) for a in ci_measure.SCENARIOS["line_breaks"] if a.startswith("-EnemyBreakTest="))
+    checks = [
+        ("line_break_hull", b.get("line_break_hull") == BREAK * HULL),
+        ("line_break_t", b.get("line_break_t") is not None and abs(b["line_break_t"] - at) <= 2 * tick),
+        ("line_closed_t", b.get("line_closed_t") is not None and b.get("line_break_t") is not None
+         and 0 <= b["line_closed_t"] - b["line_break_t"] <= 2 * tick),
+        ("line_broken", b.get("line_broken") == 1),
+        ("line_skips", b.get("line_skips") == 1),
+        ("line_runner_gap_m", (b.get("line_runner_gap_m") or -1) > REJOIN / 100),
+        ("line_station_gap_m", b.get("line_station_gap_m") == -1),
+        ("line_runners_afloat", b.get("line_runners_afloat") == 1),
+        ("no broadside (breaks)", b.get("broadsides") == 0),
+    ]
+    control = [
+        ("control: a line formed", f.get("line_station_gap_m") is not None
+         and 0 <= f["line_station_gap_m"] < 2 * INTERVAL / 100),
+        ("control: nobody broke off", f.get("line_broken") == 0 and f.get("line_closed_t") == -1),
+        ("no broadside (formed)", f.get("broadsides") == 0),
+    ]
+    wrong = [k for k, good in checks + control if not good]
+    if wrong:
+        fail("line_breaks / line_formed against paper: %s" % ", ".join(wrong))
+    else:
+        ok("line_breaks / line_formed: %d numbers match the paper" % len(checks + control))
+
+    MUST = {"line_broken", "line_break_t", "line_break_hull", "line_closed_t", "line_skips",
+            "line_runner_gap_m", "line_station_gap_m", "line_runners_afloat"}
+    moved = set(k for k in set(b) | set(f) if b.get(k) != f.get(k))
+    if moved != MUST:
+        fail("line_breaks vs line_formed moves %s, not exactly %s" % (sorted(moved), sorted(MUST)))
+    else:
+        ok("line_breaks vs line_formed: exactly %d keys move" % len(MUST))
+
+    tb = rows["ledger_testbreak"]
+    if (tb.get("ledger_why"), tb.get("ledger_written")) != (3, 0):
+        fail("ledger_testbreak: -EnemyBreakTest does not shut the book: why=%r written=%r"
+             % (tb.get("ledger_why"), tb.get("ledger_written")))
+
 def main():
     print("PirateSeas checks - the ones that do not need Unreal\n")
     files = tracked_files()
@@ -1497,6 +1609,7 @@ def main():
     check_docs()
     check_comparison()
     check_ledger()
+    check_line()
     print("")
     if NOTES:
         print("%d check(s) SKIPPED - a skip is not a pass:" % len(NOTES))

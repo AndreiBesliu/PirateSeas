@@ -752,6 +752,30 @@ miscat NICIO cifra la reparatia asta, fiindca niciunul nu punea vreodata un
 consort sa inceteze sa guverneze in timp ce altii il urmau. Defectul a trebuit
 gasit CITIND codul.
 
+**Si peste o nava care RUPE LUPTA (26.09).** O nava a Coroanei nu coboara
+niciodata pavilionul: batuta sub 30% din coca, fuge cu vantul in pupa si nu se
+mai intoarce (coca nu se repara pe mare). Linia sarea doar peste cele
+scufundate, cu pavilionul coborat sau aduse ca prada - nu si peste cea care
+fuge. Asa ca, atunci cand fugea LIDERUL, consorta isi tinea pozitia dupa el si
+il escorta afara din lupta, exact cand jucatorul castigase primul duel. Acum
+un singur predicat, `IsBreakingOff()`, e citit si de alegerea tacticii ei, si
+de mersul pe linie al fiecarei consorte: linia se strange peste fugara, iar
+urmatoarea nava preia conducerea si isi alege singura tactica.
+
+Perechea `line_breaks` / `line_formed`: escadra implicita la 1,5 km, vantul de-a
+curmezisul, jucatorul nemiscat, 90 s - nimeni nu ajunge in bataia tunurilor
+(1350 m minus 8 m/s x 90 s = 630 m, peste 550). `-EnemyBreakTest=10` pune coca
+liderului la un sfert: rupe lupta la 10,03, linia se strange in acelasi tic,
+consorta nu mai tine pozitie dupa nimeni si e lasata la 620 m in urma (pragul
+codului pentru „iesita din statie" e 360). Controlul arata o linie chiar
+formata (198 m intre nave, sub doua intervale). Perechea misca exact opt chei.
+
+**Ce ramane, si e spus:** fugara fuge la nesfarsit - si victoria cere ca TOATE
+navele Coroanei sa fie scufundate. O fugara cu greementul intreg nu e incetinita
+de coca ei, deci poate tine lupta implicita fara victorie si fara escadra
+urmatoare. Cheia `line_runners_afloat` le numara la iesire; regula prin care o
+fugara desprinsa conteaza ca „scapata" e felia urmatoare.
+
 ## Nava inamică
 
 Un `AEnemyShipPawn` creat la pornire de `ASeaGameMode`, la 632 m de tine.

@@ -82,7 +82,8 @@ BOOKS = {"ledger_fresh": (None, ".book"), "ledger_carry": ("veteran.book", ".boo
          "tackle_buy": ("tacklebuy.book", ".book"), "tackle_top": ("tackletop.book", ".book"),
          "tackle_short": ("tackleshort.book", ".book"), "tackle_max": ("tacklemax.book", ".book"),
          "tackle_shotfirst": ("tackleshotfirst.book", ".book"),
-         "tackle_pending": ("tacklepending.book", ".book")}
+         "tackle_pending": ("tacklepending.book", ".book"),
+         "ledger_testbreak": ("veteran.book", ".book")}
 # The owner's own book. The suite must leave it byte for byte as it found it.
 REAL_BOOK = os.path.join(ROOT, "Saved", "Ledger", "book.txt")
 LEDGER_BASE = ["-WindBearing=120", "-WindSpeed=12", "-EnemyCount=0"]
@@ -566,6 +567,24 @@ SCENARIOS = {
     # is money spent before a second press can take it back.
     "tackle_grace": LEDGER_BASE + ["-Port=1", "-PortX=0", "-PortY=0", "-ShipToggleTackle=1",
                                    "-ShipQuitAfter=10"],
+
+    # THE LINE CLOSES OVER A SHIP THAT BREAKS OFF. The default squadron of two,
+    # 1.5 km off with the wind across the line between them, the player lying
+    # still: nobody comes within gunshot in 90 s (1350 m less 8 m/s x 90 s is
+    # 630 m, past EngageRangeM), so the only thing that can differ is where the
+    # ships go. line_formed is the control - a line that actually formed
+    # (stationGap under two intervals). line_breaks sets the LEADER's hull to a
+    # quarter at t=10, below the 30% at which a Crown ship runs: the line must
+    # close over her (closed at once, skips 1), her consort must stop dressing
+    # on her (stationGap -1) and be left well astern (runnerGap past the 360 m
+    # at which the code itself calls a ship off her station).
+    "line_formed": ["-WindBearing=90", "-WindSpeed=12", "-EnemyX=150000", "-EnemyY=0",
+                    "-ShipQuitAfter=90"],
+    "line_breaks": ["-WindBearing=90", "-WindSpeed=12", "-EnemyX=150000", "-EnemyY=0",
+                    "-ShipQuitAfter=90", "-EnemyBreakTest=10"],
+    # A test flag like the others: it shuts the book.
+    "ledger_testbreak": LEDGER_BASE + ["-Port=1", "-EnemyBreakTest=5", "-ShipQuitAfter=10",
+                                       "-LedgerBook=Saved/CI/ledger_testbreak.book"],
 
     # THE GUNS LAID BY HAND. Three rows around one idea, and each pair says a
     # different thing.
@@ -1337,6 +1356,20 @@ def measure(name, text):
     rf = re.search(r"PORTLOG \S+ begins to refit t=([0-9.]+)", text)
     if rf:
         m["refit_first_t"] = float(rf.group(1))
+    # THE LINE OF BATTLE, latched on the game mode and printed on every row.
+    ln = re.search(r"LINELOG TOTAL broken=(\d+) closed=(-?[0-9.]+) runnerTicks=(\d+) "
+                   r"runnerGap=(-?[0-9.]+) stationGap=(-?[0-9.]+) runnersAfloat=(\d+)", text)
+    if ln:
+        m["line_broken"] = int(ln.group(1))
+        m["line_closed_t"] = float(ln.group(2))
+        m["line_runner_ticks"] = int(ln.group(3))
+        m["line_runner_gap_m"] = float(ln.group(4))
+        m["line_station_gap_m"] = float(ln.group(5))
+        m["line_runners_afloat"] = int(ln.group(6))
+    lb = re.search(r"AILOG \S+ BROKEN for the test at t=([0-9.]+) hull=([0-9.]+)/", text)
+    if lb:
+        m["line_break_t"] = float(lb.group(1))
+        m["line_break_hull"] = float(lb.group(2))
     tt = re.search(r"TACKLELOG TOTAL bought=(\d+) refusedCoffers=(\d+) spent=(\d+)", text)
     if tt:
         m["tackle_bought"] = int(tt.group(1))
