@@ -1788,18 +1788,33 @@ def check_ships():
         "LogTemp: Display: SHIPLOG MerchantShipPawn_1 livery=navy painted=6 of 6 sail=MI_Ship_Sail_navy\n"
         "LogTemp: Display: SHIPLOG EnemyShipPawn_4 livery=navy painted=5 of 6 sail=MI_Ship_Sail_navy\n"
         "LogTemp: Display: SHIPLOG EnemyShipPawn_5 livery=navy painted=6 of 6 sail=MI_Ship_Sail_navy\n"
+        "LogTemp: Display: SHIPLOG EnemyShipPawn_6 livery=navy painted=6 of 6 sail=MI_Ship_Sail_pirate\n"
         "LogTemp: Display: SHIPLOG ShipPawn_0 rigsway mats=12 wind=9.0 m/s toward 215 deg (readback ok 9.0) sail=MI_Ship_Sail_pirate\n"
         "LogTemp: Display: SHIPLOG EnemyShipPawn_3 rigsway mats=12 wind=9.0 m/s toward 215 deg (readback ok 9.0) sail=MI_Ship_Sail_navy\n"
+        "LogTemp: Display: SHIPLOG MerchantShipPawn_1 rigsway mats=12 wind=9.0 m/s toward 215 deg (readback ok 9.0) sail=MI_Ship_Sail_navy\n"
+        "LogTemp: Display: SHIPLOG EnemyShipPawn_4 rigsway mats=12 wind=9.0 m/s toward 215 deg (readback ok 9.0) sail=MI_Ship_Sail_navy\n"
         "LogTemp: Display: SHIPLOG EnemyShipPawn_5 rigsway mats=12 wind=9.0 m/s toward 215 deg (readback ok 9.0) sail=MI_Ship_Sail_pirate\n"
+        "LogTemp: Display: SHIPLOG EnemyShipPawn_6 rigsway mats=12 wind=9.0 m/s toward 215 deg (readback ok 9.0) sail=MI_Ship_Sail_pirate\n"
         "LogTemp: Display: SHIPLOG ShipPawn_0 muzzles sockets=14 P0=(-715,-404,181) S0=(-715,404,181)\n"
         "LogTemp: Display: SHIPLOG EnemyShipPawn_3 muzzles sockets=14 P0=(-715,-404,181) S0=(-715,404,181)\n")
-    # 5 hulls: two right at both ends; a merchant in navy; one painted 5 of 6;
-    # one whose slot is navy but whose wind instance was made from the pirate.
-    want = {"livery_hulls": 5, "livery_ok": 2, "muzzle_sockets": 14,
+    # SIX hulls, each bad one wrong for exactly ONE reason, and every one with
+    # its wind line so none is wrong by accident: two right at both ends; a
+    # merchant in navy (the class map); one painted 5 of 6; one whose wind
+    # instance was made from the pirate (the wind end); one whose slot carries
+    # a sail that is not its livery's (the slot end). The review found the
+    # first version caught ONE of the conditions: the other bad hulls had no
+    # wind line and failed on that alone, so the class map could be deleted
+    # and this stayed green.
+    want = {"livery_hulls": 6, "livery_ok": 2, "muzzle_sockets": 14,
             "muzzle_mouths": "P0=(-715,-404,181) S0=(-715,404,181)", "muzzle_hulls_agree": 1}
     bad = {k: (got.get(k), v) for k, v in want.items() if got.get(k) != v}
     if bad:
         fail("the ship lines are not read field by field (got, want): %r" % bad)
+    split = ci_measure.measure("fixture",
+        "LogTemp: Display: SHIPLOG ShipPawn_0 muzzles sockets=14 P0=(-715,-404,181) S0=(-715,404,181)\n"
+        "LogTemp: Display: SHIPLOG EnemyShipPawn_3 muzzles sockets=14 P0=(-640,-404,181) S0=(-715,404,181)\n")
+    if split.get("muzzle_hulls_agree") != 0:
+        fail("two hulls that chose different mouths are read as agreeing")
 
     facts_path = os.path.join(ROOT, "Scripts", "SM_Ship_Brig.json")
     if not os.path.exists(facts_path):
@@ -1813,11 +1828,39 @@ def check_ships():
     chain = [("Art/OwnerShips/FBX/" + facts.get("source", "?"), facts.get("source_sha1")),
              ("Scripts/SM_Ship_Brig.fbx", facts.get("fbx_sha1"))]
     broken = ["%s (%s, facts say %s)" % (rel, sha(rel), want_sha) for rel, want_sha in chain
-              if sha(rel) != want_sha]
+              if not want_sha or sha(rel) != want_sha]
+
+    # THE THIRD LINK, to what the game actually loads. Unreal writes the MD5 of
+    # the file an asset was imported from into the .uasset (AssetImportData);
+    # it must be the md5 of the converted FBX - and of each PNG, for the
+    # textures - as committed. The chain used to stop at the FBX, and the brig
+    # committed with it had been imported from the converter's PREVIOUS run:
+    # same geometry, other bytes, and this check said "by two hashes".
+    def md5(rel):
+        p = os.path.join(ROOT, rel)
+        return hashlib.md5(open(p, "rb").read()).hexdigest() if os.path.exists(p) else None
+
+    def imported_from(rel):
+        p = os.path.join(ROOT, rel)
+        if not os.path.exists(p):
+            return None
+        mm = re.search(rb'"FileMD5" : "([0-9a-f]{32})"', open(p, "rb").read())
+        return mm.group(1).decode() if mm else None
+    links = [("Content/Ships/%s.uasset" % facts.get("asset"), "Scripts/SM_Ship_Brig.fbx")]
+    tex_dir = os.path.join(ROOT, "Content", "Ships", "Textures")
+    for f in sorted(os.listdir(tex_dir)) if os.path.isdir(tex_dir) else []:
+        if f.startswith("T_") and f.endswith(".uasset"):
+            links.append(("Content/Ships/Textures/" + f,
+                          "Art/OwnerShips/textures/" + f[2:-len(".uasset")] + ".png"))
+    for asset, src_rel in links:
+        got_md5 = imported_from(asset)
+        if got_md5 is None or got_md5 != md5(src_rel):
+            broken.append("%s imported from md5 %s, %s is %s" % (asset, got_md5, src_rel, md5(src_rel)))
     if broken:
         fail("the owner's brig is not the file the facts were taken from: %s" % "; ".join(broken))
     else:
-        ok("the brig in the game is the owner's file, by two hashes")
+        ok("the brig in the game is the owner's file: two hashes to the FBX, then the mesh and "
+           "%d textures imported from exactly the committed bytes" % (len(links) - 1))
 
     src = io.open(os.path.join(ROOT, "Source", "PirateSeas", "ShipPawn.cpp"), encoding="utf-8").read()
     ports = re.search(r"const float GGunPortsX\[\] = \{([^}]*)\}", src)

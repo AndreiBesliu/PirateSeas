@@ -1234,6 +1234,11 @@ sterse; o parte care nu se recunoaste. Si trei lucruri pe care le stiu deja:
 3. **Dara ghiulelei porneste cam la 2 m in afara gurii si ~0,9 m mai sus.**
    Ghiuleaua se naste tot unde se nastea pe nava veche; mutarea ei pe gurile
    Brig-ului e balistica si vine cu pielea noua a cocii, in felia urmatoare.
+4. **Ce loveste ghiuleaua e inca nava veche.** O gaura poate aparea in aer, pana
+   la 0,7 m deasupra parapetului Brig-ului (mai mult la capete); o lovitura in
+   prova poate trece prin scandura; iar prin spanker si prin focuri (panzele
+   triunghiulare) ghiuleaua trece fara sa loveasca greementul. Tot felia
+   urmatoare.
 
 **Doua intrebari pentru tine:**
 - **Ai scris „5 modele"; in folder sunt 7** (Sloop, Schooner, Brig,

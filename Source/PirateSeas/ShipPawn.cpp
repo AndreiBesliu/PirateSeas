@@ -152,10 +152,17 @@ AShipPawn::AShipPawn()
 
 	// THE OWNER'S BRIG (Art/OwnerShips/FBX/Ship_Brig.fbx, brought into this
 	// frame by Scripts/owner_ship.py). Chosen of the seven because she is the
-	// ship this body was built for: 30.0 m of hull against ship.py's 30, 2.60 m
-	// of draught against 2.6, her two masts within 35 cm of where ForeRig and
-	// MainRig stand. Nothing below this line - the box, the pontoons, the rig
-	// volumes, the shot skin - had to move to carry her.
+	// ship this BODY was built for: 30.0 m of hull against ship.py's 30, 2.60 m
+	// of draught against 2.6 - the box, the pontoons and the mass carry her
+	// unchanged. What a shot can hit is NOT yet hers, and is the next slice:
+	// her square sails sit inside ForeRig and MainRig along the hull (fore
+	// 505..607 cm, main -304..-195; her masts themselves stand at +429 and
+	// -378), but her yards reach 76 cm past the boxes' 525 half width, her fore
+	// topgallant 2.6 m above ForeRig, her spanker (-1403..-431) and jibs
+	// (503..2247) are outside every rig volume, and HullShot below is still the
+	// old hull's skin - 0.7 m above her rail amidships, up to 0.8 m inside her
+	// bow planking. (Measured by the review of 3b4e30f; this comment said "her
+	// masts within 35 cm" and "nothing had to move", and both were wrong.)
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> ShipMeshAsset(
 		TEXT("/Game/Ships/SM_Ship_Brig.SM_Ship_Brig"));
 	if (ShipMeshAsset.Succeeded())

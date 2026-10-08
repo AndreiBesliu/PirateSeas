@@ -116,9 +116,10 @@ crem, steag albastru).
 
 **De ce Brig-ul, si de ce numai el.** E nava pentru care e facut corpul fizic al
 jocului: 30,0 m de coca fata de cei 30 ai navei vechi (`Scripts/ship.py`), 2,60 m
-de pescaj fata de 2,6, cele doua catarge la cel mult 35 cm de unde stau volumele
-de greement. Nimic din fizica - cutia, pontoanele, greementul, pielea pe care se
-opreste ghiuleaua - n-a trebuit mutat ca s-o poarte. Celelalte sase (Sloop 16 m,
+de pescaj fata de 2,6 - cutia, pontoanele si masa o poarta neschimbate. CE POATE
+LOVI O GHIULEA nu e inca al ei (mai jos, „Stiute"): prima versiune a textului
+asta spunea „catargele la cel mult 35 cm de volumele de greement" si „nimic n-a
+trebuit mutat", si recenzia a aratat ca amandoua erau false. Celelalte sase (Sloop 16 m,
 Schooner 22, Merchantman 32, Frigate 42, Galleon 44, vasul de linie 56) au alta
 marime, alt numar de catarge si de tunuri: fiecare cere corpul ei, iar cat de
 repede merge un sloop fata de o fregata e un numar al owner-ului. Felia
@@ -143,7 +144,10 @@ urmatoare.
    pielii exterioare. Plus: gurile de babord la +Y si cele de tribord oglinda lor
    la 0,0000 m, carma la pupa, catargele in sus, si FBX-ul scris recitit.
 2. `Scripts/owner_ship_assets.py` (Unreal, de doua ori - importul omoara
-   editorul DUPA ce a scris) importa texturile (20: trei livrele + puntea si
+   editorul DUPA ce a scris) importa ce nu e la zi - decis dupa md5-ul pe care
+   Unreal il scrie in .uasset la import, fata de md5-ul FBX-ului / PNG-ului de
+   acum, nu dupa „exista asset-ul" (prima versiune; Brig-ul comis cu ea fusese
+   importat din rularea ANTERIOARA a convertorului) - adica texturile (20: trei livrele + puntea si
    lemnul catargelor; steagurile de 512x320 intinse la putere a lui doi, ca sa-si
    pastreze mipurile) si mesh-ul, si il verifica fata de JSON: **24 140 de
    triunghiuri** (24 180 scrise, minus exact cele 40 fara arie pe care Unreal le
@@ -176,7 +180,9 @@ Tunurile, plutirea, convoiul, prazile, cartea - neatinse. Poarta (`check_ships`)
 lantul de hash-uri de la fisierul owner-ului la cel importat, fiecare coca din
 fiecare rand in culorile partii ei (citita dupa CLASA, nu dupa tabelul din care
 vopseste jocul), gurile alese = cele alese de poarta din JSON, si vantul ajunge
-in toate cele 12 sloturi.
+in toate cele 12 sloturi. Lantul merge pana la ce incarca jocul: md5-ul din
+.uasset-ul Brig-ului si al fiecareia dintre cele 20 de texturi trebuie sa fie al
+fisierului comis din care vine.
 
 **Stiute si lasate pentru feliile urmatoare:**
 - Brig-ul are **sapte** tunuri pe bord, jocul trage cu **patru** - din gurile cele
@@ -184,9 +190,19 @@ in toate cele 12 sloturi.
   fumega niciodata.
 - Ghiuleaua pleaca de la 6,4 m in bord si 2,8 m inaltime, gurile Brig-ului sunt
   la 3,1-4,4 m si 1,8-2,3 m: dara incepe cam la 2 m in afara si cu ~0,9 m deasupra
-  fumului. Si pielea pe care se opreste ghiuleaua e inca a cocii vechi (8,4 m
-  latime fata de 7,9): gaurile pot sta pana la 25 cm in fata scandurii la mijloc.
-  Amandoua sunt balistica si muta suita - felie proprie, cu pielea Brig-ului.
+  fumului.
+- **Ce poate lovi o ghiulea e inca geometria navei vechi.** Pielea pe care se
+  opreste (`SM_PirateHull`) are parapetul cu 0,7 m DEASUPRA parapetului Brig-ului
+  la mijloc (3,25 m fata de 2,53) si pana la 1,9 m la capete: o ghiulea care trece
+  peste parapetul vazut se poate opri in aer si lasa o gaura plutind. Spre prova
+  Brig-ul e pana la 0,8 m mai lat decat pielea: o lovitura acolo trece prin
+  scandura vazuta. Volumele de greement acopera panzele patrate pe lungime
+  (trinchet 5,05-6,07 m, arbore -3,04..-1,95), dar vergile ies cu 76 cm peste
+  latimea lor, gabierul trinchetului cu 2,6 m peste varf, iar spankerul (-14,0 ..
+  -4,3 m) si focurile (+5,0 .. +22,5 m) sunt in afara oricarui volum - ghiuleaua
+  trece prin ele. (Catargele insesi: +4,29 si -3,78 m.) Masurat de recenzie, nu
+  de mine. Toate sunt balistica si muta suita - felia urmatoare, cu pielea si
+  greementul luate din modelul owner-ului.
 - Panzele patrate ale piratului ies NEGRE cand soarele e in spatele lor: panza
   lui e inchisa (cam 0,21 liniar), iar materialul nu lasa lumina sa treaca prin
   panza, cum face panza reala. OWNER_VERIFY 43.

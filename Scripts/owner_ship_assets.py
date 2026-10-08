@@ -10,6 +10,16 @@ Content Browser to select what it imported, a commandlet has no Slate, and the
 editor dies AFTER the asset is on disk. The second run imports nothing and
 checks everything - and the check is the point:
 
+  - every asset was imported from the bytes of its source AS THEY ARE NOW: the
+    MD5 Unreal records at import (in the .uasset on disk) against the md5 of
+    the FBX / PNG. That is also what decides whether to import: an asset that
+    merely EXISTS is not current. The first version imported only what was
+    missing, and the brig committed with it had been imported from the
+    converter's previous run - same geometry, other bytes, and every check
+    below passed. A re-exported FBX with the same triangle count, bounds and
+    gun mouths (a recoloured sail, a moved hatch) would have stayed stale for
+    good, said nowhere.
+
   - every texture present, colour, sRGB, wrapping, and (the flags are 512 x 320)
     stretched to a power of two so they keep their mips: a flag without mips
     shimmers at the range a flag is seen from;
@@ -24,8 +34,10 @@ checks everything - and the check is the point:
 Materials are NOT made here. ship_materials.py owns every ship material and
 assigns the default (the brig's own pirate livery) to the slots.
 """
+import hashlib
 import json
 import os
+import re
 
 import unreal
 
@@ -34,6 +46,7 @@ AT = unreal.AssetToolsHelpers.get_asset_tools()
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ART = os.path.join(os.path.dirname(HERE), "Art", "OwnerShips", "textures")
+CONTENT = os.path.join(os.path.dirname(HERE), "Content")
 TEX_DEST = "/Game/Ships/Textures"
 MESH_DEST = "/Game/Ships"
 
@@ -67,6 +80,28 @@ def sp(o, n, v):
         return False
 
 
+def md5(path):
+    return hashlib.md5(open(path, "rb").read()).hexdigest()
+
+
+def recorded_md5(asset):
+    """The MD5 of the file this asset was imported from, as Unreal wrote it into
+    the .uasset ON DISK (its AssetImportData JSON). None if there is no asset.
+    Read from the file, not through load_asset: in this process the object in
+    memory may be the one a crashed import left, and the disk is the truth the
+    game and the gate both read."""
+    p = os.path.join(CONTENT, asset[len("/Game/"):] + ".uasset")
+    if not os.path.exists(p):
+        return None
+    m = re.search(rb'"FileMD5" : "([0-9a-f]{32})"', open(p, "rb").read())
+    return m.group(1).decode() if m else ""
+
+
+def current(asset, src):
+    """Imported from these exact bytes?"""
+    return recorded_md5(asset) == md5(src)
+
+
 def textures():
     names = SHARED_TEX + ["%s_%s" % (lv, p) for lv in LIVERIES for p in THEMED]
     for n in names:
@@ -75,8 +110,10 @@ def textures():
         if not os.path.exists(src):
             bad("texture source missing: %s" % src)
             continue
-        if EAL.does_asset_exist(dst):
+        if current(dst, src):
             continue
+        L("texture %s: %s, importing" % (n, "missing" if recorded_md5(dst) is None
+                                          else "imported from other bytes"))
         task = unreal.AssetImportTask()
         sp(task, "filename", src)
         sp(task, "destination_path", TEX_DEST)
@@ -111,6 +148,9 @@ def textures():
         if ((w & (w - 1)) or (h & (h - 1))) and \
                 p2 != unreal.TexturePowerOfTwoSetting.STRETCH_TO_POWER_OF_TWO:
             bad("T_%s is %dx%d and was not stretched to a power of two" % (n, w, h))
+        if not current(dst, os.path.join(ART, n + ".png")):
+            bad("T_%s was imported from other bytes than %s.png (recorded %s)"
+                % (n, n, recorded_md5(dst)))
         ok += 1
     L("textures %d/%d" % (ok, len(names)))
 
@@ -119,7 +159,9 @@ def mesh(name):
     fbx = os.path.join(HERE, name + ".fbx")
     facts = json.load(open(os.path.join(HERE, name + ".json")))
     asset = MESH_DEST + "/" + name
-    if not EAL.does_asset_exist(asset):
+    if not current(asset, fbx):
+        L("%s: %s, importing" % (name, "missing" if recorded_md5(asset) is None
+                                 else "imported from other bytes than %s" % fbx))
         opts = unreal.FbxImportUI()
         sp(opts, "import_mesh", True)
         sp(opts, "import_as_skeletal", False)
@@ -146,6 +188,9 @@ def mesh(name):
     if m is None:
         bad("%s not in the project" % asset)
         return
+    L("%s imported from md5 %s, %s.fbx is %s" % (name, recorded_md5(asset), name, md5(fbx)))
+    if not current(asset, fbx):
+        bad("%s was imported from other bytes than %s.fbx" % (name, name))
     tris = m.get_num_triangles(0)
     b = m.get_bounds()
     slots = sorted(str(s.get_editor_property("material_slot_name"))

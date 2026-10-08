@@ -76,11 +76,14 @@ felia „clase de nave", cu numerele owner-ului.
      FBX-ul owner-ului e animat in fiecare piesa, nu doar in „_Rock".
   2. adauga nava in `SHIPS` din `Scripts/owner_ship_assets.py` (si livrelele noi
      in `LIVERIES`), apoi `run_py.ps1 -Script owner_ship_assets.py -Tag OWNERSHIP`
-     DE DOUA ORI; a doua compara triunghiurile (minus cele degenerate, numarate
-     de convertor), marginile si fiecare socket cu JSON-ul.
+     DE DOUA ORI; importa ce nu e LA ZI (md5-ul scris de Unreal in .uasset fata
+     de md5-ul FBX-ului/PNG-ului de acum - nu doar ce lipseste), iar a doua
+     compara md5-urile, triunghiurile (minus cele degenerate, numarate de
+     convertor), marginile si fiecare socket cu JSON-ul.
   3. `OWNER_MESHES`/`OWNER_LIVERIES` in `Scripts/ship_materials.py`, apoi
      `run_py.ps1 -Script ship_materials.py -Tag SHIPMAT`.
-  4. Poarta `check_ships` leaga totul: sha1 sursa → FBX-ul convertit → randurile.
+  4. Poarta `check_ships` leaga totul: sha1 sursa → FBX-ul convertit → md5-ul din
+     .uasset (mesh + 20 de texturi) → randurile.
   Masterul `M_ShipMaster` are comutatorul STATIC `UseMeshUV`; ramura veche
   (insula, nava veche) e neschimbata. Gurile de tun sunt socket-uri
   `Muzzle_Port_NNN`/`Muzzle_Starboard_NNN` pe mesh; `AShipPawn::BindMuzzles`
@@ -368,7 +371,12 @@ Urmatorul: de ales cu owner-ul. **Deschise si stiute:**
   tot la portul navei vechi (6,4 m in bord, 2,8 m sus; gurile Brig-ului sunt la
   3,1-4,4 m si 1,8-2,3 m) si se opreste pe pielea navei vechi (`SM_PirateHull`,
   8,4 m latime fata de 7,9) - balistica, muta suita, felie proprie cu pielea
-  Brig-ului (`_Hull` + `_Deck` din FBX, complex-as-simple); (2) sapte guri pe
+  Brig-ului (`_Hull` + `_Deck` din FBX, complex-as-simple). Masurat de recenzie:
+  parapetul pielii vechi e cu 0,7 m peste al Brig-ului la mijloc, pana la 1,9 m la
+  capete, iar prova Brig-ului e pana la 0,8 m mai lata decat pielea. Si GREEMENTUL:
+  `ForeRig`/`MainRig` acopera panzele patrate pe lungime, dar nu spankerul
+  (-1403..-431 cm), focurile (503..2247), cei 76 cm de verga peste 525 si
+  gabierul trinchetului (2423 fata de 2160) - in aceeasi felie; (2) sapte guri pe
   bord, patru tunuri - schimbare de echilibru, a owner-ului; (3) panzele de pirat
   negre cu soarele in spate - recomandarea: panza care lasa lumina sa treaca
   (OWNER_VERIFY 43); (4) `SM_PirateShip` + jumatatea vizuala din `ship.py` nu se

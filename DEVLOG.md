@@ -5194,3 +5194,57 @@ efectelor pe care Brig-ul l-a inlocuit cu socket-uri - a picat zgomotos cand
 tabelul a disparut. Acum numara din `GGunPortsX`, porturile, care chiar sunt
 tunurile.
 
+**Task Completed** (3b4e30f, impins; pachetul reconstruit si verificat prin
+rulare: `convoy_weather` pe exe identic cu linia de baza din editor, toate 76
+de chei, cu livrelele gasite in pachet; o captura randata din exe arata cele
+trei culori).
+
+## 08.10.2026 - Ce a gasit recenzia in Brig: lantul se oprea inainte de joc
+
+**Task Started.** Prompt: acelasi (recenzia adversariala a feliei: 5 lentile,
+18 agenti, 2,59M tokeni, fiecare constatare cu un verificator care incearca s-o
+darame). Model: Opus 5.5.
+
+**Cinci reale, doua gasite de cate doua lentile.**
+
+1. **Lantul de hash-uri se oprea la FBX, iar asset-ul comis venea din ALT FBX.**
+   Am rulat convertorul inca o data dupa import (pentru numararea triunghiurilor
+   degenerate); Blender scrie ora in FBX, deci alti octeti, iar importul sarea
+   peste orice asset care EXISTA. Aceeasi geometrie, deci toate verificarile au
+   trecut, si poarta spunea „by two hashes". Acum: `owner_ship_assets.py`
+   importa ce nu e LA ZI - md5-ul pe care Unreal il scrie in .uasset fata de
+   md5-ul FBX-ului / PNG-ului de acum - si a reimportat Brig-ul singur, pe motivul
+   „imported from other bytes"; poarta are a treia veriga, pana la mesh si la
+   cele 20 de texturi. Proba: .uasset-ul din 3b4e30f pus la loc -> poarta pica
+   („imported from md5 c58e..., Scripts/SM_Ship_Brig.fbx is f9fe...").
+2. **Acelasi defect, vazut ca procedura:** un FBX re-exportat (pe care
+   OWNER_VERIFY 43 chiar il cere) sau o panza recolorata ar fi ramas vechi in
+   joc pentru totdeauna, fara niciun mesaj. Reparat de acelasi md5.
+3. **Fixtura parserului prindea UNA din cinci conditii:** hull-urile „rele" n-
+   aveau linia vantului si picau pe ea, deci harta claselor (hartia
+   independenta!) putea fi stearsa si poarta ramanea verde. Acum sase hull-uri,
+   fiecare rau dintr-un singur motiv, plus o pereche care alege guri diferite.
+   Proba: fiecare din cele cinci conditii scoasa pe rand -> prinsa.
+4. **„Catargele la cel mult 35 cm de volumele de greement" era FALS** - in
+   comentariu, README, commit. Catargele sunt la +4,29 si -3,78 m (cutiile la
+   5,6 si -3,2); ce sta in cutii sunt PANZELE patrate. Iar spankerul (-14,0 ..
+   -4,3 m) si focurile (+5,0 .. +22,5 m) sunt in afara oricarui volum, vergile
+   ies cu 76 cm peste latime, gabierul trinchetului cu 2,6 m peste varf: o
+   ghiulea trece prin ele. Masurat si de mine, pe piese, in repaus.
+5. **Pielea veche era subestimata:** am scris „gauri pana la 25 cm in fata
+   scandurii"; recenzia a masurat parapetul pielii vechi cu 0,7 m DEASUPRA
+   parapetului Brig-ului la mijloc (pana la 1,9 m la capete), si prova Brig-ului
+   pana la 0,8 m mai lata decat pielea.
+
+4 si 5 nu se repara aici: sunt geometria loviturii, muta suita, si sunt exact
+felia urmatoare. Le-am corectat peste tot unde le afirmasem, si sunt al
+patrulea lucru stiut din OWNER_VERIFY 43.
+
+**Respinse de verificatori (7):** cache-ul static de livrele vazut de GC (nu se
+ajunge acolo in proiect), `static_assert` pe o enumeratie viitoare, zonele
+tunurilor (felia nu le atinge), fereastra noaptea, randuri fara linia vantului,
+verificarea de rigiditate si o conversie esuata suprascrisa (semnalata zgomotos).
+
+**Masurat.** `convoy_weather` si `gunnery` cu asset-ul reimportat: identice cu
+linia de baza. Poarta: verde. In C++ s-a schimbat doar un comentariu.
+
