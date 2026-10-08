@@ -1,0 +1,219 @@
+{
+ "asset": "SM_Ship_Brig",
+ "bounds": {
+  "max": [
+   2272.7,
+   601.1,
+   2958.5
+  ],
+  "min": [
+   -1611.4,
+   -601.1,
+   -260.0
+  ]
+ },
+ "fbx_sha1": "c843fae3ad1fae0368b672e5fec9cb3de833d7d0",
+ "frame": "Unreal: cm, X bow, Y starboard, Z up, origin waterline mid-hull",
+ "hull": {
+  "half_beam": 395.3,
+  "keel_z": -260.0,
+  "rail_z": 370.5,
+  "x_max": 1500.0,
+  "x_min": -1500.0
+ },
+ "livery": "pirate",
+ "masts": [
+  {
+   "half_width": 601.1,
+   "mast": "1",
+   "sails": 4,
+   "x_max": -195.1,
+   "x_min": -1402.6,
+   "z_max": 2590.9,
+   "z_min": 268.2
+  },
+  {
+   "half_width": 601.1,
+   "mast": "2",
+   "sails": 3,
+   "x_max": 606.6,
+   "x_min": 505.4,
+   "z_max": 2423.2,
+   "z_min": 280.2
+  }
+ ],
+ "muzzles": [
+  {
+   "deck": 0,
+   "gun": 1,
+   "pos": [
+    -714.6,
+    -403.6,
+    181.1
+   ],
+   "side": "port",
+   "socket": "Muzzle_Port_001"
+  },
+  {
+   "deck": 0,
+   "gun": 2,
+   "pos": [
+    -460.0,
+    -427.2,
+    183.4
+   ],
+   "side": "port",
+   "socket": "Muzzle_Port_002"
+  },
+  {
+   "deck": 0,
+   "gun": 3,
+   "pos": [
+    -208.0,
+    -440.5,
+    187.2
+   ],
+   "side": "port",
+   "socket": "Muzzle_Port_003"
+  },
+  {
+   "deck": 0,
+   "gun": 4,
+   "pos": [
+    44.0,
+    -441.5,
+    192.9
+   ],
+   "side": "port",
+   "socket": "Muzzle_Port_004"
+  },
+  {
+   "deck": 0,
+   "gun": 5,
+   "pos": [
+    296.0,
+    -422.8,
+    200.9
+   ],
+   "side": "port",
+   "socket": "Muzzle_Port_005"
+  },
+  {
+   "deck": 0,
+   "gun": 6,
+   "pos": [
+    548.0,
+    -380.7,
+    211.7
+   ],
+   "side": "port",
+   "socket": "Muzzle_Port_006"
+  },
+  {
+   "deck": 0,
+   "gun": 7,
+   "pos": [
+    820.0,
+    -311.7,
+    225.6
+   ],
+   "side": "port",
+   "socket": "Muzzle_Port_007"
+  },
+  {
+   "deck": 0,
+   "gun": 1,
+   "pos": [
+    -714.6,
+    403.6,
+    181.1
+   ],
+   "side": "starboard",
+   "socket": "Muzzle_Starboard_001"
+  },
+  {
+   "deck": 0,
+   "gun": 2,
+   "pos": [
+    -460.0,
+    427.2,
+    183.4
+   ],
+   "side": "starboard",
+   "socket": "Muzzle_Starboard_002"
+  },
+  {
+   "deck": 0,
+   "gun": 3,
+   "pos": [
+    -208.0,
+    440.5,
+    187.2
+   ],
+   "side": "starboard",
+   "socket": "Muzzle_Starboard_003"
+  },
+  {
+   "deck": 0,
+   "gun": 4,
+   "pos": [
+    44.0,
+    441.5,
+    192.9
+   ],
+   "side": "starboard",
+   "socket": "Muzzle_Starboard_004"
+  },
+  {
+   "deck": 0,
+   "gun": 5,
+   "pos": [
+    296.0,
+    422.8,
+    200.9
+   ],
+   "side": "starboard",
+   "socket": "Muzzle_Starboard_005"
+  },
+  {
+   "deck": 0,
+   "gun": 6,
+   "pos": [
+    548.0,
+    380.7,
+    211.7
+   ],
+   "side": "starboard",
+   "socket": "Muzzle_Starboard_006"
+  },
+  {
+   "deck": 0,
+   "gun": 7,
+   "pos": [
+    820.0,
+    311.7,
+    225.6
+   ],
+   "side": "starboard",
+   "socket": "Muzzle_Starboard_007"
+  }
+ ],
+ "slots": {
+  "DarkInterior": 228,
+  "Deck": 756,
+  "Flag": 384,
+  "HullBand": 1132,
+  "HullBottom": 4684,
+  "HullPlanks": 1646,
+  "HullTrim": 1250,
+  "Iron": 2548,
+  "Rope": 2304,
+  "Sail": 4896,
+  "Spar": 4300,
+  "WindowGlow": 52
+ },
+ "source": "Ship_Brig.fbx",
+ "source_sha1": "fa40d32b0b3ff656bc53465bfbc107c155a87ed2",
+ "tris": 24180,
+ "tris_degenerate": 40
+}

@@ -21,6 +21,7 @@
 #include "Engine/DamageEvents.h"
 #include "Engine/Engine.h"
 #include "Engine/StaticMesh.h"
+#include "Engine/StaticMeshSocket.h"
 #include "EngineUtils.h"
 #include "Math/UnrealMathUtility.h"
 #include "GameFramework/SpringArmComponent.h"
@@ -54,10 +55,11 @@ namespace
 	 *  positions the barrels were modelled at in Blender. */
 	const float GGunPortsX[] = { -600.f, -240.f, 120.f, 480.f };
 	// Clear of the ship that fired it: her collision skin's bulwark reaches
-	// ~420 amidships and her own barrel mouths 568 (GGunMuzzleY), so a fresh
-	// shot never starts life inside her. (Until 25.09 the number was justified
-	// against the 520 half width of the collision box, which the ball now
-	// ignores; the box is still the root and still 520.)
+	// ~420 amidships, and the owner's brig's barrel mouths reach 442 (its
+	// sockets, Scripts/SM_Ship_Brig.json), so a fresh shot never starts life
+	// inside her. (Until 25.09 the number was justified against the 520 half
+	// width of the collision box, which the ball now ignores; the box is still
+	// the root and still 520.)
 	const float GGunPortY = 640.f;
 	/** Gun-port height above the hull ORIGIN, and the hull origin is the
 	 *  waterline the Blender ship was drawn around (Scripts/ship.py: DRAFT 2.6 m
@@ -72,24 +74,20 @@ namespace
 	 *  what made the ship read as a barge with masts. */
 	const float GGunPortZ = 280.f;
 
-	/** Where the barrel MOUTHS are, per gun, for the smoke and the flash only.
-	 *
-	 *  The ball is born at GGunPortY = 640 and has to be: that clears the hull
-	 *  collision box's 520 half width, so a fresh shot never starts life already
-	 *  touching the ship that fired it. The barrels cannot reach 640 - the hull
-	 *  narrows towards the ends, and a barrel long enough to reach it amidships
-	 *  would stick out four metres at the bow.
-	 *
-	 *  So the effects got their own number, and the gap they close is real: 72 cm
-	 *  at the widest gun and 157 cm at the foremost. On 19.09 the Z disagreement
-	 *  between the barrels and the guns was found and fixed, and the SAME
-	 *  disagreement in Y was left standing one commit longer - the barrels were
-	 *  aligned in one axis of two.
-	 *
-	 *  Derived, not guessed: half_beam(t) from Scripts/ship.py at each gun's
-	 *  station, plus 35 cm of stand-off, plus half of the 2.3 m barrel. Recompute
-	 *  them from that file if the hull's beam ever changes. */
-	const float GGunMuzzleY[] = { 521.f, 568.f, 559.f, 483.f };
+	// Where the barrel MOUTHS are is no longer a table here: it was derived from
+	// Scripts/ship.py's half-beam, the hull changed to the owner's brig, and the
+	// brig's own model carries every mouth as a socket. AShipPawn::BindMuzzles.
+
+	/** The six parts a livery repaints, named as the owner's mesh names its
+	 *  slots (Scripts/owner_ship.py strips the livery off the material name). */
+	const TCHAR* const GLiveryParts[] = {
+		TEXT("HullPlanks"), TEXT("HullBottom"), TEXT("HullBand"),
+		TEXT("HullTrim"), TEXT("Sail"), TEXT("Flag") };
+	/** One livery per allegiance, in EShipAllegiance's order: the raider flies
+	 *  the black, the squadron the Crown's colours, the convoy a trader's. */
+	const TCHAR* const GLiveries[] = { TEXT("pirate"), TEXT("navy"), TEXT("merchant") };
+	static_assert(UE_ARRAY_COUNT(GLiveries) == static_cast<int32>(EShipAllegiance::Merchant) + 1,
+		"a livery for every allegiance");
 }
 
 AShipPawn::AShipPawn()
@@ -152,11 +150,42 @@ AShipPawn::AShipPawn()
 	HullMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	HullMesh->SetGenerateOverlapEvents(false);
 
+	// THE OWNER'S BRIG (Art/OwnerShips/FBX/Ship_Brig.fbx, brought into this
+	// frame by Scripts/owner_ship.py). Chosen of the seven because she is the
+	// ship this body was built for: 30.0 m of hull against ship.py's 30, 2.60 m
+	// of draught against 2.6, her two masts within 35 cm of where ForeRig and
+	// MainRig stand. Nothing below this line - the box, the pontoons, the rig
+	// volumes, the shot skin - had to move to carry her.
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> ShipMeshAsset(
-		TEXT("/Game/Meshes/SM_PirateShip.SM_PirateShip"));
+		TEXT("/Game/Ships/SM_Ship_Brig.SM_Ship_Brig"));
 	if (ShipMeshAsset.Succeeded())
 	{
 		HullMesh->SetStaticMesh(ShipMeshAsset.Object);
+	}
+	// Every livery, found here so the cook packs it (see LiveryMaterials).
+	// Once, for the class default object; every hull after copies the array.
+	struct FLiveryFinder
+	{
+		TArray<UMaterialInterface*> Mats;
+		FLiveryFinder()
+		{
+			for (const TCHAR* Livery : GLiveries)
+			{
+				for (const TCHAR* Part : GLiveryParts)
+				{
+					const FString Name = FString::Printf(TEXT("MI_Ship_%s_%s"), Part, Livery);
+					ConstructorHelpers::FObjectFinder<UMaterialInterface> Mat(
+						*FString::Printf(TEXT("/Game/Ships/Materials/%s.%s"), *Name, *Name));
+					Mats.Add(Mat.Succeeded() ? Mat.Object : nullptr);
+				}
+			}
+		}
+	};
+	static FLiveryFinder Liveries;
+	LiveryMaterials.Reset();
+	for (UMaterialInterface* M : Liveries.Mats)
+	{
+		LiveryMaterials.Add(M);
 	}
 
 	// --- the hull, as something a shot can find --------------------------
@@ -371,6 +400,93 @@ void AShipPawn::ApplyShotCamera()
 		*Cam, Arm, Height, Pitch, Yaw, Fov);
 }
 
+void AShipPawn::ApplyLivery()
+{
+	const int32 Parts = UE_ARRAY_COUNT(GLiveryParts);
+	const int32 Livery = static_cast<int32>(Allegiance);
+	int32 Painted = 0;
+	for (int32 p = 0; p < Parts; ++p)
+	{
+		const int32 i = Livery * Parts + p;
+		UMaterialInterface* Mat = LiveryMaterials.IsValidIndex(i) ? LiveryMaterials[i].Get() : nullptr;
+		const int32 Slot = HullMesh ? HullMesh->GetMaterialIndex(FName(GLiveryParts[p])) : INDEX_NONE;
+		if (Mat && Slot != INDEX_NONE)
+		{
+			HullMesh->SetMaterial(Slot, Mat);
+			++Painted;
+		}
+	}
+	// Read BACK, off the slot that shows from furthest away: what the sails
+	// are drawn with now, not what this function meant to give them.
+	const int32 SailSlot = HullMesh ? HullMesh->GetMaterialIndex(FName(TEXT("Sail"))) : INDEX_NONE;
+	const UMaterialInterface* OnSail = (SailSlot != INDEX_NONE) ? HullMesh->GetMaterial(SailSlot) : nullptr;
+	UE_LOG(LogTemp, Display, TEXT("SHIPLOG %s livery=%s painted=%d of %d sail=%s"),
+		*GetName(), GLiveries[Livery], Painted, Parts,
+		OnSail ? *OnSail->GetName() : TEXT("NONE"));
+}
+
+void AShipPawn::BindMuzzles()
+{
+	// Until a socket says otherwise, the smoke comes from where the ball is
+	// born: a metre or two outboard of the barrel, and said in the log, rather
+	// than from the hull origin thirty metres of nowhere away.
+	for (int32 s = 0; s < 2; ++s)
+	{
+		for (int32 g = 0; g < UE_ARRAY_COUNT(GGunPortsX); ++g)
+		{
+			MuzzleMouth[s][g] = FVector(GGunPortsX[g], (s ? 1.f : -1.f) * GGunPortY, GGunPortZ);
+		}
+	}
+	MuzzleSockets = 0;
+	TArray<FVector> Mouths[2];
+	if (const UStaticMesh* Mesh = HullMesh ? HullMesh->GetStaticMesh() : nullptr)
+	{
+		for (const UStaticMeshSocket* Socket : Mesh->Sockets)
+		{
+			const FString Name = Socket ? Socket->SocketName.ToString() : FString();
+			const int32 Side = Name.StartsWith(TEXT("Muzzle_Starboard_")) ? 1
+				: (Name.StartsWith(TEXT("Muzzle_Port_")) ? 0 : INDEX_NONE);
+			if (Side != INDEX_NONE)
+			{
+				Mouths[Side].Add(Socket->RelativeLocation);
+				++MuzzleSockets;
+			}
+		}
+	}
+	// Each gun the game fires takes the mouth nearest its port ALONG the hull.
+	// The brig has seven a side and the battery is four; the four nearest are
+	// four different barrels (-715, -208, 44, 548 against ports at -600, -240,
+	// 120, 480). Two guns on one barrel would put two puffs in one place and
+	// none where the second ball comes from - and tools/ci_checks.py refuses
+	// exactly that, so a hull for which it happens stops the build instead of
+	// being quietly patched up here.
+	FString Report;
+	for (int32 s = 0; s < 2; ++s)
+	{
+		for (int32 g = 0; g < UE_ARRAY_COUNT(GGunPortsX); ++g)
+		{
+			int32 Best = INDEX_NONE;
+			float BestCm = TNumericLimits<float>::Max();
+			for (int32 m = 0; m < Mouths[s].Num(); ++m)
+			{
+				const float Cm = FMath::Abs(Mouths[s][m].X - GGunPortsX[g]);
+				if (Cm < BestCm)
+				{
+					Best = m;
+					BestCm = Cm;
+				}
+			}
+			if (Best != INDEX_NONE)
+			{
+				MuzzleMouth[s][g] = Mouths[s][Best];
+			}
+			Report += FString::Printf(TEXT(" %s%d=(%.0f,%.0f,%.0f)"), s ? TEXT("S") : TEXT("P"), g,
+				MuzzleMouth[s][g].X, MuzzleMouth[s][g].Y, MuzzleMouth[s][g].Z);
+		}
+	}
+	UE_LOG(LogTemp, Display, TEXT("SHIPLOG %s muzzles sockets=%d%s"), *GetName(), MuzzleSockets, *Report);
+}
+
 void AShipPawn::BeginPlay()
 {
 	// Every man aboard, before anything below can take one away. Done here
@@ -391,6 +507,12 @@ void AShipPawn::BeginPlay()
 		UE_LOG(LogTemp, Display, TEXT("SHIPLOG %s shothull=%s"), *GetName(),
 			bOk ? TEXT("ok") : (Skin ? TEXT("NO-COLLISION") : TEXT("NO-MESH")));
 	}
+
+	// Her colours and her gun mouths, before the first tick: the wind turns
+	// every slot into a dynamic instance on that tick, and an instance made
+	// from the pirate paint would keep the pirate paint.
+	ApplyLivery();
+	BindMuzzles();
 
 	// A MERCHANT HAS NO GUNS, so she must have no gun PORTS to lose either.
 	// AMerchantShipPawn's class comment says "No guns"; her constructor
@@ -1213,8 +1335,8 @@ bool AShipPawn::FireBroadside(bool bStarboard, AActor* AimAt, bool bHigh)
 		// up to a metre and a half, and the difference is visible: the owner's
 		// acceptance test for the flash is "the fire, the smoke and the barrel in
 		// the same place".
-		const FVector EffectMuzzle = HullTransform.TransformPosition(
-			FVector(PortX, Side * GGunMuzzleY[g], GGunPortZ));
+		// Since the owner's brig: the barrel IS the model's - its socket.
+		const FVector EffectMuzzle = HullTransform.TransformPosition(MuzzleMouth[SideIndex][g]);
 		if (bGunSmoke)
 		{
 			AGunSmoke::Spawn(GetWorld(), EffectMuzzle, Aim, ThisShot);
@@ -2661,12 +2783,21 @@ void AShipPawn::Tick(float DeltaSeconds)
 			float Back = -1.f;
 			const bool bTook = RigMaterials[0]->GetScalarParameterValue(
 				TEXT("WindSpeedMS"), Back);
+			// And WHICH paint the wind is now pushing into the sails: the
+			// instance this tick made for the sail slot is a copy of whatever
+			// the slot held, so a livery applied after it would be drawn
+			// nowhere - and the livery's own line, read from the slot before
+			// this, would still say the right name.
+			const int32 SailSlot = HullMesh->GetMaterialIndex(FName(TEXT("Sail")));
+			const UMaterialInstanceDynamic* SailMid = (SailSlot != INDEX_NONE)
+				? Cast<UMaterialInstanceDynamic>(HullMesh->GetMaterial(SailSlot)) : nullptr;
 			UE_LOG(LogTemp, Display,
 				TEXT("SHIPLOG %s rigsway mats=%d wind=%.1f m/s toward %.0f deg "
-					 "(readback %s %.1f)"),
+					 "(readback %s %.1f) sail=%s"),
 				*GetName(), RigMaterials.Num(), WindMS,
 				FMath::Fmod(BearingDeg + 180.f, 360.f),
-				bTook ? TEXT("ok") : TEXT("FAILED"), Back);
+				bTook ? TEXT("ok") : TEXT("FAILED"), Back,
+				(SailMid && SailMid->Parent) ? *SailMid->Parent->GetName() : TEXT("NONE"));
 		}
 	}
 

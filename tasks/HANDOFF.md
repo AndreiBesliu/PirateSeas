@@ -39,6 +39,12 @@ mare cu şase valuri Gerstner care urmează vântul, spumă pe creste keyed la s
 siaj cu firimituri + guler + braţe Kelvin, stropi, surf la ţărm, cordaj cu LOD,
 vânt în plante şi greement, `-Hour=` pentru ora din zi.
 
+**Navele owner-ului** (08.10): owner-ul a făcut 7 nave în Blender
+(`Art/OwnerShips/`, cum le-a dat). În joc e **Brig-ul**, pe toate navele, în
+livreaua părţii (pirat / navy / merchant, după `EShipAllegiance`). Corpul fizic
+e neatins: Brig-ul are exact mărimea navei vechi. Celelalte 6 cer corpul lor —
+felia „clase de nave", cu numerele owner-ului.
+
 ## Cum se lucrează aici (obligatoriu)
 
 - **Totul prin script.** C++ în `Source/PirateSeas`, materiale ca grafuri Python
@@ -62,6 +68,23 @@ vânt în plante şi greement, `-Hour=` pentru ora din zi.
   disc - in acelasi proces `load_asset` intoarce obiectul din memorie. Si in
   joc fiecare nava spune la BeginPlay `SHIPLOG ... shothull=ok`; cheia
   `shothull_ok` din suita e 0 daca vreo coca e transparenta.
+- **Navele owner-ului** (08.10), pentru o nava noua sau un FBX re-exportat:
+  1. `blender -b --factory-startup -P Scripts/owner_ship.py -- Art/OwnerShips/FBX/Ship_X.fbx Scripts SM_Ship_X`
+     — scrie `SM_Ship_X.fbx` + `.json` si iese cu 1 la orice verificare picata
+     (linia de plutire la z=0 pe 1 cm, gurile oglinda, carma la pupa, FBX-ul
+     recitit). Repausul fiecarei piese = pozitia ei FATA DE COCA la cadrul 1:
+     FBX-ul owner-ului e animat in fiecare piesa, nu doar in „_Rock".
+  2. adauga nava in `SHIPS` din `Scripts/owner_ship_assets.py` (si livrelele noi
+     in `LIVERIES`), apoi `run_py.ps1 -Script owner_ship_assets.py -Tag OWNERSHIP`
+     DE DOUA ORI; a doua compara triunghiurile (minus cele degenerate, numarate
+     de convertor), marginile si fiecare socket cu JSON-ul.
+  3. `OWNER_MESHES`/`OWNER_LIVERIES` in `Scripts/ship_materials.py`, apoi
+     `run_py.ps1 -Script ship_materials.py -Tag SHIPMAT`.
+  4. Poarta `check_ships` leaga totul: sha1 sursa → FBX-ul convertit → randurile.
+  Masterul `M_ShipMaster` are comutatorul STATIC `UseMeshUV`; ramura veche
+  (insula, nava veche) e neschimbata. Gurile de tun sunt socket-uri
+  `Muzzle_Port_NNN`/`Muzzle_Starboard_NNN` pe mesh; `AShipPawn::BindMuzzles`
+  le citeste, iar poarta refuza doua tunuri pe aceeasi gura.
 - **Sunetele** (25.09): `python Scripts/sounds.py` scrie `Scripts/Sounds/S_*.wav`
   (sintetizate, cu samanta; UNDELE SUNT IN GIT: poarta le regenereaza si cere
   octetii din arbore - dupa orice schimbare in `sounds.py` rulezi generatorul,
@@ -341,6 +364,15 @@ Urmatorul: de ales cu owner-ul. **Deschise si stiute:**
   `TallySquadron` (o singura socoteala, si pentru scufundare) da victoria.
   Perechea `escape_on`/`escape_off` plus garzile `escape_fighting`,
   `escape_player_down`, `escape_wreck`, `escape_edge`.
+- **Brig-ul owner-ului, ce a ramas pe dinafara (08.10):** (1) ghiuleaua se naste
+  tot la portul navei vechi (6,4 m in bord, 2,8 m sus; gurile Brig-ului sunt la
+  3,1-4,4 m si 1,8-2,3 m) si se opreste pe pielea navei vechi (`SM_PirateHull`,
+  8,4 m latime fata de 7,9) - balistica, muta suita, felie proprie cu pielea
+  Brig-ului (`_Hull` + `_Deck` din FBX, complex-as-simple); (2) sapte guri pe
+  bord, patru tunuri - schimbare de echilibru, a owner-ului; (3) panzele de pirat
+  negre cu soarele in spate - recomandarea: panza care lasa lumina sa treaca
+  (OWNER_VERIFY 43); (4) `SM_PirateShip` + jumatatea vizuala din `ship.py` nu se
+  mai deseneaza, raman pana confirma owner-ul; (5) celelalte 6 nave - clase.
 - Doctrinele `-AIPrize=1` si `-AIRefit=1` pot scoate LIDERUL din lupta cu coca
   peste 30%; amandoua stinse implicit si fara rand cu escadra - linia nu se
   strange peste el in cazurile astea.
@@ -388,7 +420,7 @@ atmosfera, iar dara face cititul.
 
 ## Ce aşteaptă ochiul owner-ului
 
-`OWNER_VERIFY.md` are **42** de puncte; **16–36 şi 39–42 n-au fost confirmate niciodată**, 37 e reparat, 38 e o DECIZIE a lui
+`OWNER_VERIFY.md` are **43** de puncte; **16–36 şi 39–43 n-au fost confirmate niciodată**, 37 e reparat, 38 e o DECIZIE a lui
 — sunt judecăţi vizuale pe care nu le pot face eu. (Scria 34 aici, şi numărul a
 rămas în urmă de două ori la rând: cele mai NOI puncte sunt exact cele pe care
 un cititor al acestei linii nu le-ar fi deschis.) Punctul 20 nu mai e o

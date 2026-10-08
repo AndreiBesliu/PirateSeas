@@ -6,7 +6,8 @@ tunuri cu balistică reală, integritate de cocă. Totul în C++, nimic în nodu
 Blueprint.
 
 Tot ce e aici a fost generat prin script, fără să deschid editorul: nava e
-modelată procedural în Blender, iar proiectul Unreal e construit prin API-ul
+Brig-ul modelat de owner în Blender (din 08.10; înainte, una modelată procedural
+de `Scripts/ship.py`), adusă în joc prin script, iar proiectul Unreal e construit prin API-ul
 Python al engine-ului.
 
 ## Cum îl joci, fără editor
@@ -103,6 +104,97 @@ lucruri: câtă pânză e sus, cât de tare bate vântul și sub ce unghi îl pr
 
 Cârma nu face nimic dacă nava stă pe loc. Autoritatea ei crește cu viteza,
 fiindcă are nevoie de apă care curge pe lângă ea.
+
+## Navele owner-ului (08.10)
+
+Owner-ul a facut sapte nave in Blender. Sunt in `Art/OwnerShips/` exact cum le-a
+dat: FBX-urile, texturile, generatorul (`ships_lib1/2.py`) si scena. In joc e
+una dintre ele, **Brig-ul**, pe TOATE navele, in culorile partii fiecareia: tu
+in negru-pirat cu steagul cu craniu, Coroana in navy (coca neagra, brau galben,
+panze albe, steag rosu cu dungi), convoiul in merchant (lemn, brau verde, panze
+crem, steag albastru).
+
+**De ce Brig-ul, si de ce numai el.** E nava pentru care e facut corpul fizic al
+jocului: 30,0 m de coca fata de cei 30 ai navei vechi (`Scripts/ship.py`), 2,60 m
+de pescaj fata de 2,6, cele doua catarge la cel mult 35 cm de unde stau volumele
+de greement. Nimic din fizica - cutia, pontoanele, greementul, pielea pe care se
+opreste ghiuleaua - n-a trebuit mutat ca s-o poarte. Celelalte sase (Sloop 16 m,
+Schooner 22, Merchantman 32, Frigate 42, Galleon 44, vasul de linie 56) au alta
+marime, alt numar de catarge si de tunuri: fiecare cere corpul ei, iar cat de
+repede merge un sloop fata de o fregata e un numar al owner-ului. Felia
+urmatoare.
+
+**Lantul, fiecare veriga verificata de urmatoarea:**
+
+1. `Scripts/owner_ship.py` (Blender 4.3, fara interfata) aduce un FBX al
+   owner-ului in cadrul jocului: metri, prova pe +X, babordul pe +Y, originea
+   pe linia de plutire la mijlocul cocii, un singur mesh cu sloturile numite
+   dupa PIESA (`HullPlanks`, nu `pirate_HullPlanks`), fiecare gura de tun ca
+   `SOCKET_`. Scrie `Scripts/SM_Ship_Brig.fbx` si `.json` (faptele: coca, catargele,
+   gurile, sloturile, si sha1 al sursei si al iesirii).
+   **Capcana platita:** FBX-ul e animat (legana nava 10 s), dar nu cum spune
+   README-ul lui. Exportorul a pus miscarea si in curbele FIECAREI piese, nu doar
+   in „_Rock": prima versiune a scriptului a readus „_Rock" in repaus si a lasat
+   Brig-ul aplecat 1,7 grade, cu prova ridicata un metru - si numai verificarea
+   liniei de plutire a vazut. Repausul e acum pozitia fiecarei piese FATA DE
+   COCA, iar coca a fost construita in origine. Verificarea: generatorul pune un
+   inel de varfuri exact la z = 0 (vopseaua de fund e tot ce e sub el), deci dupa
+   transformare inelul trebuie sa fie la 0: **0,0000 m pe 78 de puncte** ale
+   pielii exterioare. Plus: gurile de babord la +Y si cele de tribord oglinda lor
+   la 0,0000 m, carma la pupa, catargele in sus, si FBX-ul scris recitit.
+2. `Scripts/owner_ship_assets.py` (Unreal, de doua ori - importul omoara
+   editorul DUPA ce a scris) importa texturile (20: trei livrele + puntea si
+   lemnul catargelor; steagurile de 512x320 intinse la putere a lui doi, ca sa-si
+   pastreze mipurile) si mesh-ul, si il verifica fata de JSON: **24 140 de
+   triunghiuri** (24 180 scrise, minus exact cele 40 fara arie pe care Unreal le
+   arunca - numarate de convertor, nu potrivite aici), marginile la 0,0 cm,
+   **14 socket-uri la cel mult 0,05 cm** de gurile convertorului.
+3. `Scripts/ship_materials.py`: masterul navei are acum comutatorul STATIC
+   `UseMeshUV` - texturile owner-ului pe UV-urile modelului, in loc de proiectia
+   lemnului nostru. Static, deci ramura veche se compileaza exact cum era.
+   Masurat pe insula (plantele ei folosesc acelasi master), cu
+   `tools/png_diff.py` pe caseta dealului: inainte/dupa difera in medie cu 0,94
+   si 1,02 niveluri - dar CERUL, care n-are niciun material de nava, difera la
+   fel (0,84 si 0,93): e expunerea automata, care raspunde Brig-ului mai inchis
+   din cadru. Doua rulari noi intre ele: 0,04 si 0,11. (Prima captura „dupa"
+   iesise identica cu „inainte" - dar era prima rulare dupa reconstruirea
+   materialului, care arata starea VECHE; HANDOFF o spune, si a fost refacuta.) Instantele
+   owner-ului (`/Game/Ships/Materials`, 18 pe livrele + 6 comune) iau rugozitatea
+   si metalul din materialele lui, iar restul - linia de plutire uda, vantul in
+   greement, parama care dispare in departare - e acelasi graf ca la nava veche.
+4. C++: `AShipPawn` deseneaza `SM_Ship_Brig`; `ApplyLivery` vopseste cele sase
+   piese ale livrelei dupa APARTENENTA, pe nume de slot, inainte de primul tic
+   (cand vantul face din fiecare slot o instanta dinamica); `BindMuzzles` ia
+   fumul si focul din socket-ul cel mai apropiat de fiecare port, de-a lungul
+   cocii. Ghiuleaua se naste tot la port (`GGunPortsX/Y/Z`): asta e balistica, nu
+   vopsea.
+
+**Masurat:** suita, 76 de scenarii: singura cheie veche care s-a miscat e
+`rig_sway_mats`, 7 -> 12, in toate 76 (vantul ajunge in cele 12 sloturi ale
+Brig-ului in loc de cele 7 ale navei vechi); 0 disparute; cinci chei noi pe rand.
+Tunurile, plutirea, convoiul, prazile, cartea - neatinse. Poarta (`check_ships`):
+lantul de hash-uri de la fisierul owner-ului la cel importat, fiecare coca din
+fiecare rand in culorile partii ei (citita dupa CLASA, nu dupa tabelul din care
+vopseste jocul), gurile alese = cele alese de poarta din JSON, si vantul ajunge
+in toate cele 12 sloturi.
+
+**Stiute si lasate pentru feliile urmatoare:**
+- Brig-ul are **sapte** tunuri pe bord, jocul trage cu **patru** - din gurile cele
+  mai apropiate de porturi (-7,15 / -2,08 / 0,44 / 5,48 m). Celelalte trei nu
+  fumega niciodata.
+- Ghiuleaua pleaca de la 6,4 m in bord si 2,8 m inaltime, gurile Brig-ului sunt
+  la 3,1-4,4 m si 1,8-2,3 m: dara incepe cam la 2 m in afara si cu ~0,9 m deasupra
+  fumului. Si pielea pe care se opreste ghiuleaua e inca a cocii vechi (8,4 m
+  latime fata de 7,9): gaurile pot sta pana la 25 cm in fata scandurii la mijloc.
+  Amandoua sunt balistica si muta suita - felie proprie, cu pielea Brig-ului.
+- Panzele patrate ale piratului ies NEGRE cand soarele e in spatele lor: panza
+  lui e inchisa (cam 0,21 liniar), iar materialul nu lasa lumina sa treaca prin
+  panza, cum face panza reala. OWNER_VERIFY 43.
+- Animatia din FBX (legatul, panzele umflate/strase, steagul care flutura) nu e
+  folosita: nava o legana jocul; panzele si steagul pot veni prin deplasarea din
+  material, mai tarziu.
+- `SM_PirateShip` si jumatatea vizuala din `ship.py` nu se mai deseneaza; raman
+  pana confirma owner-ul Brig-ul (pielea pentru ghiulea tot de acolo vine).
 
 ## Tunurile
 
@@ -1553,7 +1645,10 @@ suprapuse cu perioade care nu se repetă scurt, deci nu simți un ciclu.
 
 | Ce | Unde |
 |---|---|
-| nava, 7074 triunghiuri, 37,5 m, originea pe linia de plutire | `Content/Meshes/SM_PirateShip` |
+| nava: Brig-ul owner-ului, 24 140 de triunghiuri, 38,8 m cu bompresul, originea pe linia de plutire la mijlocul cocii, 14 socket-uri de gura de tun | `Content/Ships/SM_Ship_Brig` |
+| livrelele (pirat, navy, merchant) si texturile lor | `Content/Ships/Materials/`, `Content/Ships/Textures/` |
+| cele sapte nave ale owner-ului, cum le-a dat | `Art/OwnerShips/` |
+| nava veche, procedurala - nu se mai deseneaza; pielea ei inca opreste ghiuleaua | `Content/Meshes/SM_PirateShip`, `SM_PirateHull` |
 | material părinte + opt instanțe (cocă, punte, lemn, lemn închis, velă, fier, parâmă, vegetație) | `Content/Materials/` |
 | nivelul: ocean 5 km, zonă de apă, manager de plutire, cer, soare, ceață, nori | `Content/Maps/L_OpenSea` |
 | suprafața mării: grilă radială de 30 880 de triunghiuri, 6 km | `Content/Meshes/SM_SeaSurface` |

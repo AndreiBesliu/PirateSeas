@@ -5104,3 +5104,93 @@ scapa, fara margine) - 8 din 8 pe toata felia.
 
 **Task Completed** (commit + pachet verificat prin rulare, mai jos).
 
+## 08.10.2026 - Navele owner-ului: Brig-ul pe toate navele, in trei culori
+
+**Task Started.** Prompt: "am facut 5 modele de nave in blender, poti sa le
+folosesti la joc? C:\Users\besli\Desktop\MyWork\Apps\games\PirateSeas_Ships".
+Model: Opus 5.5.
+
+**Ce era in folder.** Sapte nave, nu cinci (Sloop 16 m, Schooner 22, Brig 28,
+Merchantman 32, Frigate 42, Galleon 44, vasul de linie 56), fiecare intr-un FBX
+facut pentru Unity (+Y sus, prova pe +Z, originea la pupa), cu o animatie de
+legat de 10 s, panze cu forme (umflata/strasa), steag care flutura, si cate un
+gol la gura fiecarui tun. Plus texturile (cinci livrele), generatorul
+(`ships_lib1/2.py`) si scena `.blend` - din Blender 5.2, pe care 4.3 de aici nu
+o deschide. Toate copiate in `Art/OwnerShips/`, octet cu octet
+(`.gitattributes`: `-text`). Texturile din folder sunt aceiasi pixeli ca cele
+din FBX-uri, verificat pe toate 56 de perechi.
+
+**De ce Brig-ul, si numai el.** Masurat, nu ales din ochi: coca lui are 30,0 m
+(nava veche: 30), pescajul 2,60 m (2,6), catargele la cel mult 35 cm de
+volumele de greement. E exact nava pentru care e facut corpul fizic al jocului,
+deci intra fara sa mute nimic din fizica. Celelalte sase cer corpul lor si
+numere care sunt ale owner-ului - felia urmatoare.
+
+**Capcana platita: FBX-ul nu e animat cum spune README-ul lui.** Generatorul
+legana un singur gol („_Rock") cu toata nava sub el; exportorul a copt miscarea
+si in curbele FIECAREI piese. Prima versiune a convertorului a readus „_Rock" in
+repaus si a lasat Brig-ul aplecat 1,7 grade, cu prova ridicata un metru. N-a
+vazut-o nimic altceva decat verificarea pe care o scrisesem pentru exact asta:
+generatorul pune un inel de varfuri la z = 0 (vopseaua de fund e tot ce e sub
+el), deci dupa transformare inelul trebuie sa fie la 0 - iar el era intre 0,17 si
+1,0 m. Trei sonde au aratat de ce: piesele se misca RIGID cu coca (1,7 cm de
+diferenta intre cadrele 1 si 121, cat simplifica exportorul curbele), iar
+transformarea cocii in cadrul 1 e exact poza generatorului (0,179 m si 0,0149
+rad, din formulele lui cu L = 28). Repausul fiecarei piese e acum pozitia ei fata
+de coca: inelul iese la **0,0000 m pe 78 de puncte**. Verificarea insasi a
+trebuit ajustata de doua ori, si scris de ce: o fata a oglinzii de la pupa e
+vopsita dupa centrul ei (deci MUCHIILE, nu varfurile, fac linia), iar spre prova
+copia interioara a peretelui ia latimea celei exterioare.
+
+**Lantul**, fiecare veriga verificata de urmatoarea: `owner_ship.py` (Blender) ->
+`SM_Ship_Brig.fbx` + `.json` -> `owner_ship_assets.py` (Unreal: 24 140 de
+triunghiuri = 24 180 minus exact cele 40 fara arie, numarate de convertor;
+marginile la 0,0 cm; 14 socket-uri la 0,05 cm) -> `ship_materials.py`
+(comutatorul STATIC `UseMeshUV` in masterul navei; 24 de instante noi) -> C++
+(`ApplyLivery` dupa apartenenta, pe nume de slot, inainte ca vantul sa faca
+instantele dinamice; `BindMuzzles` din socket-uri). Poarta noua `check_ships`:
+hash-ul sursei si al FBX-ului convertit, fiecare coca din fiecare rand in
+culorile partii (citita dupa CLASA, iar culoarea si de pe slot si de pe
+instanta vantului), gurile = cele alese de poarta din JSON, vantul in toate 12
+sloturile, si doua tunuri pe o singura gura e refuzat.
+
+**Ce n-am facut, si de ce.** Ghiuleaua se naste si se opreste tot pe geometria
+navei vechi (portul la 6,4 m / 2,8 m; pielea `SM_PirateHull`): e balistica si
+muta suita, felie proprie. Sapte guri pe bord, patru tunuri: echilibru, al
+owner-ului. Panzele de pirat ies negre cu soarele in spate - panza piratului
+e inchisa la culoare si materialul nu lasa lumina sa treaca; recomandarea e
+transluciditatea, felia vizuala urmatoare (OWNER_VERIFY 43).
+
+**Masurat.** Suita, 76 de scenarii: singura cheie veche care s-a miscat e
+`rig_sway_mats`, 7 -> 12, in toate 76 (vantul ajunge acum in cele 12 sloturi ale
+Brig-ului); 0 GONE; cinci chei noi pe rand (`livery_hulls`, `livery_ok`,
+`muzzle_sockets`, `muzzle_mouths`, `muzzle_hulls_agree`). Tunurile, plutirea,
+convoiul, prazile, cartea - neatinse, cum trebuia, fiindca nimic din fizica nu
+s-a mutat. Suita a fost oprita o data la 12 randuri, ca adaugarea parintelui de
+pe instanta vantului (`rigsway ... sail=`) sa intre in aceeasi rulare, nu in a
+doua de 2,5 ore; cele 12 aratau deja numai `rig_sway_mats`.
+
+**Masterul vechi neschimbat** - si prima proba a fost falsa. Captura „dupa"
+iesise identica cu „inainte", dar era PRIMA rulare dupa reconstruirea
+materialului, care arata starea veche (HANDOFF o spune). Refacuta: caseta
+insulei difera cu 0,94 / 1,02 niveluri, iar cerul - fara niciun material de
+nava - cu 0,84 / 0,93: expunerea automata raspunde Brig-ului mai inchis din
+cadru. Doua rulari noi intre ele: 0,04 / 0,11.
+
+**Mutatii: 9 din 9 prinse.** In C++, fiecare construita, rulata pe
+`convoy_weather` (jucator + Coroana + doi negustori) si judecata de poarta
+reala: toate cocile in culorile jucatorului; livreaua neaplicata; livreaua
+aplicata DUPA instantele vantului (slotul o numeste, vantul nu o deseneaza -
+prinsa numai de capatul nou din `rigsway`); gura aleasa dupa latime in loc de
+lungime; socket-urile numarate dar nefolosite; nava veche desenata din nou.
+Sursa restaurata octet cu octet, controlul identic cu linia de baza. In poarta:
+un octet adaugat la FBX-ul convertit (lantul de hash-uri) si doua porturi
+mutate pe aceeasi gura (refuzat). In importul Unreal: o gura mutata cu 1 cm in
+JSON (picat, „0,96 cm"). Convertorul s-a probat singur: prima lui versiune e
+exact defectul pe care verificarea liniei de plutire il refuza (1,01 m).
+
+**Gasit pe drum:** poarta numara tunurile pe bord din `GGunMuzzleY`, tabelul
+efectelor pe care Brig-ul l-a inlocuit cu socket-uri - a picat zgomotos cand
+tabelul a disparut. Acum numara din `GGunPortsX`, porturile, care chiar sunt
+tunurile.
+

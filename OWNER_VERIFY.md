@@ -5,7 +5,7 @@ arată bine și de ce nu pot eu.
 
 ## Prima pagină — citește doar asta (25.09)
 
-Lista are 42 de puncte și de şase zile n-a fost atinsă. Nu-ţi cer să o parcurgi.
+Lista are 43 de puncte și de şase zile n-a fost atinsă. Nu-ţi cer să o parcurgi.
 **Mai jos sunt singurele lucruri care contează acum**, în ordinea în care
 contează; restul e arhivă, etichetată ca atare la sfârşitul paginii.
 
@@ -13,6 +13,15 @@ contează; restul e arhivă, etichetată ca atare la sfârşitul paginii.
 `PirateSeas.exe` singur te pune direct în luptă; `2 - Port si prazi, fara
 inamici` e cel pentru punctele 41 și 42 (partea 1), `3 - ... cu escorta` pentru
 partea 2 din 42.
+
+### Navele tale (08.10) — întâi asta
+
+**Brig-ul tău e acum nava tuturor**, în trei culori: tu pirat, Coroana navy,
+convoiul merchant. Punctul **43**: ce te uiţi, trei lucruri pe care le ştiu deja
+(pânzele de pirat ies negre cu soarele în spate — recomand pânză prin care trece
+lumina), şi două întrebări (ai scris 5 modele şi în folder sunt 7; `.blend`-ul e
+mai nou decât FBX-urile). Celelalte şase nave cer fiecare corpul ei şi numerele
+tale — felia următoare.
 
 ### O decizie care e a ta
 
@@ -1193,4 +1202,57 @@ nu, si AI-ul nu cumpara nimic) - o felie separata.
 dupa ghiulele si inaintea reparatiilor, ca o refuza fara bani si ca o duce
 cartea. Nu pot simti daca 10 s fata de 12 schimba o lupta, sau daca T e o tasta
 buna.
+
+## 43. Navele tale in joc: Brig-ul, in trei culori
+
+**Ce te uiti:** `Joaca\1 - Lupta, ca pana acum.bat`. Nava ta e Brig-ul tau, cu
+steagul cu craniu; cele doua nave ale Coroanei sunt acelasi Brig, vopsit navy
+(coca neagra, brau galben, panze albe, steag rosu). Apoi
+`Joaca\2 - Port si prazi, fara inamici.bat`: negustorii convoiului sunt tot
+Brig-ul, in culorile merchant (lemn, brau verde, panze crem, steag albastru).
+Trage o salva (Q / E) si uita-te de unde iese fumul.
+
+**Cum arata bine:** Brig-ul arata cum l-ai facut tu - aceleasi culori, aceeasi
+marime fata de mare, plutind pe linia lui (vopseaua de fund sub apa). Cele trei
+parti se recunosc de departe dupa panze si steag. Fumul si focul ies din guri de
+tun ale modelului, nu din aer.
+
+**Cum arata prost:** ceva rotit, oglindit sau scufundat; texturi intinse sau
+sterse; o parte care nu se recunoaste. Si trei lucruri pe care le stiu deja:
+
+1. **Panzele patrate ale piratului ies NEGRE cand soarele e in spatele lor.**
+   Panza ta de pirat e inchisa la culoare (cam 0,21 liniar), iar materialul nu
+   lasa lumina sa treaca prin panza, cum face panza adevarata. Cele navy, albe,
+   ies gri inchis in acelasi loc. Variantele: (a) lasate asa - panze negre de
+   pirat; (b) **panza care lasa lumina sa treaca** (se lumineaza cand soarele e
+   in spate) - recomandarea mea, felia vizuala urmatoare; (c) panza de pirat mai
+   deschisa la culoare, in modelul tau.
+2. **Brig-ul are sapte tunuri pe bord, jocul trage cu patru.** Fumul iese din
+   cele patru guri cele mai apropiate de porturile jocului; celelalte trei nu
+   trag niciodata. Ca jocul sa traga cu toate sapte e o schimbare de echilibru
+   (aproape dublu foc) - a ta.
+3. **Dara ghiulelei porneste cam la 2 m in afara gurii si ~0,9 m mai sus.**
+   Ghiuleaua se naste tot unde se nastea pe nava veche; mutarea ei pe gurile
+   Brig-ului e balistica si vine cu pielea noua a cocii, in felia urmatoare.
+
+**Doua intrebari pentru tine:**
+- **Ai scris „5 modele"; in folder sunt 7** (Sloop, Schooner, Brig,
+  Merchantman, Frigate, Galleon, vasul de linie). Le-am pus pe toate sapte in
+  proiect (`Art/OwnerShips/`) si folosesc Brig-ul. Daca doua erau de aruncat,
+  spune care.
+- **FBX-urile sunt din 03.10, 13:11, iar `.blend`-ul e salvat la 15:19** (si
+  `ships_lib1.py` la 15:20). Eu citesc FBX-urile. Daca ai schimbat navele dupa
+  export, re-exporta-le (sau spune-mi) si le reiau - lantul e un script. (Nu
+  pot deschide eu `.blend`-ul: e din Blender 5.2, iar aici e 4.3.)
+
+**Ce hotarasti tu, mai departe:** cine pe ce nava. Acum toti au Brig-ul, fiindca
+e singura de marimea corpului fizic al jocului. Ca tu sa ai Sloop-ul sau
+Schooner-ul, Coroana Fregata sau vasul de linie, iar convoiul Merchantman-ul sau
+Galionul, fiecare nava are nevoie de corpul ei (marime, greutate, tunuri,
+viteza) - si numerele astea sunt ale tale. E felia urmatoare a navelor.
+
+**De ce nu pot eu:** pot masura ca modelul a intrat exact (linia de plutire la
+0,0000 m, 24 140 de triunghiuri, toate 14 gurile la 0,05 cm de unde le-ai pus
+tu), ca fiecare nava din fiecare scenariu poarta culorile partii ei si ca fumul
+iese din gurile alese. Nu pot judeca daca arata cum ai vrut tu sa arate.
 

@@ -960,6 +960,33 @@ def measure(name, text):
         m["rig_sway_mats"] = int(rig.group(1))
         m["rig_sway_readback_ok"] = 1 if rig.group(3) == "ok" else 0
 
+    # THE OWNER'S BRIG, painted by side. Every hull says what it now draws its
+    # sails with; the side is read off its CLASS here (the player's ShipPawn,
+    # the Crown's EnemyShipPawn, the convoy's MerchantShipPawn), which is not
+    # the table the game paints from - the game goes by allegiance - so a hull
+    # in the wrong colours cannot agree with this by construction.
+    # A hull counts only when BOTH ends agree: the slot after painting, and the
+    # paint the wind's instance on that slot was made from on the first tick -
+    # a livery applied after that instance would be named on the slot and drawn
+    # nowhere.
+    WANT_LIVERY = {"ShipPawn": "pirate", "EnemyShipPawn": "navy", "MerchantShipPawn": "merchant"}
+    liv = re.findall(r"SHIPLOG ((\S+?)_\d+) livery=(\w+) painted=(\d+) of (\d+) sail=(\S+)", text)
+    windsail = dict(re.findall(r"SHIPLOG (\S+) rigsway mats=\d+ .*? sail=(\S+)", text))
+    if liv:
+        m["livery_hulls"] = len(liv)
+        m["livery_ok"] = sum(1 for hull, cls, lv, p, of, sail in liv
+                             if WANT_LIVERY.get(cls) == lv and p == of
+                             and sail == "MI_Ship_Sail_" + lv
+                             and windsail.get(hull) == sail)
+    # And where the smoke comes from: the four mouths each side chose, as the
+    # first hull printed them, and whether every hull chose the same - they are
+    # one mesh, so a hull that disagreed would be reading something else.
+    mz = re.findall(r"SHIPLOG \S+ muzzles sockets=(\d+)((?: [PS]\d=\(-?\d+,-?\d+,-?\d+\))+)", text)
+    if mz:
+        m["muzzle_sockets"] = int(mz[0][0])
+        m["muzzle_mouths"] = mz[0][1].strip()
+        m["muzzle_hulls_agree"] = 1 if len(set(mz)) == 1 else 0
+
     # The convoy. One MISSION line per run, printed from every exit including
     # the quit timer, so a run that ended neither way still reports its
     # counters. mission_result: 2 taken, 1 got through, 0 unresolved. The

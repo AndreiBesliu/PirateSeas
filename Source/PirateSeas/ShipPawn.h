@@ -639,6 +639,31 @@ protected:
 
 	bool bRigSwayReported = false;
 
+	/** THE COLOURS SHE FLIES. The hull is the owner's brig (Art/OwnerShips),
+	 *  modelled in the pirate livery; the Crown's hulls and the merchants are
+	 *  the same timber painted navy and merchant. Every livery's six parts
+	 *  (planks, bottom, band, trim, sails, flag) are found in the CONSTRUCTOR,
+	 *  so the cook packs all three - a material asked for by name at run time
+	 *  would be found in the editor and be missing from the shipped game.
+	 *  Indexed [livery * 6 + part], livery in EShipAllegiance's order. */
+	UPROPERTY()
+	TArray<TObjectPtr<UMaterialInterface>> LiveryMaterials;
+
+	/** Paints this hull's allegiance onto the six slots, by SLOT NAME, before
+	 *  the first tick turns every slot into a dynamic instance for the wind. */
+	void ApplyLivery();
+
+	/** WHERE THE SMOKE AND THE FLASH COME FROM, per side and gun, in hull space.
+	 *  Asked of the mesh: every barrel mouth of the owner's model is a socket
+	 *  (Muzzle_Port_001 ...), and each of the four guns the game fires takes
+	 *  the mouth nearest its port along the hull (the gate refuses two guns on
+	 *  one mouth). The ball is
+	 *  still born at the gun port (GGunPortsX / GGunPortY / GGunPortZ), which
+	 *  is gunnery and is not changed by a new hull's paint. */
+	FVector MuzzleMouth[2][4];
+	int32 MuzzleSockets = 0;
+	void BindMuzzles();
+
 	/** EXPERIMENT: does a query-only child box weld into the simulating hull
 	 *  and change its inertia? Measured, not assumed. */
 	/** The fore and main rigs, as things a shot can find. QUERY ONLY, which

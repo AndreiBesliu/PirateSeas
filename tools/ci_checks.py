@@ -22,6 +22,10 @@ guards exists because the thing it checks actually went wrong in this project:
                                            before/after comparison meaningless
   8. the owner's list is consecutive     - a skipped number means an item was
                                            written and lost
+  9. the owner's ships, on paper         - the hull in the game is the file given
+                                           gave, every side flies its colours,
+                                           and the smoke comes out of a barrel
+                                           of THE OWNER'S model, not a constant
 
 Run it anywhere:  python tools/ci_checks.py
 """
@@ -1144,10 +1148,13 @@ def check_ledger():
     TACKLE_MAX = const("ShipPawn.h", r"int32 TackleMaxTier = (\d+);")
     TACKLE_COST = const("SeaGameMode.h", r"int32 TackleCost = (\d+);")
     pawn_src = io.open(os.path.join(ROOT, "Source", "PirateSeas", "ShipPawn.cpp"), encoding="utf-8").read()
-    gm = re.search(r"GGunMuzzleY\[\] = \{([^}]*)\}", pawn_src)
+    # The battery: one gun port per gun. (It read GGunMuzzleY until 08.10, the
+    # effects' table, which the owner's brig replaced with the mesh's sockets -
+    # the gun count was never the effects' to say.)
+    gm = re.search(r"GGunPortsX\[\] = \{([^}]*)\}", pawn_src)
     GUNS = len([x for x in gm.group(1).split(",") if x.strip()]) if gm else None
     if GUNS is None:
-        fail("cannot count the guns a side (GGunMuzzleY) - the paper arithmetic has no inputs")
+        fail("cannot count the guns a side (GGunPortsX) - the paper arithmetic has no inputs")
     if None in (HANDS, HULL, SHOT, HAND_COST, HULL_COST, SHOT_COST, HULL_TICK, SHOT_TICK,
                 RELOAD, TACKLE_S, TACKLE_MAX, TACKLE_COST, GUNS):
         return
@@ -1756,6 +1763,114 @@ def check_escape():
         if row.get("sea_escaped", 0):
             fail("%s: a Crown ship escaped in a row that never broke one off" % name)
 
+def check_ships():
+    """THE OWNER'S BRIG, on paper.
+
+    The chain from the owner's file to the game, each link checked against the one
+    before it: Art/OwnerShips/FBX/Ship_Brig.fbx is the source the converter's
+    facts name (sha1), Scripts/SM_Ship_Brig.fbx is the file those facts were
+    written with (sha1); the mouths every hull chose are the ones THIS gate
+    picks from those facts with the gun ports read out of ShipPawn.cpp; every
+    hull in every row flies the colours of its side; and the wind reaches every
+    slot the mesh has.
+    """
+    import hashlib
+    import re
+    sys.path.insert(0, os.path.join(ROOT, "tools"))
+    try:
+        import ci_measure
+    except Exception as e:
+        fail("cannot import ci_measure: %s" % e)
+        return
+    got = ci_measure.measure("fixture",
+        "LogTemp: Display: SHIPLOG ShipPawn_0 livery=pirate painted=6 of 6 sail=MI_Ship_Sail_pirate\n"
+        "LogTemp: Display: SHIPLOG EnemyShipPawn_3 livery=navy painted=6 of 6 sail=MI_Ship_Sail_navy\n"
+        "LogTemp: Display: SHIPLOG MerchantShipPawn_1 livery=navy painted=6 of 6 sail=MI_Ship_Sail_navy\n"
+        "LogTemp: Display: SHIPLOG EnemyShipPawn_4 livery=navy painted=5 of 6 sail=MI_Ship_Sail_navy\n"
+        "LogTemp: Display: SHIPLOG EnemyShipPawn_5 livery=navy painted=6 of 6 sail=MI_Ship_Sail_navy\n"
+        "LogTemp: Display: SHIPLOG ShipPawn_0 rigsway mats=12 wind=9.0 m/s toward 215 deg (readback ok 9.0) sail=MI_Ship_Sail_pirate\n"
+        "LogTemp: Display: SHIPLOG EnemyShipPawn_3 rigsway mats=12 wind=9.0 m/s toward 215 deg (readback ok 9.0) sail=MI_Ship_Sail_navy\n"
+        "LogTemp: Display: SHIPLOG EnemyShipPawn_5 rigsway mats=12 wind=9.0 m/s toward 215 deg (readback ok 9.0) sail=MI_Ship_Sail_pirate\n"
+        "LogTemp: Display: SHIPLOG ShipPawn_0 muzzles sockets=14 P0=(-715,-404,181) S0=(-715,404,181)\n"
+        "LogTemp: Display: SHIPLOG EnemyShipPawn_3 muzzles sockets=14 P0=(-715,-404,181) S0=(-715,404,181)\n")
+    # 5 hulls: two right at both ends; a merchant in navy; one painted 5 of 6;
+    # one whose slot is navy but whose wind instance was made from the pirate.
+    want = {"livery_hulls": 5, "livery_ok": 2, "muzzle_sockets": 14,
+            "muzzle_mouths": "P0=(-715,-404,181) S0=(-715,404,181)", "muzzle_hulls_agree": 1}
+    bad = {k: (got.get(k), v) for k, v in want.items() if got.get(k) != v}
+    if bad:
+        fail("the ship lines are not read field by field (got, want): %r" % bad)
+
+    facts_path = os.path.join(ROOT, "Scripts", "SM_Ship_Brig.json")
+    if not os.path.exists(facts_path):
+        fail("no Scripts/SM_Ship_Brig.json - the converter's facts are the paper here")
+        return
+    facts = json.loads(io.open(facts_path, encoding="utf-8").read())
+
+    def sha(rel):
+        p = os.path.join(ROOT, rel)
+        return hashlib.sha1(open(p, "rb").read()).hexdigest() if os.path.exists(p) else None
+    chain = [("Art/OwnerShips/FBX/" + facts.get("source", "?"), facts.get("source_sha1")),
+             ("Scripts/SM_Ship_Brig.fbx", facts.get("fbx_sha1"))]
+    broken = ["%s (%s, facts say %s)" % (rel, sha(rel), want_sha) for rel, want_sha in chain
+              if sha(rel) != want_sha]
+    if broken:
+        fail("the owner's brig is not the file the facts were taken from: %s" % "; ".join(broken))
+    else:
+        ok("the brig in the game is the owner's file, by two hashes")
+
+    src = io.open(os.path.join(ROOT, "Source", "PirateSeas", "ShipPawn.cpp"), encoding="utf-8").read()
+    ports = re.search(r"const float GGunPortsX\[\] = \{([^}]*)\}", src)
+    if not ports:
+        fail("cannot read GGunPortsX out of ShipPawn.cpp")
+        return
+    port_x = [float(v.strip().rstrip("f")) for v in ports.group(1).split(",")]
+    # The paper: each gun takes the mouth nearest its port along the hull -
+    # written here from the facts, not read back from the game that does the
+    # same thing. And two guns on ONE mouth is refused outright: the game does
+    # not arbitrate it, so a hull for which it happens must stop here, where a
+    # person decides, instead of drawing two puffs from one barrel.
+    paper = []
+    for side, tag in (("port", "P"), ("starboard", "S")):
+        mouths = [mz["pos"] for mz in facts["muzzles"] if mz["side"] == side]
+        chosen = [min(range(len(mouths)), key=lambda i: abs(mouths[i][0] - x)) for x in port_x]
+        if len(set(chosen)) != len(chosen):
+            fail("two %s guns share one barrel of %s: mouths %s for ports %s"
+                 % (side, facts.get("asset"), chosen, port_x))
+        paper += [(tag + str(g), mouths[i]) for g, i in enumerate(chosen)]
+
+    base_path = os.path.join(ROOT, "tools", "measurement_baseline.json")
+    if not os.path.exists(base_path):
+        note("no baseline - the ships are not checked against the rows, which is NOT a pass")
+        return
+    rows = json.loads(io.open(base_path, encoding="utf-8-sig").read())
+    wrong = []
+    for name, row in sorted(rows.items()):
+        if row.get("livery_hulls", 0) < 1 or row.get("livery_ok") != row.get("livery_hulls"):
+            wrong.append("%s: %s of %s hulls in their colours"
+                         % (name, row.get("livery_ok"), row.get("livery_hulls")))
+        if row.get("muzzle_sockets") != len(facts["muzzles"]) or row.get("muzzle_hulls_agree") != 1:
+            wrong.append("%s: %s sockets, hulls agree %s" % (name, row.get("muzzle_sockets"),
+                                                             row.get("muzzle_hulls_agree")))
+        logged = dict((k, [float(c) for c in v.split(",")]) for k, v in
+                      re.findall(r"([PS]\d)=\(([-\d,]+)\)", row.get("muzzle_mouths", "")))
+        # Half a centimetre: the game prints whole centimetres of a float the
+        # converter rounded to a millimetre, and -440.5 rounds either way.
+        off = [tag for tag, pos in paper
+               if tag not in logged or max(abs(a - b) for a, b in zip(logged[tag], pos)) > 0.6]
+        if off:
+            wrong.append("%s: mouths %s are not the paper's" % (name, off))
+        if "rig_sway_mats" in row and row["rig_sway_mats"] != len(facts["slots"]):
+            wrong.append("%s: the wind reaches %d slots of the brig's %d"
+                         % (name, row["rig_sway_mats"], len(facts["slots"])))
+    if wrong:
+        fail("the owner's brig against paper: %s%s" % ("; ".join(wrong[:6]),
+                                                         " (+%d more)" % (len(wrong) - 6) if len(wrong) > 6 else ""))
+    else:
+        ok("the owner's brig: %d rows, every hull in its colours, %d mouths each the paper's"
+           % (len(rows), len(paper)))
+
+
 def main():
     print("PirateSeas checks - the ones that do not need Unreal\n")
     files = tracked_files()
@@ -1766,6 +1881,7 @@ def main():
     check_ledger()
     check_line()
     check_escape()
+    check_ships()
     print("")
     if NOTES:
         print("%d check(s) SKIPPED - a skip is not a pass:" % len(NOTES))

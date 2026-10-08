@@ -339,8 +339,29 @@ def build_master():
 
     # ------------------------------------------------------------- albedo
     alb = blend3(*triplanar("BaseTex", "T_Timber_C", -1500, -900), x=-1000, y=-300)
+    # THE OWNER'S SHIPS HAVE UVs (Art/OwnerShips, mapped by the generator that
+    # made them) and come with their own painted timber, canvas and colours -
+    # projecting T_Timber over them would throw the paint away. A STATIC switch,
+    # so the projection permutation the island's plants and SM_PirateShip are
+    # drawn with compiles exactly as it did: the branch not taken is not in the
+    # shader at all. Everything after this - the tint, the wetline, the wind and
+    # the rope collapse - is the same graph for both, which is the point of
+    # putting the owner's ships on this master instead of a copy of it.
+    uvtex = expr(unreal.MaterialExpressionTextureSampleParameter2D, -1300, -560)
+    sp(uvtex, "parameter_name", "BaseTexUV")
+    sp(uvtex, "group", "Textures")
+    white = EAL.load_asset("/Engine/EngineResources/WhiteSquareTexture")
+    if white is None:
+        raise RuntimeError("M_ShipMaster: no engine white texture for BaseTexUV's default")
+    sp(uvtex, "texture", white)
+    use_uv = expr(unreal.MaterialExpressionStaticSwitchParameter, -800, -420)
+    sp(use_uv, "parameter_name", "UseMeshUV")
+    sp(use_uv, "default_value", False)
+    sp(use_uv, "group", "Surface")
+    if not (link(uvtex, "", use_uv, ["True", "A"]) and link(alb, "", use_uv, ["False", "B"])):
+        raise RuntimeError("M_ShipMaster: the UseMeshUV switch is not wired on both sides")
     tint = vector("Tint", unreal.LinearColor(1, 1, 1, 1), -1500, 120)
-    tinted = mul(alb, "", tint, "", -900, -200)
+    tinted = mul(use_uv, "", tint, "", -900, -200)
 
     # --------------------------------------------------------- the wetline
     # Local Z, in centimetres, against the modelled waterline at zero.
@@ -692,8 +713,109 @@ def build_foliage(master, name, mesh_path, sway_height_cm, sway_amount):
          sway_amount, sway_height_cm))
 
 
+OWNER_DIR = "/Game/Ships/Materials"
+OWNER_TEX = "/Game/Ships/Textures"
+OWNER_MESHES = ["/Game/Ships/SM_Ship_Brig"]
+# The liveries the game paints a hull in (ShipPawn.cpp asks for these by name),
+# and the one each mesh was modelled in, which is what its slots default to.
+OWNER_LIVERIES = ["pirate", "navy", "merchant"]
+OWNER_DEFAULT_LIVERY = "pirate"
+# The owner's own material settings, read off the FBX (Blender's Principled
+# BSDF on each): texture, or None for a flat colour; colour (linear, as Blender
+# stores it; white under a texture); roughness; metallic. Then this project's:
+# wet below the boot-top (the hull only), sway and rope collapse as the old
+# rig had them - the whole rig moves as one, over the same eighteen metres.
+OWNER_PARTS = {
+    "HullPlanks":   ("{lv}_HullPlanks", (1.0, 1.0, 1.0), 0.80, 0.0, 1.0, 0.0, 0.0),
+    "HullBottom":   ("{lv}_HullBottom", (1.0, 1.0, 1.0), 0.75, 0.0, 1.0, 0.0, 0.0),
+    "HullBand":     ("{lv}_HullBand", (1.0, 1.0, 1.0), 0.60, 0.0, 1.0, 0.0, 0.0),
+    "HullTrim":     ("{lv}_HullTrim", (1.0, 1.0, 1.0), 0.60, 0.0, 1.0, 0.0, 0.0),
+    "Sail":         ("{lv}_Sail", (1.0, 1.0, 1.0), 0.95, 0.0, 0.0, 0.10, 0.0),
+    "Flag":         ("{lv}_Flag", (1.0, 1.0, 1.0), 0.90, 0.0, 0.0, 0.10, 0.0),
+    "Deck":         ("Deck_Planks", (1.0, 1.0, 1.0), 0.85, 0.0, 0.0, 0.0, 0.0),
+    "Spar":         ("Spar_Wood", (1.0, 1.0, 1.0), 0.75, 0.0, 0.0, 0.10, 0.0),
+    "Iron":         (None, (0.05, 0.05, 0.055), 0.45, 0.8, 0.0, 0.0, 0.0),
+    "Rope":         (None, (0.11, 0.085, 0.06), 0.90, 0.0, 0.0, 0.10, 1.0),
+    "DarkInterior": (None, (0.02, 0.015, 0.01), 0.90, 0.0, 0.0, 0.0, 0.0),
+    "WindowGlow":   (None, (1.0, 0.72, 0.35), 0.40, 0.0, 0.0, 0.0, 0.0),
+}
+
+
+def owner_instance_name(part, livery):
+    """MI_Ship_Sail_navy for a part that changes with the livery, MI_Ship_Deck
+    for one that does not. ShipPawn.cpp builds the same names."""
+    return "MI_Ship_%s_%s" % (part, livery) if "{lv}" in (OWNER_PARTS[part][0] or "") \
+        else "MI_Ship_" + part
+
+
+def build_owner_instances(master):
+    white = EAL.load_asset("/Engine/EngineResources/WhiteSquareTexture")
+    made = {}
+    for part, (tex, rgb, rough, metal, wet, sway, collapse) in OWNER_PARTS.items():
+        for lv in (OWNER_LIVERIES if "{lv}" in (tex or "") else [None]):
+            name = owner_instance_name(part, lv)
+            path = OWNER_DIR + "/" + name
+            if EAL.does_asset_exist(path):
+                EAL.delete_asset(path)
+            mi = AT.create_asset(name, OWNER_DIR, unreal.MaterialInstanceConstant,
+                                 unreal.MaterialInstanceConstantFactoryNew())
+            MEL.set_material_instance_parent(mi, master)
+            MEL.set_material_instance_static_switch_parameter_value(mi, "UseMeshUV", True)
+            t = white
+            if tex:
+                t = EAL.load_asset(OWNER_TEX + "/T_" + tex.format(lv=lv))
+                if t is None:
+                    raise RuntimeError("%s: no texture T_%s - run owner_ship_assets.py"
+                                       % (name, tex.format(lv=lv)))
+            MEL.set_material_instance_texture_parameter_value(mi, "BaseTexUV", t)
+            MEL.set_material_instance_vector_parameter_value(
+                mi, "Tint", unreal.LinearColor(rgb[0], rgb[1], rgb[2], 1.0))
+            # One roughness, as the owner set it: floor and ceiling equal, so
+            # the projected roughness map's lerp returns it unchanged. And no
+            # projected normal map: these textures came with none, and T_Timber's
+            # relief laid over painted planks would put the seams in two places.
+            for k, v in (("RoughMin", rough), ("RoughMax", rough), ("Metallic", metal),
+                         ("NormalStrength", 0.0), ("WetAmount", wet),
+                         ("SwayAmount", sway), ("SwayHeightCm", 1800.0),
+                         ("RopeCollapse", collapse)):
+                MEL.set_material_instance_scalar_parameter_value(mi, k, v)
+            EAL.save_asset(path)
+            back = EAL.load_asset(path)
+            if not MEL.get_material_instance_static_switch_parameter_value(back, "UseMeshUV"):
+                raise RuntimeError("%s: UseMeshUV did not stick; it would draw T_Timber" % name)
+            got = MEL.get_material_instance_texture_parameter_value(back, "BaseTexUV")
+            if got != t:
+                raise RuntimeError("%s: BaseTexUV reads back %s" % (name, got))
+            made[name] = back
+            L("owner instance %-26s tex=%s rough=%.2f metal=%.2f wet=%.0f sway=%.2f"
+              % (name, t.get_name(), rough, metal, wet, sway))
+    return made
+
+
+def assign_owner(made):
+    for mesh_path in OWNER_MESHES:
+        mesh = EAL.load_asset(mesh_path)
+        if mesh is None:
+            raise RuntimeError("%s missing - run owner_ship_assets.py" % mesh_path)
+        n = 0
+        for i, slot in enumerate(mesh.get_editor_property("static_materials")):
+            part = str(slot.get_editor_property("material_slot_name"))
+            if part not in OWNER_PARTS:
+                raise RuntimeError("%s slot %r is not a known part" % (mesh_path, part))
+            mesh.set_material(i, made[owner_instance_name(part, OWNER_DEFAULT_LIVERY)])
+            n += 1
+        EAL.save_asset(mesh_path)
+        for i, s in enumerate(EAL.load_asset(mesh_path).get_editor_property("static_materials")):
+            m = s.get_editor_property("material_interface")
+            L("verify %s slot %d %s -> %s" % (mesh_path.split("/")[-1], i,
+                                             s.get_editor_property("material_slot_name"),
+                                             m.get_name() if m else "NONE"))
+        L("owner mesh %s: %d slots in the %s livery" % (mesh_path, n, OWNER_DEFAULT_LIVERY))
+
+
 master = build_master()
 assign(build_instances(master))
+assign_owner(build_owner_instances(master))
 # A palm bends over six metres of trunk; a bush is a metre of springy scrub and
 # moves proportionally more of itself, so it gets the larger amount over the
 # smaller height.
