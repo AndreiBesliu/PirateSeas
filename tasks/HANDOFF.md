@@ -1,8 +1,71 @@
 # Unde e proiectul, pe scurt
 
 Scris ca o sesiune nouă (sau un model nou) să poată continua fără să recitească
-DEVLOG-ul de 4000 de rânduri. Starea de la 15.09.2026, după commit-ul „portul"
-(al şaselea din arcul de mecanică).
+DEVLOG-ul de 5000 de rânduri. Restul fişierului e referinţa; secţiunea de mai jos
+e ce citeşti ÎNTÂI.
+
+## Porneşte de aici (17.10.2026)
+
+**Starea.** `main` = `origin/main` = `204790d`, arborele curat, CI (`checks`)
+verde, pachetul din `Packaged\` reconstruit şi verificat prin rulare pe acel
+commit. Suita: **76 de scenarii**, linia de bază la zi (ultima mişcare voită:
+`rig_sway_mats` 7 -> 12, la Brig). Rularea completă durează **~2,5 ore** - porneşte-o
+detaşat şi NU compila cât rulează (îi schimbi binarul sub picioare).
+
+**Ultimul lucru făcut (08.10):** navele owner-ului. A dat 7 nave din Blender
+(`Art/OwnerShips/`, octet cu octet); în joc e **Brig-ul**, pe toate navele, în
+livreaua părţii. Detalii: README „Navele owner-ului (08.10)", aici mai jos
+„Navele owner-ului" (reţeta pentru o navă nouă / un FBX re-exportat) şi lista
+„Brig-ul owner-ului, ce a rămas pe dinafară". Recenzia (5 lentile, 18 agenţi,
+2,59 M) a găsit 5 defecte reale, reparate sau corectate în `204790d`.
+
+**Ce aşteaptă de la owner** (`OWNER_VERIFY.md`, prima pagină): **43** - Brig-ul
+în joc, plus două întrebări (a scris „5 modele", în folder sunt 7; `.blend`-ul e
+mai nou decât FBX-urile); decizia **38** (banda tunurilor); numerele **41/42**
+(cartea, palancurile) şi **2000 m** (scăparea). Fără răspuns la ele, nu le
+hotărî tu.
+
+**Următoarele felii, în ordinea propusă** (fiecare = un pas: cod, măsurare,
+mutaţii, docs, commit, pachet, raport, STOP):
+
+1. **Geometria loviturii luată din Brig.** Pielea pentru ghiulea din `_Hull` +
+   `_Deck` ale FBX-ului (exportată de `owner_ship.py`, complex-as-simple ca
+   `hull_collision.py`); volume de greement din faptele modelului (de adăugat în
+   JSON bornele PE PÂNZĂ: spanker -1403..-431, focuri 503..2247, vergile până la
+   601, gabierul trinchetului la 2423); ghiuleaua născută la gura de tun (socket),
+   nu la `GGunPortY` 640 / `GGunPortZ` 280. **MUTĂ suita** (rânduri de tir,
+   aşchii, găuri) - fiecare mişcare explicată; owner-ului îi spui cu cât s-a
+   schimbat cât nimereşti. Gurile Brig-ului sunt la 1,8-2,3 m: verifică `awash`
+   în `gale`.
+2. **Pânza translucidă** - pânzele de pirat ies negre cu soarele în spate
+   (pânză închisă la culoare, material opac). Recomandarea: model de umbrire cu
+   transmisie doar pe pânze (comutator static în `M_ShipMaster`), dovedit cu
+   capturi. Judecata e a owner-ului.
+3. **Clasele celorlalte 6 nave** - fiecare cere corpul ei (mărime, masă, tunuri,
+   viteză). Numerele sunt ale owner-ului: propune implicite, nu le hotărî.
+4. **Igienă:** `-ConvoyStrikeTest=`, `-EnemyStrikeTest=`, `-EnemySinkTest=`,
+   `-ConvoySinkTest=` încă NU închid cartea navei - câte un rând `ledger_test*`.
+5. Amânate: „valva" (Coroana primeşte palancuri - întrebarea 42.4 a owner-ului);
+   `-AIPrize`/`-AIRefit` pot scoate liderul din luptă.
+
+**Regulile de lucru în vigoare** (din memorie, schimbate după 08.10 - le iei
+de la owner, nu de aici, dacă par altfel):
+- **Paşi mari:** o felie întreagă pe pas, cu commit-uri pe părţi, raport şi
+  **STOP** la capăt; aştepţi „continua".
+- **Agenţii (recenzii, Workflow) DOAR cu acordul owner-ului şi cu costul spus
+  ÎNAINTE.** Recenzia ultimei felii: 18 agenţi = 2,59 M tokeni. Citeşte
+  `get_usage` înainte. Până acum recenzia era automată după fiecare felie - nu
+  mai e.
+- Neschimbate: niciodată `git add -A`; DEVLOG cu Task Started/Completed, promptul
+  exact şi modelul; OWNER_VERIFY cu ce / cum / de ce; mutaţii aplicate,
+  construite, rulate prin poarta reală şi restaurate cu `cmp`; `Saved/Ledger/
+  book.txt` e al owner-ului - nicio unealtă nu-l atinge.
+
+**Capcane noi (08.10):** Blender 4.3 nu deschide `.blend` 5.x; exportul FBX
+scrie ora, deci alţi octeţi la fiecare rulare - importul hotărăşte după md5-ul
+din `.uasset`, iar poarta verifică lanţul până acolo. Prima rulare după ce
+reconstruieşti un material arată starea VECHE (rulează de două ori). Expunerea
+automată se mută când se schimbă nava din cadru: compară o casetă şi cerul.
 
 ## Unde stă, şi de ce NU stă lângă celelalte proiecte
 
