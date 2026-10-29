@@ -5355,3 +5355,8 @@ de lovituri in lemn; banda de acum [0,240] scoate 11 tunuri (6 de sub punte),
 [130,240] (puntea Brig-ului - varful tunurilor lui) scoate 5. Pe Brig varianta A
 injumatateste, nu imparte la 13.
 
+**Task Completed** (`2896aa9`, `6c79a9a`, `ddf6173`, impinse; CI `checks`
+verde; pachetul reconstruit si verificat prin rulare: `gunnery` si
+`convoy_weather` pe exe identice cu linia de baza, toate cheile, cu pielea si
+panzele gasite in pachet, pe ambele fete).
+
