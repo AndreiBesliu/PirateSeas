@@ -49,6 +49,26 @@ Writes <out_dir>/<AssetName>.fbx and <out_dir>/<AssetName>.json - the second
 in UNREAL's frame and units (centimetres, Y to STARBOARD), because that is the
 frame the game and the gate read it in. Then re-imports its own FBX into an
 empty scene and reports what is actually in the file.
+
+AND WHAT A CANNONBALL MEETS (17.10), three more meshes the game never draws:
+
+  <AssetName>_Shot.fbx       the timber: _Hull, _Deck, _DeckProps, _Rudder.
+                             The hull is one closed skin (no free edge); the
+                             props are the port frames and lids, the chain
+                             wales, the stern windows and the quarterdeck
+                             front - things that are there to be hit. Not the
+                             guns: their barrels are the battery, and seven
+                             a side against the game's four is the owner's.
+  <AssetName>_ForeCloth.fbx  the fore-and-aft sails of the foremost mast
+  <AssetName>_MainCloth.fbx  ... and of the aftmost (jibs; spanker).
+
+A sail is FORE-AND-AFT when it is longer than it is wide (seen from above),
+square otherwise - measured, not read off its name, because the next ship may
+be a schooner. Square sails are NOT written as meshes: from the beam a square
+sail is a sliver one metre deep, and the game keeps a box for them (its
+thickness is the game's, ShipPawn.cpp); the facts give the box its width,
+height and floor. The rail profile is written so the gate can derive that
+floor the way the game does.
 """
 import bpy
 import hashlib
@@ -313,6 +333,149 @@ facts["masts"] = [{"mast": k, "sails": r["sails"],
                    "z_min": round(r["lo"].z * 100, 1), "z_max": round(r["hi"].z * 100, 1)}
                   for k, r in sorted(rig.items())]
 
+# ------------------------------------------- what a cannonball meets (17.10)
+# The rail, station by station: the highest point of the hull in each 50 cm
+# of her length. The game's rig boxes stand on it (a box that reached below
+# the rail would take the hit the bulwark should have taken, because a box is
+# wider than the hull), so the gate needs it to check them.
+STATION = 0.5
+rail = {}
+for v in hull_obj.data.vertices:
+    k = int(math.floor(v.co.x / STATION))
+    rail[k] = max(rail.get(k, -1e9), v.co.z)
+facts["hull"]["rail_profile"] = [[round(k * STATION * 100, 1), round((k + 1) * STATION * 100, 1),
+                                  round(rail[k] * 100, 1)] for k in sorted(rail)]
+mid_rail = [z for x0, x1, z in facts["hull"]["rail_profile"] if -500 <= x0 < 500]
+say("rail: %d stations, %.0f..%.0f cm amidships, %.0f cm at most"
+    % (len(rail), min(mid_rail), max(mid_rail), max(rail.values()) * 100))
+
+
+def bounds_of(objs):
+    vs = [v.co for o in objs for v in o.data.vertices]
+    lo = Vector((min(v.x for v in vs), min(v.y for v in vs), min(v.z for v in vs)))
+    hi = Vector((max(v.x for v in vs), max(v.y for v in vs), max(v.z for v in vs)))
+    return lo, hi
+
+
+# Every sail, square or fore-and-aft, and the mast it belongs to. Square sails
+# and gaffs are named for their mast (Sail_M1_...); a headsail is set on the
+# foremost mast's stays and carries no number.
+sails = [o for o in meshes if "_Sail_" in o.name]
+mast_x = {m["mast"]: 0.5 * (m["x_min"] + m["x_max"]) for m in facts["masts"]}
+foremost = max(mast_x, key=lambda k: mast_x[k]) if mast_x else None
+aftmost = min(mast_x, key=lambda k: mast_x[k]) if mast_x else None
+if len(mast_x) != 2:
+    fail("the game has two rig zones (fore, main); this ship has %d masts" % len(mast_x))
+zones = {foremost: "fore", aftmost: "main"}
+rigf = {}
+for o in sails:
+    lo, hi = bounds(o)
+    square = 2.0 * max(-lo.y, hi.y) > (hi.x - lo.x)
+    k = o.name.split("_Sail_M")[1].split("_")[0] if "_Sail_M" in o.name else foremost
+    z = rigf.setdefault(zones.get(k, "?"), {"mast": k, "square": [], "cloth": []})
+    z["square" if square else "cloth"].append(o)
+    say("sail %-28s %s, mast %s (%s): x %.2f..%.2f, half width %.2f m"
+        % (o.name, "square" if square else "fore-and-aft", k, zones.get(k, "?"),
+           lo.x, hi.x, max(-lo.y, hi.y)))
+if "?" in rigf:
+    fail("sails on no mast the game has a zone for: %s" % [o.name for o in rigf["?"]["square"] + rigf["?"]["cloth"]])
+facts["rig"] = {}
+for zone, z in sorted(rigf.items()):
+    if zone == "?":
+        continue
+    entry = {"mast": z["mast"]}
+    if z["square"]:
+        lo, hi = bounds_of(z["square"])
+        entry["square"] = {"sails": sorted(o.name for o in z["square"]),
+                           "x_min": round(lo.x * 100, 1), "x_max": round(hi.x * 100, 1),
+                           "half_width": round(max(-lo.y, hi.y) * 100, 1),
+                           "z_min": round(lo.z * 100, 1), "z_max": round(hi.z * 100, 1)}
+    if z["cloth"]:
+        entry["cloth"] = {"sails": sorted(o.name for o in z["cloth"])}
+    facts["rig"][zone] = entry
+
+
+def tri_facts(o):
+    """Triangles, the ones with no area (Unreal drops them), and the bounds in
+    Unreal's frame - the same three numbers the import checks on every mesh."""
+    import bmesh
+    bm = bmesh.new()
+    bm.from_mesh(o.data)
+    bmesh.ops.triangulate(bm, faces=bm.faces[:])
+    tris = len(bm.faces)
+    degenerate = sum(1 for f in bm.faces if f.calc_area() < 1e-10)
+    boundary = sum(1 for e in bm.edges if e.is_boundary)
+    bm.free()
+    lo, hi = bounds(o)
+    return {"tris": tris, "tris_degenerate": degenerate, "free_edges": boundary,
+            "bounds": {"min": ue(Vector((lo.x, hi.y, lo.z))), "max": ue(Vector((hi.x, lo.y, hi.z)))}}
+
+
+def export_one(o, path):
+    for x in bpy.data.objects:
+        x.select_set(x is o)
+    bpy.context.view_layer.objects.active = o
+    bpy.ops.export_scene.fbx(filepath=path, use_selection=True,
+                             apply_unit_scale=True, global_scale=1.0,
+                             apply_scale_options="FBX_SCALE_NONE",
+                             object_types={"MESH"}, mesh_smooth_type="FACE",
+                             add_leaf_bones=False, bake_space_transform=False,
+                             bake_anim=False, path_mode="STRIP", embed_textures=False)
+
+
+# The three meshes, built from COPIES so the ship drawn below is untouched, and
+# without materials: nothing draws them, and a livery name in a slot nobody
+# sees would be one more thing to keep in step.
+SHOT_PARTS = ("_Hull", "_Deck", "_DeckProps", "_Rudder")
+groups = [("shot", NAME + "_Shot", [o for o in meshes if o.name.endswith(SHOT_PARTS)])]
+for zone in ("fore", "main"):
+    cloth = rigf.get(zone, {}).get("cloth", [])
+    groups.append((zone + "_cloth", NAME + "_" + zone.capitalize() + "Cloth", cloth))
+facts["shot"] = {}
+for key, asset, parts in groups:
+    if not parts:
+        fail("%s: nothing to build it from" % asset)
+        continue
+    copies = []
+    for o in parts:
+        c = o.copy()
+        c.data = o.data.copy()
+        c.data.materials.clear()
+        bpy.context.scene.collection.objects.link(c)
+        copies.append(c)
+    for x in bpy.data.objects:
+        x.select_set(x in copies)
+    bpy.context.view_layer.objects.active = copies[0]
+    if len(copies) > 1:
+        bpy.ops.object.join()
+    shot = bpy.context.view_layer.objects.active
+    shot.name = asset
+    shot.data.name = asset
+    f = tri_facts(shot)
+    f["asset"] = asset
+    f["parts"] = sorted(o.name for o in parts)
+    path = os.path.join(OUT, asset + ".fbx")
+    export_one(shot, path)
+    f["fbx_sha1"] = hashlib.sha1(open(path, "rb").read()).hexdigest()
+    facts["shot"][key] = f
+    say("%s: %d tris (%d with no area), %d free edges, from %s"
+        % (asset, f["tris"], f["tris_degenerate"], f["free_edges"], f["parts"]))
+    me = shot.data
+    bpy.data.objects.remove(shot, do_unlink=True)
+    bpy.data.meshes.remove(me)
+# The hull itself must be closed - a ball that finds a gap in the planking
+# flies on to the far side's inner skin and is charged THERE, a metre and a
+# half from where it went in. The props are open boxes and the deck a sheet;
+# the hull is the one part that must have no free edge.
+import bmesh
+bm = bmesh.new()
+bm.from_mesh(hull_obj.data)
+hull_open = sum(1 for e in bm.edges if e.is_boundary)
+bm.free()
+say("the hull skin has %d free edges" % hull_open)
+if hull_open:
+    fail("the hull skin is not closed (%d free edges)" % hull_open)
+
 # ------------------------------------------------------ slots, then one mesh
 renamed = {}
 liveries = set()
@@ -410,6 +573,17 @@ say("read back %s: meshes=%d tris=%d sockets=%d slots=%s"
        sorted(m.name for m in bpy.data.materials)))
 if len(back_m) != 1 or back_tris != facts["tris"] or len(back_s) != len(facts["muzzles"]):
     fail("the written FBX is not what was built")
+# And each mesh a ball meets, the same way.
+for key, f in sorted(facts["shot"].items()):
+    p = os.path.join(OUT, f["asset"] + ".fbx")
+    bpy.ops.wm.read_factory_settings(use_empty=True)
+    bpy.ops.import_scene.fbx(filepath=p)
+    ms = [o for o in bpy.data.objects if o.type == "MESH"]
+    t = sum(len(q.vertices) - 2 for o in ms for q in o.data.polygons)
+    say("read back %s: meshes=%d tris=%d" % (os.path.basename(p), len(ms), t))
+    if len(ms) != 1 or t != f["tris"]:
+        fail("the written %s is not what was built (%d meshes, %d tris against %d)"
+             % (os.path.basename(p), len(ms), t, f["tris"]))
 
 with open(os.path.join(OUT, NAME + ".json"), "w", newline="\n") as f:
     json.dump(facts, f, indent=1, sort_keys=True)

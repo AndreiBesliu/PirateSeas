@@ -33,6 +33,18 @@ checks everything - and the check is the point:
 
 Materials are NOT made here. ship_materials.py owns every ship material and
 assigns the default (the brig's own pirate livery) to the slots.
+
+AND WHAT A CANNONBALL MEETS (17.10): the converter's facts["shot"] meshes -
+the timber (<ship>_Shot) and the fore-and-aft sails of each mast
+(<ship>_ForeCloth, _MainCloth). Same rule for importing (the bytes, not the
+existence), same triangle and bounds checks, and one more thing, because the
+game cannot see a mesh without it: complex-as-simple collision, so the
+collision IS the triangles, and double-sided for queries, because a sail is
+an open sheet. Those flags are set and saved after the import, and read back
+on the NEXT run - in this process load_asset returns the object in memory, the
+disk is the next process's "before". One import per run (the editor dies
+after each), so: run it until it imports nothing and says DONE; the run after
+a flag was set must say "complex-as-simple and double-sided on disk".
 """
 import hashlib
 import json
@@ -245,7 +257,97 @@ def mesh(name):
         bad("%s sockets are %.2f cm from where the converter put the muzzles" % (name, worst))
 
 
+COMPLEX = unreal.CollisionTraceFlag.CTF_USE_COMPLEX_AS_SIMPLE
+
+
+def shot_mesh(ship, key):
+    """One mesh a ball meets: imported from the converter's bytes, its
+    triangles and bounds the converter's, and complex-as-simple on disk."""
+    facts = json.load(open(os.path.join(HERE, ship + ".json")))["shot"][key]
+    name = facts["asset"]
+    fbx = os.path.join(HERE, name + ".fbx")
+    asset = MESH_DEST + "/" + name
+    if not current(asset, fbx):
+        L("%s: %s, importing" % (name, "missing" if recorded_md5(asset) is None
+                                 else "imported from other bytes than %s" % fbx))
+        opts = unreal.FbxImportUI()
+        sp(opts, "import_mesh", True)
+        sp(opts, "import_as_skeletal", False)
+        sp(opts, "import_materials", False)
+        sp(opts, "import_textures", False)
+        sp(opts, "import_animations", False)
+        sm = opts.static_mesh_import_data
+        sp(sm, "combine_meshes", True)
+        # Never drawn and never lit: no lightmap channel to build.
+        sp(sm, "generate_lightmap_u_vs", False)
+        sp(sm, "auto_generate_collision", False)
+        sp(sm, "convert_scene", True)
+        task = unreal.AssetImportTask()
+        sp(task, "filename", fbx)
+        sp(task, "destination_path", MESH_DEST)
+        sp(task, "destination_name", name)
+        sp(task, "automated", True)
+        sp(task, "replace_existing", True)
+        sp(task, "save", True)
+        sp(task, "options", opts)
+        L("importing %s" % fbx)
+        AT.import_asset_tasks([task])
+    m = EAL.load_asset(asset)
+    if m is None:
+        bad("%s not in the project" % asset)
+        return
+    if not current(asset, fbx):
+        bad("%s was imported from other bytes than %s.fbx" % (name, name))
+    tris = m.get_num_triangles(0)
+    want = facts["tris"] - facts["tris_degenerate"]
+    b = m.get_bounds()
+    lo = [b.origin.x - b.box_extent.x, b.origin.y - b.box_extent.y, b.origin.z - b.box_extent.z]
+    hi = [b.origin.x + b.box_extent.x, b.origin.y + b.box_extent.y, b.origin.z + b.box_extent.z]
+    err = max(max(abs(a - c) for a, c in zip(lo, facts["bounds"]["min"])),
+              max(abs(a - c) for a, c in zip(hi, facts["bounds"]["max"])))
+    body = m.get_editor_property("body_setup")
+    before = body.get_editor_property("collision_trace_flag") if body else None
+    L("%s tris=%d (converter %d, %d degenerate -> %d) bounds agree to %.1f cm, "
+      "trace flag on load %s" % (name, tris, facts["tris"], facts["tris_degenerate"], want, err, before))
+    if tris != want:
+        bad("%s has %d triangles, the converter wrote %d with an area" % (name, tris, want))
+    if err > 1.0:
+        bad("%s bounds are off by %.1f cm" % (name, err))
+    if body is None:
+        bad("%s has no BodySetup; a ball cannot find it" % name)
+        return
+    # BOTH FACES. A sail is an open sheet, not a closed skin: if its triangles
+    # answered queries on one side only, every ball from the other beam would
+    # pass through the cloth it is drawn hitting. Read, not assumed - the first
+    # version of this comment said Unreal's default was double sided, and the
+    # import had left all three single sided. The skin gets it too: it costs
+    # nothing, and its inner faces are met from inside the waist.
+    two = body.get_editor_property("double_sided_geometry")
+    L("%s on load: double-sided %s" % (name, two))
+    if before == COMPLEX and two:
+        L("%s complex-as-simple and double-sided on disk" % name)
+        return
+    body.set_editor_property("collision_trace_flag", COMPLEX)
+    body.set_editor_property("double_sided_geometry", True)
+    m.modify()
+    if not EAL.save_asset(asset):
+        bad("%s: save_asset returned False - the flags are not on disk" % name)
+        return
+    # Not a pass yet: the next run's "on load" is the disk.
+    L("%s complex-as-simple and double-sided SET and saved - run again to read them back"
+      % name)
+    BAD_PENDING.append(name)
+
+
+BAD_PENDING = []
 textures()
 for s in SHIPS:
     mesh(s)
-L("DONE" if not BAD else "FAILED %d" % len(BAD))
+    for key in sorted(json.load(open(os.path.join(HERE, s + ".json"))).get("shot", {})):
+        shot_mesh(s, key)
+if BAD:
+    L("FAILED %d" % len(BAD))
+elif BAD_PENDING:
+    L("NOT DONE: %s set this run, read back on the next" % BAD_PENDING)
+else:
+    L("DONE")
