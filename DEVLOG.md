@@ -5262,3 +5262,96 @@ de la 15.09".
 
 **Task Completed.**
 
+## 17.10.2026 - Ghiuleaua pe Brig: pielea, greementul si gura de tun
+
+**Task Started.** Prompt: "Proiectul PirateSeas: C:\Users\besli\Documents\Unreal
+Projects\PirateSeas. Citește întâi tasks/HANDOFF.md, secțiunea „Pornește de aici
+(17.10.2026)”, apoi prima pagină din OWNER_VERIFY.md. Verifică git status și git
+log (să fie la 8f09996 sau după). Apoi propune-mi următoarea felie (implicit:
+ghiulelele să lovească geometria Brig-ului) cu costul estimat și așteaptă
+„continua”. Fără agenți până nu-ți spun." apoi "continua". Model: Opus 5.5.
+Fara agenti. Cost anuntat: 1-2 M tokeni in sesiune; la pornire 8% din limita
+saptamanala, 35% din fereastra de 5 h.
+
+**OPRITA LA JUMATATE, la cererea owner-ului ("termina ce ai inceput si
+opreste-te"). NIMIC COMIS.** Ce e facut si probat:
+- `owner_ship.py` scrie si `SM_Ship_Brig_Shot.fbx` (Hull + Deck + DeckProps +
+  Rudder, 10 976 tri, coca inchisa: 0 muchii libere), `_ForeCloth` (focurile)
+  si `_MainCloth` (spankerul), plus in JSON `hull.rail_profile`, `rig`
+  (patrate vs longitudinale, clasificate geometric) si `shot`. Restul JSON-ului
+  identic cu rularea veche (doar `fbx_sha1`, ora din FBX).
+- `owner_ship_assets.py` le importa, le pune complex-as-simple SI double-sided
+  (importul le lasase pe o singura fata - prins de verificare) si le citeste de
+  pe disc. Brig-ul reimportat: aceleasi tri, margini, socket-uri.
+- C++: HullShot = pielea Brig-ului; cutiile de greement din `GRigBoxes`
+  (podeaua = parapetul de sub cutie + raza bilei, `ACannonBall::RadiusCm`);
+  ForeCloth/MainCloth in aceleasi zone; ghiuleaua, reculul, avansul si
+  ridicarea de la gura de tun (socket); cadranul din inaltimea gurilor (193);
+  ferestrele de avarie a tunurilor pe guri; testul AI de culoar de la guri;
+  tinta tirului inalt = centrul cutiei mari (-249,75). Compileaza.
+- Suita/poarta: chei noi (`muzzle_height`, `rigcloth_ok`, `rig_boxes`,
+  `rig_boxes_agree`, `rig_hits_*`) si `check_ships` care deriva cutiile din
+  JSON. Fixturile si lantul de amprente: verzi. Randurile pica fiindca linia de
+  baza nu are inca cheile noi.
+- Probe pe 6 randuri (gunnery, gale, aim_laid, guns_split, convoy_weather,
+  holes_off): `awash` 0 in gale; `aim_fall_m` -12 m (gurile mai jos);
+  `enemy_gun_hits` 3 -> 1 (ferestrele pe guri); convoiul: spankerul
+  negustorilor prinde 6, prazi 1 -> 2. O fata vs doua: identic pe toate 6.
+
+**Ce a ramas:** suita completa (~2,5 h) + `--record` cu fiecare miscare
+explicata; mutatiile; comentariul benzii tunurilor din ShipPawn.h (cu Brig-ul,
+gurile 181-212 SUNT in banda [0,240]); README/HANDOFF/OWNER_VERIFY (cu cat s-a
+schimbat cat nimeresti); commit-urile; pachetul.
+
+### 29.10 - reluata si terminata
+
+**Task Started.** Prompt: "contiuna". Model: Opus 5.5. Fara agenti. La pornire:
+69% din limita saptamanala (de la 25% pe 17.10 - contorul e al contului, cu
+alte sesiuni intre timp). Arborele: exact cum ramasese, `8f09996` = origin.
+
+**Suita a durat 24 de minute**, nu ~2,5 ore (cifra din HANDOFF, nemasurata de
+mult). 76 de randuri, toate miscate - grupate pe cauze, fiecare numita:
+`aim_fall_m` in toate (cadranul ia inaltimea gurilor, 193 nu 280); dara, avansul,
+stropii (gura noua); greementul 298 -> 312 si apa 213 -> 184 (focurile prind 24,
+spankerul 41); tunurile scoase la inamic 30 -> 11 (ferestrele pe tevi: in
+`gunnery` doua lovituri la 37 si 81 cm, la x 412 si 443, erau in fereastra veche
+380..580 a tunului din fata si sunt chiar inaintea celei noi, 448..648).
+
+**Defect al suitei, gasit de miscari: perechea de prazi era NULA, si nimic nu
+striga.** `prize_hull` (tir jos) nu mai lua niciun negustor: 6 lovituri din cele
+7 care il opresc, a treia salva scurt, convoiul trece. Paza ("prizes_taken 1 in
+AMBELE jumatati, altfel comparatia e nula") era o propozitie intr-un comentariu.
+Pielea veche (M1) sau gura veche (M4) singure dau +1 lovitura la 450 m - la 600 m
+randul statea pe muchie, nu e o cauza singura. Jumatatea de sus era
+`convoy_weather`, care e si perechea lui `convoy_lee`, deci perechea a primit
+randuri proprii: `prize_rig` / `prize_hull`, la 450 m. Masurat la 300 (jos: 0
+prazi), 400 (2/2), 450 (2/2, amandoua la 29 s), 500 (0/0): nu e monoton, e
+geometria apropierii. Si paza e acum o verificare: `check_prize_pair`. Valorile
+ies exact cele vechi: 1200 prin greement, 696 prin coca (0,58).
+
+**Mutatii, C++ (fiecare construita, rulata, judecata de `compare` contra liniei
+de baza, restaurata si comparata octet cu octet; control curat: 0 diferente):**
+8 din 10. M1 pielea veche, M2 panzele socotite lemn, M4 ghiuleaua la portul
+vechi, M5 podeaua fara raza, M6 ferestrele pe porturile vechi, M7 cadranul la
+280, M9 tinta inalta la 0 - prinse. **M3 (spankerul la trinchet) a fost prins
+prima data DOAR de inaltimea apei sub un strop** - nicio cheie nu spunea la ce
+catarg se socoteste o lovitura. Adaugate `zone_forerig` / `zone_mainrig` (suita
+rulata din nou: 77 de randuri identice + 154 de chei noi, deci determinist) si
+in poarta: un catarg nu poate fi taxat cu mai mult decat au intalnit piesele lui.
+M3 acum: `zone_forerig` 2 -> 8. **Supravietuitori, raportati:** M8 (testul AI de
+culoar din centrul navei, nu de la guri) - niciun rand nu are o consoarta la
+marginea culoarului; M10 (panzele unei nave care se scufunda mai prind) -
+`hits_ignored` e 0 in toata suita, nicio ghiulea nu ajunge intr-o nava care se
+scufunda. Amandoua in HANDOFF, felia de igiena.
+
+**Mutatii, poarta: 11 din 11** - o statie a parapetului in JSON, un octet in
+FBX-ul pielii, perechea nula, perechea inversata, cutia fara raza, gurile la
+280, o panza fara coliziune, panza scoasa din fapte, raza si grosimea schimbate
+in sursa pe care o citeste poarta, spankerul taxat la trinchet.
+
+**OWNER_VERIFY 38 pe Brig:** `probe_hull_hits.py` masoara fata de sectiunile
+navei vechi, deci pe Brig am numarat din logurile jocului: 8 lupte distincte, 43
+de lovituri in lemn; banda de acum [0,240] scoate 11 tunuri (6 de sub punte),
+[130,240] (puntea Brig-ului - varful tunurilor lui) scoate 5. Pe Brig varianta A
+injumatateste, nu imparte la 13.
+

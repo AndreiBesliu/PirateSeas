@@ -116,10 +116,12 @@ crem, steag albastru).
 
 **De ce Brig-ul, si de ce numai el.** E nava pentru care e facut corpul fizic al
 jocului: 30,0 m de coca fata de cei 30 ai navei vechi (`Scripts/ship.py`), 2,60 m
-de pescaj fata de 2,6 - cutia, pontoanele si masa o poarta neschimbate. CE POATE
-LOVI O GHIULEA nu e inca al ei (mai jos, „Stiute"): prima versiune a textului
-asta spunea „catargele la cel mult 35 cm de volumele de greement" si „nimic n-a
-trebuit mutat", si recenzia a aratat ca amandoua erau false. Celelalte sase (Sloop 16 m,
+de pescaj fata de 2,6 - cutia, pontoanele si masa o poarta neschimbate. Din
+17.10 (felie terminata pe 29.10) si CE POATE LOVI O GHIULEA e al ei: lemnul,
+panzele si gurile de tun - mai jos, „Coca pe care o loveste ghiuleaua". (Pana
+atunci era al navei vechi; prima versiune a textului asta spunea „catargele la
+cel mult 35 cm de volumele de greement" si „nimic n-a trebuit mutat", si
+recenzia a aratat ca amandoua erau false.) Celelalte sase (Sloop 16 m,
 Schooner 22, Merchantman 32, Frigate 42, Galleon 44, vasul de linie 56) au alta
 marime, alt numar de catarge si de tunuri: fiecare cere corpul ei, iar cat de
 repede merge un sloop fata de o fregata e un numar al owner-ului. Felia
@@ -143,6 +145,9 @@ urmatoare.
    transformare inelul trebuie sa fie la 0: **0,0000 m pe 78 de puncte** ale
    pielii exterioare. Plus: gurile de babord la +Y si cele de tribord oglinda lor
    la 0,0000 m, carma la pupa, catargele in sus, si FBX-ul scris recitit.
+   Din 17.10 scrie si ce intalneste o ghiulea: `SM_Ship_Brig_Shot.fbx` (lemnul),
+   `_ForeCloth` si `_MainCloth` (panzele longitudinale), plus in JSON profilul
+   parapetului si bornele panzelor pe catarg.
 2. `Scripts/owner_ship_assets.py` (Unreal, de doua ori - importul omoara
    editorul DUPA ce a scris) importa ce nu e la zi - decis dupa md5-ul pe care
    Unreal il scrie in .uasset la import, fata de md5-ul FBX-ului / PNG-ului de
@@ -152,7 +157,10 @@ urmatoare.
    pastreze mipurile) si mesh-ul, si il verifica fata de JSON: **24 140 de
    triunghiuri** (24 180 scrise, minus exact cele 40 fara arie pe care Unreal le
    arunca - numarate de convertor, nu potrivite aici), marginile la 0,0 cm,
-   **14 socket-uri la cel mult 0,05 cm** de gurile convertorului.
+   **14 socket-uri la cel mult 0,05 cm** de gurile convertorului. Si cele trei
+   plase pentru ghiulea: aceleasi verificari, plus coliziunea „complex as
+   simple" si raspunsul pe AMBELE fete, setate si recitite de pe disc. Ruleaza-l
+   pana spune `DONE` - fiecare import omoara editorul, deci o trecere per asset.
 3. `Scripts/ship_materials.py`: masterul navei are acum comutatorul STATIC
    `UseMeshUV` - texturile owner-ului pe UV-urile modelului, in loc de proiectia
    lemnului nostru. Static, deci ramura veche se compileaza exact cum era.
@@ -170,8 +178,7 @@ urmatoare.
    piese ale livrelei dupa APARTENENTA, pe nume de slot, inainte de primul tic
    (cand vantul face din fiecare slot o instanta dinamica); `BindMuzzles` ia
    fumul si focul din socket-ul cel mai apropiat de fiecare port, de-a lungul
-   cocii. Ghiuleaua se naste tot la port (`GGunPortsX/Y/Z`): asta e balistica, nu
-   vopsea.
+   cocii - si din 17.10 si ghiuleaua.
 
 **Masurat:** suita, 76 de scenarii: singura cheie veche care s-a miscat e
 `rig_sway_mats`, 7 -> 12, in toate 76 (vantul ajunge in cele 12 sloturi ale
@@ -187,30 +194,19 @@ fisierului comis din care vine.
 **Stiute si lasate pentru feliile urmatoare:**
 - Brig-ul are **sapte** tunuri pe bord, jocul trage cu **patru** - din gurile cele
   mai apropiate de porturi (-7,15 / -2,08 / 0,44 / 5,48 m). Celelalte trei nu
-  fumega niciodata.
-- Ghiuleaua pleaca de la 6,4 m in bord si 2,8 m inaltime, gurile Brig-ului sunt
-  la 3,1-4,4 m si 1,8-2,3 m: dara incepe cam la 2 m in afara si cu ~0,9 m deasupra
-  fumului.
-- **Ce poate lovi o ghiulea e inca geometria navei vechi.** Pielea pe care se
-  opreste (`SM_PirateHull`) are parapetul cu 0,7 m DEASUPRA parapetului Brig-ului
-  la mijloc (3,25 m fata de 2,53) si pana la 1,9 m la capete: o ghiulea care trece
-  peste parapetul vazut se poate opri in aer si lasa o gaura plutind. Spre prova
-  Brig-ul e pana la 0,8 m mai lat decat pielea: o lovitura acolo trece prin
-  scandura vazuta. Volumele de greement acopera panzele patrate pe lungime
-  (trinchet 5,05-6,07 m, arbore -3,04..-1,95), dar vergile ies cu 76 cm peste
-  latimea lor, gabierul trinchetului cu 2,6 m peste varf, iar spankerul (-14,0 ..
-  -4,3 m) si focurile (+5,0 .. +22,5 m) sunt in afara oricarui volum - ghiuleaua
-  trece prin ele. (Catargele insesi: +4,29 si -3,78 m.) Masurat de recenzie, nu
-  de mine. Toate sunt balistica si muta suita - felia urmatoare, cu pielea si
-  greementul luate din modelul owner-ului.
+  trag niciodata.
+- ~~Ghiuleaua pleaca de la 6,4 m in bord si 2,8 m inaltime~~ si ~~ce poate lovi
+  o ghiulea e inca geometria navei vechi~~: **inchise 29.10**, „Coca pe care o
+  loveste ghiuleaua" mai jos.
 - Panzele patrate ale piratului ies NEGRE cand soarele e in spatele lor: panza
   lui e inchisa (cam 0,21 liniar), iar materialul nu lasa lumina sa treaca prin
   panza, cum face panza reala. OWNER_VERIFY 43.
 - Animatia din FBX (legatul, panzele umflate/strase, steagul care flutura) nu e
   folosita: nava o legana jocul; panzele si steagul pot veni prin deplasarea din
   material, mai tarziu.
-- `SM_PirateShip` si jumatatea vizuala din `ship.py` nu se mai deseneaza; raman
-  pana confirma owner-ul Brig-ul (pielea pentru ghiulea tot de acolo vine).
+- `SM_PirateShip`, jumatatea vizuala din `ship.py` si, din 17.10, si pielea
+  veche `SM_PirateHull` nu mai sunt folosite de joc; raman pana confirma
+  owner-ul Brig-ul.
 
 ## Tunurile
 
@@ -555,6 +551,66 @@ sa caute o gura de tun - „pe travers". Pe cutie, orice lovitura in bord avea
 la statia aia: 371 cm cel mult in fereastra tunului 1, 333 in a tunului 4 -
 deci doua tunuri pe bord deveneau de nelovit, iar prima cifra pusa in fata
 owner-ului („7") era poarta asta, nu lemnul. O recenzie a prins-o; e scoasa.
+
+### Din 17.10 (terminat 29.10): lemnul, panzele si tevile Brig-ului
+
+Pielea de mai sus era a navei vechi, iar jocul desena de pe 08.10 Brig-ul
+owner-ului: parapetul pielii statea cu 0,7 m deasupra parapetului lui in talie
+si pana la 1,9 m la capete, prova lui iesea cu pana la 0,8 m din piele, iar prin
+focuri si spanker o ghiulea trecea fara sa atinga nimic. Acum tot ce intalneste
+o ghiulea vine din modelul owner-ului (`Scripts/owner_ship.py`):
+
+- **Lemnul** = `SM_Ship_Brig_Shot`: coca lui (o piele inchisa, zero muchii
+  libere - verificat de convertor), puntea, `DeckProps` (cadrele si capacele
+  sabordurilor, lanturile sarturilor care ies 32 cm din bord, ferestrele pupei,
+  felinarul, peretele dunetei) si carma. 10 976 de triunghiuri. NU si tunurile:
+  tevile sunt bateria, iar sapte pe bord fata de patru in joc e a owner-ului.
+- **Panzele patrate** raman CUTII, cu numerele din model: centrate pe panzele
+  catargului, late cat cea mai lata verga (601 cm), pana la capul celei mai
+  inalte panze (trinchet 2423, arbore 2591), si cu podeaua pe parapetul de sub
+  cutie plus raza ghiulelei (302 si 267). O cutie e mai lata decat coca, deci
+  una care cobora sub parapet ar fi luat lovitura cuvenita lemnului; cu podeaua
+  acolo, o ghiulea al carei centru trece peste parapet e in greement, iar una
+  la sau sub el e a parapetului. Podeaua veche (350, varful CUTIEI cocii) lasa
+  un metru gol in talia Brig-ului, prin panzele lui mari. Grosimea pe lungime
+  (460 cm) e a jocului, nu a modelului: din travers o panza patrata e o fasie de
+  un metru, si felia muta greementul pe Brig fara sa hotarasca si cat de usor
+  se nimereste.
+- **Focurile si spankerul** sunt PROPRIA LOR PANZA (`_ForeCloth`, `_MainCloth`):
+  din travers stau cu fata la ghiulea, deci triunghiurile lor sunt o tinta
+  dreapta. O cutie in jurul focurilor ar fi fost de 2,5 ori panza lor (o umplu
+  40 %). Socotite la catargul lor: focurile la trinchet, spankerul la arbore.
+- **Ghiuleaua pleaca din teava** (socket-ul gurii), si de acolo se calculeaza
+  si distanta, avansul, ridicarea si reculul; cadranul de batere ia inaltimea
+  medie a gurilor (193 cm, nu 280). Ferestrele in care o lovitura scoate un tun
+  sunt centrate pe tevi, nu pe porturile navei vechi.
+
+**Capcana platita:** cele trei plase au venit din import raspunzand pe O
+SINGURA FATA (`double_sided_geometry` = False) - la piele nu conteaza, la o
+panza inseamna ca o ghiulea din spatele ei poate trece. Importul le pune acum
+pe ambele fete si le reciteste de pe disc, iar jocul spune la pornire
+`rig cloth fore=ok` doar daca o panza are coliziunea si ambele fete (altfel
+`ONE-SIDED`); cheia `rigcloth_ok` a iesit 0 pe defectul real. Pe sase randuri,
+o fata contra doua a dat aceleasi lovituri - dar nu mai depinde de noroc.
+
+**Masurat** (suita, 76 de randuri cu aceleasi steaguri): **361 de lovituri din
+549 de ghiulele (66 %)**, fata de 344 din 561 (61 %) - in coca 46 -> 49, in
+greement 298 -> 312 (din ele 24 in focuri si 41 in spanker), in apa 213 -> 184.
+Lupta standard (`gunnery`) iese identica; ochind de mana (`aim_laid`) 9 -> 11
+din 16. In convoi spankerul negustorilor prinde sase ghiulele si cad amandoi
+(prazi 1 -> 2). Tunurile scoase la inamic, 30 -> 11: in `gunnery` doua ghiulele
+intra la 37 si 81 cm deasupra apei, la 412 si 443 cm spre prova - in fereastra
+veche a tunului din fata (380..580), chiar inainte de cea noua (448..648, pe
+teava lui de la 548). OWNER_VERIFY 38.
+
+**Perechea de prazi s-a stins fara sa strige nimeni**, si de-asta are acum
+randuri proprii si o verificare. La 600 m un tir jos punea in primul negustor 6
+ghiulele din cele 7 care il opresc, a treia salva cadea scurt, si nimeni nu era
+luat: comparatia „greement contra coca" nu mai compara nimic, iar paza ei era o
+propozitie intr-un comentariu. `prize_rig` / `prize_hull` stau la 450 m (300:
+tirul jos nu ia nimic; 500: niciunul) si iau amandoi negustorii in aceeasi
+secunda; `check_prize_pair` cere ca ambele jumatati sa ia o prada si ca preturile
+sa difere in sensul spus.
 
 ## Unde lovești contează
 
@@ -954,8 +1010,10 @@ cinci ghiulele sus îi rup velatura sub 0,6 şi coboară pavilionul cu coca
 neatinsă, deci plăteşte **1200**, tot. Tras în cocă, îi trebuie şapte ghiulele
 ca s-o aduci la 580 din 1000, si marfa udata plateste **696**.
 
-Masurat, nu estimat: perechea `convoy_weather` / `prize_hull` difera intr-un
-singur flag (`-AIAimHigh=0`) si da fix cifrele astea.
+Masurat, nu estimat: perechea `prize_rig` / `prize_hull` difera intr-un
+singur flag (`-AIAimHigh=0`) si da fix cifrele astea. (Pana pe 29.10 jumatatea
+de sus era `convoy_weather`; vezi „Coca pe care o loveste ghiuleaua" pentru de
+ce perechea are acum randuri proprii.)
 
 **Ce NU mai e adevarat, si a fost pana la recenzia din 16.09:** ca tirul in coca
 ar fi drumul mai LENT. Parea asa - 83,1 s fata de 70,9 - dar numai fiindca

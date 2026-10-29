@@ -23,17 +23,31 @@ lumina), şi două întrebări (ai scris 5 modele şi în folder sunt 7; `.blend
 mai nou decât FBX-urile). Celelalte şase nave cer fiecare corpul ei şi numerele
 tale — felia următoare.
 
+**Nou, 29.10: ghiulelele lovesc acum Brig-ul tău**, nu nava veche: lemnul lui
+(coca, puntea, cadrele sabordurilor, cârma), velele lui pătrate, iar **focurile
+şi spankerul** (velele triunghiulare) prind ghiulele - până acum treceau prin
+ele. Şi ghiuleaua pleacă din ţeava tunului, nu de la 2 m în afara ei. Ce s-a
+schimbat în ce nimereşti, pe toate luptele din suită: **361 de lovituri din 549
+de ghiulele (66 %), faţă de 344 din 561 (61 %)** - în cocă 46 -> 49, în greement
+298 -> 312, în apă 213 -> 184. Lupta standard a rămas identică (3 în cocă, 8 în
+greement). Tu, ochind de mână, nimereşti 11 din 16 în loc de 9. Ce se vede de
+verificat: punctul 43, rândurile 3 şi 4.
+
 ### O decizie care e a ta
 
-**Banda de avarie a tunurilor — punctul 38.** Acum, 12 din 41 de lovituri în
+**Banda de avarie a tunurilor — punctul 38.** (Cifrele de pe Brig, 29.10, sunt
+la punctul 38: tunurile lui stau ÎN bandă acum, dar banda începe tot de la linia
+de plutire; dărâmările la inamic au scăzut în suită de la 30 la 11.) Pe nava
+veche, 12 din 41 de lovituri în
 cocă scoteau un tun din afet, **toate 12 de sub punte** — şi după ce coca a
 primit coliziunea ei pe 25.09, **13 din 37**, tot toate de sub punte. Panoul
 GUNS îţi arată atunci un afet distrus de o ghiulea care a intrat la linia de
-plutire. Recomandarea mea e să mut banda unde sunt tunurile; asta face
-dărâmarea unui tun de vreo **treisprezece ori mai rară**, şi de aceea nu o fac
-fără tine. **Poţi juca decizia în loc s-o citeşti:** porneşte jocul cu
-`-ShipGunBand=200,350` şi vezi dacă a pierde un tun încă se simte. Detaliile
-şi cele trei variante sunt la punctul 38.
+plutire. Recomandarea mea e să mut banda unde sunt tunurile; pe nava veche asta
+făcea dărâmarea unui tun de vreo treisprezece ori mai rară, **pe Brig o
+înjumătăţeşte** (11 -> 5 pe luptele din suită), şi tot nu o fac fără tine.
+**Poţi juca decizia în loc s-o citeşti:** porneşte jocul cu
+`-ShipGunBand=130,240` (puntea Brig-ului până la vârful tunurilor lui) şi vezi
+dacă a pierde un tun încă se simte. Detaliile şi variantele sunt la punctul 38.
 
 ### O întrebare veche, încă deschisă
 
@@ -1020,6 +1034,30 @@ Dar cate aschii arata a lovitura si cate arata a explozie e o judecata de ochi.
 
 **E o decizie, nu o verificare.**
 
+**Pe Brig-ul tău (29.10) — citeşte asta întâi; ce urmează după e nava veche.**
+Ghiuleaua loveşte acum lemnul Brig-ului, iar ferestrele în care o lovitură scoate
+un tun stau pe ţevile lui. Brig-ul are puntea la 131–266 cm şi tunurile (afet +
+ţeavă) la 132–241 cm, deci **banda de acum, `[0, 240]`, are vârful exact pe
+tunuri** - doar că începe de la linia de plutire. Măsurat pe cele 8 lupte
+distincte din suită (43 de lovituri în lemn):
+
+- **B — cum e acum, `[0, 240]`: 11 tunuri scoase**, dintre care **6 de lovituri
+  sub punte** (la 22–129 cm deasupra apei). Pe nava veche erau 13 din 37, toate
+  sub punte.
+- **A — banda unde sunt tunurile, pe Brig `[130, 240]`** (de la punte la vârful
+  ţevilor, din modelul tău): **5 tunuri scoase**, toate la înălţimea tunurilor.
+  Adică pe Brig varianta A **înjumătăţeşte** dărâmările - nu le face de 13 ori
+  mai rare, ca pe nava veche. Recomandarea mea rămâne A, acum mai ieftină.
+- Banda veche a variantei A (200–350) e scrisă pentru nava veche: pe Brig nu mai
+  scoate niciun tun (rândul `gunband_high` din suită: 0).
+
+**Cum o joci:** `Packaged\Windows\PirateSeas.exe -ShipGunBand=130,240` e A pe
+Brig; fără steag e B. În toată suita, tunurile scoase la inamic au scăzut deja de
+la 30 la 11 doar fiindcă ferestrele au trecut de pe porturile navei vechi pe
+ţevile Brig-ului (README, „Coca pe care o loveşte ghiuleaua").
+
+**Ce urmează e măsurătoarea pe nava veche (25.09), păstrată pentru context.**
+
 **Ce se întâmplă acum, măsurat pe 25.09** cu `tools/probe_hull_hits.py`, pe cele
 şapte lupte distincte din suită, cu ghiuleaua oprindu-se pe lemn (37 de
 lovituri în cocă; pe cutia de dinainte erau 41 şi 12 dărâmări):
@@ -1231,14 +1269,16 @@ sterse; o parte care nu se recunoaste. Si trei lucruri pe care le stiu deja:
    cele patru guri cele mai apropiate de porturile jocului; celelalte trei nu
    trag niciodata. Ca jocul sa traga cu toate sapte e o schimbare de echilibru
    (aproape dublu foc) - a ta.
-3. **Dara ghiulelei porneste cam la 2 m in afara gurii si ~0,9 m mai sus.**
-   Ghiuleaua se naste tot unde se nastea pe nava veche; mutarea ei pe gurile
-   Brig-ului e balistica si vine cu pielea noua a cocii, in felia urmatoare.
-4. **Ce loveste ghiuleaua e inca nava veche.** O gaura poate aparea in aer, pana
-   la 0,7 m deasupra parapetului Brig-ului (mai mult la capete); o lovitura in
-   prova poate trece prin scandura; iar prin spanker si prin focuri (panzele
-   triunghiulare) ghiuleaua trece fara sa loveasca greementul. Tot felia
-   urmatoare.
+3. **REZOLVAT 29.10 - dara ghiulelei porneste din teava.** Ghiuleaua se naste
+   la gura tunului din modelul tau. **Ce te uiti:** trage o salva si urmareste
+   dara - trebuie sa iasa din fum, din aceeasi teava.
+4. **REZOLVAT 29.10 - ghiuleaua loveste Brig-ul tau.** Gaurile (discurile
+   intunecate) stau pe scandurile lui, nu in aer deasupra parapetului; o
+   ghiulea prin foc sau prin spanker e o lovitura in greement (panoul FORE /
+   MAIN scade). **Ce te uiti:** `-EnemyX=3000 -EnemyY=600 -ShipFireTest=8`,
+   apoi camera aproape de bordajul ei: fiecare gaura pe lemn, niciuna
+   plutind. **Ce nu pot eu:** pot masura ca fiecare lovitura e pe plasa
+   Brig-ului; nu pot vedea daca gaura se citeste ca gaura pe lemnul lui.
 
 **Doua intrebari pentru tine:**
 - **Ai scris „5 modele"; in folder sunt 7** (Sloop, Schooner, Brig,

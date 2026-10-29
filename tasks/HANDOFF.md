@@ -4,39 +4,33 @@ Scris ca o sesiune nouă (sau un model nou) să poată continua fără să recit
 DEVLOG-ul de 5000 de rânduri. Restul fişierului e referinţa; secţiunea de mai jos
 e ce citeşti ÎNTÂI.
 
-## Porneşte de aici (17.10.2026)
+## Porneşte de aici (29.10.2026)
 
-**Starea.** `main` = `origin/main` = `204790d`, arborele curat, CI (`checks`)
-verde, pachetul din `Packaged\` reconstruit şi verificat prin rulare pe acel
-commit. Suita: **76 de scenarii**, linia de bază la zi (ultima mişcare voită:
-`rig_sway_mats` 7 -> 12, la Brig). Rularea completă durează **~2,5 ore** - porneşte-o
-detaşat şi NU compila cât rulează (îi schimbi binarul sub picioare).
+**Starea.** `main` = `origin/main` după commit-urile feliei „ghiuleaua pe
+Brig" (17.10 -> 29.10), CI (`checks`) verde, pachetul din `Packaged\`
+reconstruit şi verificat prin rulare. Suita: **77 de scenarii** (nou:
+`prize_rig`), linia de bază la zi. Rularea completă a durat **24 de minute** pe
+29.10 (HANDOFF-ul vechi zicea ~2,5 ore - nemăsurat recent); porneşte-o tot
+detaşat (`Start-Process`) şi NU compila cât rulează.
 
-**Ultimul lucru făcut (08.10):** navele owner-ului. A dat 7 nave din Blender
-(`Art/OwnerShips/`, octet cu octet); în joc e **Brig-ul**, pe toate navele, în
-livreaua părţii. Detalii: README „Navele owner-ului (08.10)", aici mai jos
-„Navele owner-ului" (reţeta pentru o navă nouă / un FBX re-exportat) şi lista
-„Brig-ul owner-ului, ce a rămas pe dinafară". Recenzia (5 lentile, 18 agenţi,
-2,59 M) a găsit 5 defecte reale, reparate sau corectate în `204790d`.
+**Ultimul lucru făcut (17.10 -> 29.10, oprit o dată la jumătate de owner):**
+ghiuleaua loveşte Brig-ul. Lemnul (`SM_Ship_Brig_Shot` = Hull+Deck+DeckProps+
+Rudder), focurile şi spankerul ca pânză proprie (`_ForeCloth`/`_MainCloth`),
+cutiile pânzelor pătrate din model (`GRigBoxes`, podeaua = parapetul + raza
+bilei), ghiuleaua din ţeavă. README „Coca pe care o loveşte ghiuleaua" -> „Din
+17.10". Mutaţii: 8 din 10 în C++ (M8 testul AI de culoar şi M10 pânzele unei
+nave care se scufundă - fără rând care să le atingă), 10 din 10 în poartă.
 
 **Ce aşteaptă de la owner** (`OWNER_VERIFY.md`, prima pagină): **43** - Brig-ul
-în joc, plus două întrebări (a scris „5 modele", în folder sunt 7; `.blend`-ul e
-mai nou decât FBX-urile); decizia **38** (banda tunurilor); numerele **41/42**
-(cartea, palancurile) şi **2000 m** (scăparea). Fără răspuns la ele, nu le
-hotărî tu.
+în joc (rândurile 3-4 rezolvate 29.10, de văzut), plus două întrebări (a scris
+„5 modele", în folder sunt 7; `.blend`-ul e mai nou decât FBX-urile); decizia
+**38** (banda tunurilor - cifrele pe Brig, 29.10); numerele **41/42** (cartea,
+palancurile) şi **2000 m** (scăparea). Fără răspuns la ele, nu le hotărî tu.
 
 **Următoarele felii, în ordinea propusă** (fiecare = un pas: cod, măsurare,
 mutaţii, docs, commit, pachet, raport, STOP):
 
-1. **Geometria loviturii luată din Brig.** Pielea pentru ghiulea din `_Hull` +
-   `_Deck` ale FBX-ului (exportată de `owner_ship.py`, complex-as-simple ca
-   `hull_collision.py`); volume de greement din faptele modelului (de adăugat în
-   JSON bornele PE PÂNZĂ: spanker -1403..-431, focuri 503..2247, vergile până la
-   601, gabierul trinchetului la 2423); ghiuleaua născută la gura de tun (socket),
-   nu la `GGunPortY` 640 / `GGunPortZ` 280. **MUTĂ suita** (rânduri de tir,
-   aşchii, găuri) - fiecare mişcare explicată; owner-ului îi spui cu cât s-a
-   schimbat cât nimereşti. Gurile Brig-ului sunt la 1,8-2,3 m: verifică `awash`
-   în `gale`.
+1. ~~Geometria loviturii luată din Brig~~ - **făcută 29.10**.
 2. **Pânza translucidă** - pânzele de pirat ies negre cu soarele în spate
    (pânză închisă la culoare, material opac). Recomandarea: model de umbrire cu
    transmisie doar pe pânze (comutator static în `M_ShipMaster`), dovedit cu
@@ -45,6 +39,10 @@ mutaţii, docs, commit, pachet, raport, STOP):
    viteză). Numerele sunt ale owner-ului: propune implicite, nu le hotărî.
 4. **Igienă:** `-ConvoyStrikeTest=`, `-EnemyStrikeTest=`, `-EnemySinkTest=`,
    `-ConvoySinkTest=` încă NU închid cartea navei - câte un rând `ledger_test*`.
+   Plus cele două găuri lăsate de felia 29.10: un rând în care o consoartă
+   stă la marginea culoarului de tragere (testul AI de la guri, mutaţia M8) şi
+   unul în care ghiulele ajung într-o navă care se scufundă (`hits_ignored` e
+   0 în toată suita, deci M10 nu poate fi prinsă).
 5. Amânate: „valva" (Coroana primeşte palancuri - întrebarea 42.4 a owner-ului);
    `-AIPrize`/`-AIRefit` pot scoate liderul din luptă.
 
@@ -122,7 +120,16 @@ felia „clase de nave", cu numerele owner-ului.
   `Packaged\Windows\PirateSeas.exe`, ia ACELEAŞI flag-uri ca editorul, şi îşi
   scrie logul la `Packaged\Windows\PirateSeas\Saved\Logs\`. `Packaged/` e în
   `.gitignore`.
-- **Coca pe care o loveste ghiuleaua** (25.09): `Scripts/ship.py` exporta si
+- **Ce loveste ghiuleaua, din 17.10:** Brig-ul - `owner_ship.py` scrie si
+  `SM_Ship_Brig_Shot/_ForeCloth/_MainCloth.fbx`, `owner_ship_assets.py` le
+  importa, le pune complex-as-simple SI pe ambele fete si le reciteste (ruleaza-l
+  pana zice `DONE`). Cutiile panzelor patrate sunt `GRigBoxes` in ShipPawn.cpp,
+  scrise din JSON; poarta le deriva din nou si le compara cu ce raporteaza
+  fiecare nava (`SHIPLOG ... rig cloth ... box`). Un FBX re-exportat cu alte
+  panze/alt parapet -> re-scrii `GRigBoxes` (poarta iti spune cu ce).
+  `tools/probe_hull_hits.py` masoara fata de sectiunile NAVEI VECHI (ship.py) -
+  pe Brig nu mai e instrumentul bun.
+- **Coca navei VECHI** (25.09, nefolosita de joc din 17.10): `Scripts/ship.py` exporta si
   `SM_PirateHull.fbx` (pielea inchisa a cocii, cu parapet). Dupa orice
   schimbare a cocii: Blender → `run_py.ps1 -Script reimport_hull.py` (o data;
   moare dupa import, e normal) → `run_py.ps1 -Script hull_collision.py` DE DOUA
@@ -164,7 +171,7 @@ felia „clase de nave", cu numerele owner-ului.
   din `OWNER_VERIFY` 38 (banda tunurilor nu mai contine tunurile).
 - **Porţile:**
   - `python tools/ci_checks.py` — fără motor, rulează şi în CI hosted
-  - `python tools/ci_measure.py` — 76 scenarii headless vs `tools/measurement_baseline.json`
+  - `python tools/ci_measure.py` — 77 de scenarii headless vs `tools/measurement_baseline.json`
   - `python tools/ci_measure.py --record` — rescrie linia de bază, DELIBERAT, în
     acelaşi commit care o mişcă
   - `python tools/png_diff.py a.png b.png x0 y0 x1 y1` — compară o casetă
@@ -430,7 +437,9 @@ Urmatorul: de ales cu owner-ul. **Deschise si stiute:**
   `TallySquadron` (o singura socoteala, si pentru scufundare) da victoria.
   Perechea `escape_on`/`escape_off` plus garzile `escape_fighting`,
   `escape_player_down`, `escape_wreck`, `escape_edge`.
-- **Brig-ul owner-ului, ce a ramas pe dinafara (08.10):** (1) ghiuleaua se naste
+- **Brig-ul owner-ului, ce a ramas pe dinafara (08.10):** (1) **INCHIS 29.10**
+  (ghiuleaua pe lemnul, panzele si tevile Brig-ului; textul de mai jos e
+  istoric): ghiuleaua se naste
   tot la portul navei vechi (6,4 m in bord, 2,8 m sus; gurile Brig-ului sunt la
   3,1-4,4 m si 1,8-2,3 m) si se opreste pe pielea navei vechi (`SM_PirateHull`,
   8,4 m latime fata de 7,9) - balistica, muta suita, felie proprie cu pielea
