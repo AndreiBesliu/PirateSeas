@@ -40,6 +40,12 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Shot")
 	float ShotMassKg = 15.f;
 
+	/** The ball's radius: its collision sphere, the sphere it sweeps with, and
+	 *  the margin by which the ships' rig boxes stand clear of the rail
+	 *  (AShipPawn's constructor) - one number, because those three are one
+	 *  question: where does this sphere first touch something. */
+	static constexpr float RadiusCm = 16.f;
+
 protected:
 	UPROPERTY(VisibleAnywhere, Category = "Shot")
 	TObjectPtr<USphereComponent> Collision;

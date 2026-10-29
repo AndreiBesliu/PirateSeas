@@ -21,7 +21,7 @@ ACannonBall::ACannonBall()
 
 	Collision = CreateDefaultSubobject<USphereComponent>(TEXT("Collision"));
 	SetRootComponent(Collision);
-	Collision->InitSphereRadius(16.f);
+	Collision->InitSphereRadius(RadiusCm);
 	Collision->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 	Collision->SetCollisionObjectType(ECC_PhysicsBody);
 	// Round shot only ever strikes a hull. The sea is not a solid target: its
@@ -89,8 +89,14 @@ void ACannonBall::Fire(const FVector& Velocity, UWaterBodyComponent* InWater,
 	{
 		// Note: this does NOT protect the shooter. MoveIgnoreActors is only
 		// read by component sweeps, and this ball is moved by the solver. What
-		// actually protects her is the muzzle sitting at 640 out on the beam,
-		// clear of the hull box's 520, plus the shooter test in OnHit.
+		// actually protects her, now that the ball is born at her own barrel's
+		// mouth (a few centimetres outboard of her planking, well INSIDE her
+		// 520-wide box): the box ignores ECC_PhysicsBody, so the solver never
+		// pairs the two; the sweep in Tick ignores the shooter by actor, which
+		// covers her skin, her sails and her rig boxes; and the shooter test in
+		// OnHit. (Until 17.10 it was the muzzle sitting 640 out on the beam,
+		// clear of the box - which put every ball's birth two metres from any
+		// gun.)
 		if (Shooter)
 		{
 			Collision->IgnoreActorWhenMoving(Shooter, true);
@@ -156,7 +162,7 @@ void ACannonBall::Tick(float DeltaSeconds)
 		TArray<FHitResult> Hits;
 		const FHitResult* Found = nullptr;
 		if (GetWorld()->SweepMultiByObjectType(Hits, LastSweepFrom, Now,
-			FQuat::Identity, Objects, FCollisionShape::MakeSphere(16.f), Params))
+			FQuat::Identity, Objects, FCollisionShape::MakeSphere(RadiusCm), Params))
 		{
 			for (const FHitResult& Hit : Hits)
 			{
@@ -196,8 +202,9 @@ void ACannonBall::Tick(float DeltaSeconds)
 			}
 			// Rig or hull: since 25.09 this one sweep finds BOTH, because the
 			// hull a ball meets (AShipPawn::HullShot) is a query-only volume of
-			// the same object type as the rig boxes. The ship says which it was;
-			// the ball must not guess from a name.
+			// the same object type as the rig boxes - and since 17.10 so are the
+			// fore-and-aft sails (ForeCloth, MainCloth). The ship says which it
+			// was; the ball must not guess from a name.
 			StrikeShip(Cast<AShipPawn>(Struck), RigHit);
 			return;
 		}
@@ -224,9 +231,10 @@ void ACannonBall::Tick(float DeltaSeconds)
 		{
 			SurfaceZAtDeath = Query.GetValue().GetWaterSurfaceLocation().Z;
 
-			// A BALL CANNOT SPLASH BEFORE IT HAS FLOWN. The gun ports stand about
-			// 120 cm over the hull origin, she floats some 70 cm deeper than the
-			// waterline she was modelled at, and heel drops the lee battery
+			// A BALL CANNOT SPLASH BEFORE IT HAS FLOWN. The brig's barrel mouths
+			// stand 181 to 212 cm over the hull origin (her sockets, since 17.10;
+			// it was 120 when this was written, then 280), she rides deeper than
+			// the waterline she was modelled at, and heel drops the lee battery
 			// further still - so on a hard-heeled or bow-down frame the muzzle is
 			// genuinely under the local surface, and without this the whole
 			// broadside is destroyed on its first tick. It has happened: four

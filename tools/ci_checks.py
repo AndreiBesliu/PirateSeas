@@ -1763,6 +1763,50 @@ def check_escape():
         if row.get("sea_escaped", 0):
             fail("%s: a Crown ship escaped in a row that never broke one off" % name)
 
+def check_prize_pair():
+    """THE PRICE OF WHERE YOU AIM, held against the recorded rows.
+
+    prize_rig and prize_hull are one flag apart (-AIAimHigh=0): the same raider
+    stops the same merchant by her rig or by her hull, and the hull-shot prize
+    must pay LESS. The guard that both halves take a prize used to be a
+    sentence in ci_measure.py, and on 29.10 the pair went void with no light
+    going red: the owner's brig is a lower target, the low half took nobody,
+    and the comparison measured nothing. Now it is this.
+    """
+    base_path = os.path.join(ROOT, "tools", "measurement_baseline.json")
+    if not os.path.exists(base_path):
+        note("no baseline - the prize pair is not checked, which is NOT a pass")
+        return
+    rows = json.loads(io.open(base_path, encoding="utf-8-sig").read())
+    rig, hull = rows.get("prize_rig"), rows.get("prize_hull")
+    if not rig or not hull:
+        fail("the prize pair is not in the baseline (prize_rig %s, prize_hull %s)"
+             % (bool(rig), bool(hull)))
+        return
+    void = [n for n, r in (("prize_rig", rig), ("prize_hull", hull)) if (r.get("prizes_taken") or 0) < 1]
+    if void:
+        fail("the prize pair is VOID - %s took no prize, so nothing is compared" % ", ".join(void))
+        return
+    wrong = []
+    if not rig.get("prize_value_max", 0) > hull.get("prize_value_max", 0):
+        wrong.append("the rig-shot prize pays %s, the hull-shot one %s (rig must pay more)"
+                     % (rig.get("prize_value_max"), hull.get("prize_value_max")))
+    if not hull.get("prize_hull_at_take", 1.0) < 1.0 or rig.get("prize_hull_at_take") != 1.0:
+        wrong.append("hull at take: low %s (must be < 1), high %s (must be 1)"
+                     % (hull.get("prize_hull_at_take"), rig.get("prize_hull_at_take")))
+    if not rig.get("prize_rig_at_take", 1.0) < 1.0 or hull.get("prize_rig_at_take", 0) < 0.9:
+        wrong.append("rig at take (the decoy): high %s (must be < 1), low %s (must stay whole)"
+                     % (rig.get("prize_rig_at_take"), hull.get("prize_rig_at_take")))
+    if (rig.get("prize_strike_zone"), hull.get("prize_strike_zone")) != (1, 0):
+        wrong.append("strike zones %s/%s, expected 1 (rig) / 0 (hull)"
+                     % (rig.get("prize_strike_zone"), hull.get("prize_strike_zone")))
+    if wrong:
+        fail("the prize pair: " + "; ".join(wrong))
+    else:
+        ok("the prize pair: by the rig %s, by the hull %s (hull %.2f at the take)"
+           % (rig.get("prize_value_max"), hull.get("prize_value_max"), hull.get("prize_hull_at_take")))
+
+
 def check_ships():
     """THE OWNER'S BRIG, on paper.
 
@@ -1815,6 +1859,21 @@ def check_ships():
         "LogTemp: Display: SHIPLOG EnemyShipPawn_3 muzzles sockets=14 P0=(-640,-404,181) S0=(-715,404,181)\n")
     if split.get("muzzle_hulls_agree") != 0:
         fail("two hulls that chose different mouths are read as agreeing")
+    # The rig line (17.10): one hull whose spanker lost its collision, and two
+    # hulls with different boxes - each wrong for exactly one reason, beside a
+    # fixture that is right for both, so neither key can pass by accident.
+    box = "box fore=(326.0..786.0,601.1,301.9..2423.2) main=(-479.8..-19.8,601.1,267.4..2590.9)"
+    rg = ci_measure.measure("fixture",
+        "LogTemp: Display: SHIPLOG ShipPawn_0 rig cloth fore=ok main=ok %s\n"
+        "LogTemp: Display: SHIPLOG EnemyShipPawn_0 rig cloth fore=ok main=NO-COLLISION %s\n" % (box, box))
+    if (rg.get("rigcloth_ok"), rg.get("rig_boxes_agree")) != (0, 1):
+        fail("a hull whose spanker has no collision must read rigcloth_ok=0 (boxes agreeing): %r" % rg)
+    rg = ci_measure.measure("fixture",
+        "LogTemp: Display: SHIPLOG ShipPawn_0 rig cloth fore=ok main=ok %s\n"
+        "LogTemp: Display: SHIPLOG EnemyShipPawn_0 rig cloth fore=ok main=ok %s\n"
+        % (box, box.replace("2590.9", "2560.0")))
+    if (rg.get("rigcloth_ok"), rg.get("rig_boxes_agree")) != (1, 0):
+        fail("two hulls with different main boxes must read rig_boxes_agree=0: %r" % rg)
 
     facts_path = os.path.join(ROOT, "Scripts", "SM_Ship_Brig.json")
     if not os.path.exists(facts_path):
@@ -1827,6 +1886,13 @@ def check_ships():
         return hashlib.sha1(open(p, "rb").read()).hexdigest() if os.path.exists(p) else None
     chain = [("Art/OwnerShips/FBX/" + facts.get("source", "?"), facts.get("source_sha1")),
              ("Scripts/SM_Ship_Brig.fbx", facts.get("fbx_sha1"))]
+    # And the three meshes a ball meets (17.10), written by the same run.
+    shots = facts.get("shot", {})
+    if sorted(shots) != ["fore_cloth", "main_cloth", "shot"]:
+        fail("the facts name %s as the meshes a ball meets, not shot/fore_cloth/main_cloth"
+             % sorted(shots))
+    for key, f in sorted(shots.items()):
+        chain.append(("Scripts/%s.fbx" % f.get("asset"), f.get("fbx_sha1")))
     broken = ["%s (%s, facts say %s)" % (rel, sha(rel), want_sha) for rel, want_sha in chain
               if not want_sha or sha(rel) != want_sha]
 
@@ -1847,6 +1913,8 @@ def check_ships():
         mm = re.search(rb'"FileMD5" : "([0-9a-f]{32})"', open(p, "rb").read())
         return mm.group(1).decode() if mm else None
     links = [("Content/Ships/%s.uasset" % facts.get("asset"), "Scripts/SM_Ship_Brig.fbx")]
+    links += [("Content/Ships/%s.uasset" % f.get("asset"), "Scripts/%s.fbx" % f.get("asset"))
+              for _, f in sorted(shots.items())]
     tex_dir = os.path.join(ROOT, "Content", "Ships", "Textures")
     for f in sorted(os.listdir(tex_dir)) if os.path.isdir(tex_dir) else []:
         if f.startswith("T_") and f.endswith(".uasset"):
@@ -1859,8 +1927,9 @@ def check_ships():
     if broken:
         fail("the owner's brig is not the file the facts were taken from: %s" % "; ".join(broken))
     else:
-        ok("the brig in the game is the owner's file: two hashes to the FBX, then the mesh and "
-           "%d textures imported from exactly the committed bytes" % (len(links) - 1))
+        ok("the brig in the game is the owner's file: hashes to the FBX and to the %d meshes a "
+           "ball meets, then all %d meshes and %d textures imported from exactly the committed bytes"
+           % (len(shots), 1 + len(shots), len(links) - 1 - len(shots)))
 
     src = io.open(os.path.join(ROOT, "Source", "PirateSeas", "ShipPawn.cpp"), encoding="utf-8").read()
     ports = re.search(r"const float GGunPortsX\[\] = \{([^}]*)\}", src)
@@ -1881,6 +1950,32 @@ def check_ships():
             fail("two %s guns share one barrel of %s: mouths %s for ports %s"
                  % (side, facts.get("asset"), chosen, port_x))
         paper += [(tag + str(g), mouths[i]) for g, i in enumerate(chosen)]
+    # The guns fire from those mouths (17.10), so the height the dial works
+    # from is their mean.
+    paper_height = int(round(sum(pos[2] for _, pos in paper) / max(1, len(paper))))
+
+    # THE SQUARE-SAIL BOXES, on paper: from the model's facts and the two
+    # numbers that are the game's own - the boxes' fore-and-aft half thickness
+    # (ShipPawn.cpp) and the ball's radius (CannonBall.h) - by the rule the game
+    # states: centred on the mast's square sails, as wide as their widest, up
+    # to the highest head, down to the highest rail under the box plus one ball.
+    thick = re.search(r"const float GRigHalfThicknessCm = ([-\d.]+)f;", src)
+    ball_h = io.open(os.path.join(ROOT, "Source", "PirateSeas", "CannonBall.h"), encoding="utf-8").read()
+    radius = re.search(r"static constexpr float RadiusCm = ([-\d.]+)f;", ball_h)
+    paper_boxes = {}
+    if not thick or not radius:
+        fail("cannot read GRigHalfThicknessCm (ShipPawn.cpp) or RadiusCm (CannonBall.h)")
+    else:
+        t, r = float(thick.group(1)), float(radius.group(1))
+        stations = facts["hull"].get("rail_profile", [])
+        for zone in ("fore", "main"):
+            sq = facts.get("rig", {}).get(zone, {}).get("square")
+            if not sq or not stations:
+                fail("no %s square sails or no rail profile in the facts" % zone)
+                continue
+            cx = 0.5 * (sq["x_min"] + sq["x_max"])
+            under = [z for x0, x1, z in stations if x1 > cx - t and x0 < cx + t]
+            paper_boxes[zone] = (cx - t, cx + t, sq["half_width"], max(under) + r, sq["z_max"])
 
     base_path = os.path.join(ROOT, "tools", "measurement_baseline.json")
     if not os.path.exists(base_path):
@@ -1906,12 +2001,37 @@ def check_ships():
         if "rig_sway_mats" in row and row["rig_sway_mats"] != len(facts["slots"]):
             wrong.append("%s: the wind reaches %d slots of the brig's %d"
                          % (name, row["rig_sway_mats"], len(facts["slots"])))
+        if row.get("muzzle_height") != paper_height:
+            wrong.append("%s: the guns fire from %s cm, the mouths' mean is %d"
+                         % (name, row.get("muzzle_height"), paper_height))
+        # A MAST IS CHARGED ONLY FOR WHAT ITS OWN PARTS MET: the foremast for its
+        # box and the jibs, the mainmast for its box and the spanker. "At most",
+        # not "equal": a ball into the rig of a ship already going down is met
+        # and logged but not charged. A spanker charged to the foremast breaks it.
+        for zone, parts in (("forerig", ("forebox", "forecloth")), ("mainrig", ("mainbox", "maincloth"))):
+            met = sum(row.get("rig_hits_" + p, 0) for p in parts)
+            if row.get("zone_" + zone, 0) > met:
+                wrong.append("%s: %d hits charged to the %s, its parts met %d"
+                             % (name, row.get("zone_" + zone, 0), zone, met))
+        if row.get("rigcloth_ok") != 1 or row.get("rig_boxes_agree") != 1:
+            wrong.append("%s: rig cloth ok %s, hulls' boxes agree %s"
+                         % (name, row.get("rigcloth_ok"), row.get("rig_boxes_agree")))
+        boxes = dict((zone, [float(c) for c in re.findall(r"-?\d+(?:\.\d+)?", spec)])
+                     for zone, spec in re.findall(r"(fore|main)=\(([^)]*)\)", row.get("rig_boxes", "")))
+        for zone, want_box in sorted(paper_boxes.items()):
+            got_box = boxes.get(zone)
+            # A tenth and a half: the game prints one decimal of a float.
+            if not got_box or len(got_box) != 5 or \
+                    max(abs(a - b) for a, b in zip(got_box, want_box)) > 0.15:
+                wrong.append("%s: the %s rig box is %s, the model's is (%.1f..%.1f,%.1f,%.1f..%.1f)"
+                             % ((name, zone, got_box) + tuple(want_box)))
     if wrong:
         fail("the owner's brig against paper: %s%s" % ("; ".join(wrong[:6]),
                                                          " (+%d more)" % (len(wrong) - 6) if len(wrong) > 6 else ""))
     else:
-        ok("the owner's brig: %d rows, every hull in its colours, %d mouths each the paper's"
-           % (len(rows), len(paper)))
+        ok("the owner's brig: %d rows, every hull in its colours, %d mouths each the paper's, "
+           "the guns at %d cm, both rig boxes the model's and both sails' cloth found"
+           % (len(rows), len(paper), paper_height))
 
 
 def main():
@@ -1924,6 +2044,7 @@ def main():
     check_ledger()
     check_line()
     check_escape()
+    check_prize_pair()
     check_ships()
     print("")
     if NOTES:

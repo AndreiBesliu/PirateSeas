@@ -217,13 +217,31 @@ SCENARIOS = {
     # different sums. prize_value_max must differ AND in the stated direction -
     # a formula wired to the rig by mistake would also make them differ, the
     # other way round - and prize_rig_at_take is the decoy that must move
-    # opposite. GUARD: prizes_taken must read 1 in BOTH halves; if either is 0
-    # the comparison is void, the way fire_velfwd_max guards carried/loose.
+    # opposite. GUARD: prizes_taken must read at least 1 in BOTH halves; if
+    # either is 0 the comparison is void - and since 29.10 that guard is a
+    # check (tools/ci_checks.py check_prize_pair), not this sentence.
+    #
+    # ITS OWN TWIN since 29.10, prize_rig below, one flag apart. The high half
+    # used to be convoy_weather, and the pair went void in silence when the
+    # ball started meeting the owner's brig: her rail stands 0.7 to 1.9 m lower
+    # than the old ship's skin, the raider at 600 m put 6 balls of the 7 a
+    # merchant needs into the first one's hull, the third broadside fell short,
+    # and nobody was taken - prizes_taken 2 -> 0, mission "through". Moving the
+    # raider in moves convoy_weather too, which is convoy_lee's pair, so this
+    # pair got its own rows. At 450 m both halves take both merchants, and at
+    # the same second (29 s): measured at 300 (low takes none), 400, 450 and
+    # 500 (neither takes any). The range is geometry, not monotonic.
     "prize_hull": ["-WindBearing=0", "-WindSpeed=12", "-Convoy=2",
                    "-ConvoyX=120000", "-ConvoyY=150000", "-ConvoyWindAngle=90",
                    "-ConvoyRangeM=1200", "-EnemyCount=1", "-RaiderSide=weather",
-                   "-RaiderOffingM=600", "-ConvoyCargo=1200", "-AIAimHigh=0",
+                   "-RaiderOffingM=450", "-ConvoyCargo=1200", "-AIAimHigh=0",
                    "-ShipQuitAfter=400"],
+    # prize_hull without -AIAimHigh=0: the same raider aiming into the rig.
+    "prize_rig": ["-WindBearing=0", "-WindSpeed=12", "-Convoy=2",
+                  "-ConvoyX=120000", "-ConvoyY=150000", "-ConvoyWindAngle=90",
+                  "-ConvoyRangeM=1200", "-EnemyCount=1", "-RaiderSide=weather",
+                  "-RaiderOffingM=450", "-ConvoyCargo=1200",
+                  "-ShipQuitAfter=400"],
     # POSSESSION. The pair for this one is prize_left ABOVE, which is this
     # command line without -AIPrize=1 - so no redundant scenario is added and
     # the two really are one flag apart. With the doctrine off she leaves a
@@ -986,6 +1004,36 @@ def measure(name, text):
         m["muzzle_sockets"] = int(mz[0][0])
         m["muzzle_mouths"] = mz[0][1].strip()
         m["muzzle_hulls_agree"] = 1 if len(set(mz)) == 1 else 0
+    # How high the guns fire from (since 17.10 the ball leaves the mouths), the
+    # first hull's; the agreement above covers the mouths it is the mean of.
+    mh = re.search(r"SHIPLOG \S+ muzzles sockets=\d+(?: [PS]\d=\([-\d,]+\))+ height=(-?\d+)", text)
+    if mh:
+        m["muzzle_height"] = int(mh.group(1))
+
+    # WHAT A BALL MEETS ALOFT (17.10). The two cloths (jibs, spanker) are
+    # meshes that can lose their collision as silently as the hull skin can -
+    # 1 only if every hull says ok for both. And the two square-sail boxes as
+    # each hull's COMPONENTS have them, the first hull's, plus whether every
+    # hull agrees: tools/ci_checks.py derives the boxes from the model and
+    # holds this string against them.
+    rc = re.findall(r"SHIPLOG \S+ rig cloth fore=(\S+) main=(\S+) box fore=(\S+) main=(\S+)", text)
+    if rc:
+        m["rigcloth_ok"] = 1 if all(f == "ok" and mn == "ok" for f, mn, _, _ in rc) else 0
+        m["rig_boxes"] = "fore=%s main=%s" % (rc[0][2], rc[0][3])
+        m["rig_boxes_agree"] = 1 if len(set((b1, b2) for _, _, b1, b2 in rc)) == 1 else 0
+    # And which of the four rig parts a ball found, so a cloth that stopped
+    # catching anything shows as its own number going to zero, not as a rig
+    # count that happens to be a little lower.
+    for comp, key in (("ForeRig", "rig_hits_forebox"), ("MainRig", "rig_hits_mainbox"),
+                      ("ForeCloth", "rig_hits_forecloth"), ("MainCloth", "rig_hits_maincloth")):
+        m[key] = len(re.findall(r"SHOTLOG rig by=\S+ shot=\d+ target=\S+ comp=%s\b" % comp, text))
+    # And which MAST the ship charged them to - the other half of the same fact.
+    # The component counts above say what the ball met; these say what the
+    # ship did with it. Added on 29.10 because a mutation that charged the
+    # spanker to the foremast was caught only by a splash's water height: no
+    # number in the suite said which mast lost cloth.
+    m["zone_forerig"] = len(re.findall(r"SHOTLOG zone forerig ", text))
+    m["zone_mainrig"] = len(re.findall(r"SHOTLOG zone mainrig ", text))
 
     # The convoy. One MISSION line per run, printed from every exit including
     # the quit timer, so a run that ended neither way still reports its

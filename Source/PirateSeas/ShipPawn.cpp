@@ -73,10 +73,51 @@ namespace
 	 *  was 19 CENTIMETRES: the broadside was fired from the waterline, which is
 	 *  what made the ship read as a barge with masts. */
 	const float GGunPortZ = 280.f;
+	// SINCE 17.10 NEITHER IS WHERE A BALL IS BORN. Both survive as the fallback
+	// for a hull whose mesh carries no muzzle sockets (BindMuzzles says so in the
+	// log, sockets=0) - the ball comes from the brig's barrel mouths now.
 
 	// Where the barrel MOUTHS are is no longer a table here: it was derived from
 	// Scripts/ship.py's half-beam, the hull changed to the owner's brig, and the
 	// brig's own model carries every mouth as a socket. AShipPawn::BindMuzzles.
+
+	/** THE SQUARE SAILS AS A BALL MEETS THEM - one box per mast, its numbers the
+	 *  model's (Scripts/SM_Ship_Brig.json, "rig" and "hull.rail_profile"), and
+	 *  tools/ci_checks.py derives every one of them again from that file and
+	 *  compares them with the box each hull reports at BeginPlay.
+	 *
+	 *  ALONG and ACROSS from the sails: the box is centred on the mast's square
+	 *  sails, as wide as their widest yard (601.1: the yards reach 600, the
+	 *  courses 601). UP to the head of the highest sail. DOWN to the rail beneath
+	 *  the box plus one ball radius - a box is wider than the hull (601 against
+	 *  395), so a box that reached below the rail would be met first by a ball on
+	 *  its way into the bulwark, and charge the rig for a hit on the timber. With
+	 *  the floor there, a ball whose centre clears the rail is in the rig, and one
+	 *  at or below it is the bulwark's.
+	 *
+	 *  THICK fore and aft by the game's choice, not the model's: from the beam a
+	 *  square sail is a sliver a metre deep (fore 505..607, main -304..-195), and
+	 *  the box keeps the 460 cm it has had since the rig zones were made, so this
+	 *  slice moves the rig to the brig without also deciding how easy it is to
+	 *  hit. Her fore-and-aft sails (jibs, spanker) are NOT in here: they face the
+	 *  beam, and the ball meets their own cloth (ForeCloth, MainCloth).
+	 *
+	 *  Until 17.10 the boxes were the old ship's: 525 wide, floors at 350 (the
+	 *  top of the hull BOX, a metre above the brig's waist rail, so a ball could
+	 *  cross her waist between 250 and 350 through her courses and meet nothing),
+	 *  the fore one 2.6 m short of her topgallant, the main one centred 70 cm
+	 *  aft of her mast. */
+	struct FRigBoxSpec { float X; float HalfWidth; float RailUnder; float Top; };
+	const float GRigHalfThicknessCm = 230.f;
+	const FRigBoxSpec GRigBoxes[2] =
+	{
+		// fore: squares 505.4..606.6, half width 601.1, topgallant head 2423.2;
+		// rail over 326..786 at most 285.9 (the station at 750..800)
+		{  556.0f, 601.1f, 285.9f, 2423.2f },
+		// main: squares -304.4..-195.1, half width 601.1, head 2590.9; rail
+		// over -479.75..-19.75 at most 251.4 (the station at -50..0)
+		{ -249.75f, 601.1f, 251.4f, 2590.9f },
+	};
 
 	/** The six parts a livery repaints, named as the owner's mesh names its
 	 *  slots (Scripts/owner_ship.py strips the livery off the material name). */
@@ -154,15 +195,12 @@ AShipPawn::AShipPawn()
 	// frame by Scripts/owner_ship.py). Chosen of the seven because she is the
 	// ship this BODY was built for: 30.0 m of hull against ship.py's 30, 2.60 m
 	// of draught against 2.6 - the box, the pontoons and the mass carry her
-	// unchanged. What a shot can hit is NOT yet hers, and is the next slice:
-	// her square sails sit inside ForeRig and MainRig along the hull (fore
-	// 505..607 cm, main -304..-195; her masts themselves stand at +429 and
-	// -378), but her yards reach 76 cm past the boxes' 525 half width, her fore
-	// topgallant 2.6 m above ForeRig, her spanker (-1403..-431) and jibs
-	// (503..2247) are outside every rig volume, and HullShot below is still the
-	// old hull's skin - 0.7 m above her rail amidships, up to 0.8 m inside her
-	// bow planking. (Measured by the review of 3b4e30f; this comment said "her
-	// masts within 35 cm" and "nothing had to move", and both were wrong.)
+	// unchanged. Since 17.10 what a shot can hit is hers too: HullShot is her
+	// timber, the rig boxes are sized from her square sails (GRigBoxes), her
+	// jibs and spanker are their own cloth, and the ball leaves from her
+	// barrels. Until then all four were the old ship's - the skin 0.7 m above
+	// her rail amidships and up to 0.8 m inside her bow planking, her spanker
+	// and jibs outside every rig volume (measured by the review of 3b4e30f).
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> ShipMeshAsset(
 		TEXT("/Game/Ships/SM_Ship_Brig.SM_Ship_Brig"));
 	if (ShipMeshAsset.Succeeded())
@@ -210,8 +248,11 @@ AShipPawn::AShipPawn()
 	HullShot->SetCollisionResponseToAllChannels(ECR_Ignore);
 	HullShot->SetGenerateOverlapEvents(false);
 	HullShot->CanCharacterStepUpOn = ECB_No;
+	// HER timber since 17.10 (Scripts/owner_ship.py: _Hull, _Deck, _DeckProps,
+	// _Rudder of the owner's brig; complex-as-simple set by
+	// owner_ship_assets.py). It was SM_PirateHull, the old ship's skin.
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> ShotHullAsset(
-		TEXT("/Game/Meshes/SM_PirateHull.SM_PirateHull"));
+		TEXT("/Game/Ships/SM_Ship_Brig_Shot.SM_Ship_Brig_Shot"));
 	if (ShotHullAsset.Succeeded())
 	{
 		HullShot->SetStaticMesh(ShotHullAsset.Object);
@@ -243,20 +284,63 @@ AShipPawn::AShipPawn()
 	}
 
 	// --- the rig, as something a shot can find --------------------------
-	// The hull box stops at +350 and these volumes reach +2560, so until now a
-	// ball at rig height passed through empty air. These two volumes give it
-	// something to strike. Their floor is exactly +350, flush with the top of
-	// the hull box, so hull and rig partition the height with no gap and no
-	// overlap: no single ball can ever be charged twice.
+	// Query-only volumes the ball's sweep finds, one per mast for the square
+	// sails (GRigBoxes says where each number comes from). No single ball can
+	// be charged twice whatever overlaps what: the sweep takes the FIRST thing
+	// it meets and the ball is spent.
 	ForeRig = CreateDefaultSubobject<UBoxComponent>(TEXT("ForeRig"));
 	ForeRig->SetupAttachment(HullCollision);
-	ForeRig->SetBoxExtent(FVector(230.f, 525.f, 905.f));
-	ForeRig->SetRelativeLocation(FVector(560.f, 0.f, 1255.f));
-
 	MainRig = CreateDefaultSubobject<UBoxComponent>(TEXT("MainRig"));
 	MainRig->SetupAttachment(HullCollision);
-	MainRig->SetBoxExtent(FVector(230.f, 525.f, 1105.f));
-	MainRig->SetRelativeLocation(FVector(-320.f, 0.f, 1455.f));
+	{
+		UBoxComponent* Boxes[2] = { ForeRig.Get(), MainRig.Get() };
+		for (int32 b = 0; b < 2; ++b)
+		{
+			const FRigBoxSpec& R = GRigBoxes[b];
+			const float Floor = R.RailUnder + ACannonBall::RadiusCm;
+			Boxes[b]->SetBoxExtent(FVector(GRigHalfThicknessCm, R.HalfWidth, 0.5f * (R.Top - Floor)));
+			Boxes[b]->SetRelativeLocation(FVector(R.X, 0.f, 0.5f * (R.Top + Floor)));
+		}
+	}
+	// Up on her main top, the aim of a high broadside, along the mast with the
+	// box: it was -320, the old ship's main mast, which was this box's centre.
+	HighAimAlongCm = GRigBoxes[1].X;
+
+	// HER FORE-AND-AFT SAILS, as their own cloth (Scripts/owner_ship.py: the
+	// foremost mast's jibs, the aftmost mast's spanker). From the beam these
+	// face the ball, so their triangles are a fair target where a box is not:
+	// a box round the jibs would be 2.5 times their cloth (they fill 40% of
+	// it), the spanker's 1.35. Same recipe as HullShot - query-only, never
+	// drawn, complex-as-simple - and the same answer to "which zone": the
+	// component, never the point.
+	ForeCloth = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("ForeCloth"));
+	MainCloth = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("MainCloth"));
+	{
+		static ConstructorHelpers::FObjectFinder<UStaticMesh> ForeClothAsset(
+			TEXT("/Game/Ships/SM_Ship_Brig_ForeCloth.SM_Ship_Brig_ForeCloth"));
+		static ConstructorHelpers::FObjectFinder<UStaticMesh> MainClothAsset(
+			TEXT("/Game/Ships/SM_Ship_Brig_MainCloth.SM_Ship_Brig_MainCloth"));
+		UStaticMeshComponent* Cloths[2] = { ForeCloth.Get(), MainCloth.Get() };
+		UStaticMesh* Meshes[2] = {
+			ForeClothAsset.Succeeded() ? ForeClothAsset.Object : nullptr,
+			MainClothAsset.Succeeded() ? MainClothAsset.Object : nullptr };
+		for (int32 c = 0; c < 2; ++c)
+		{
+			Cloths[c]->SetupAttachment(HullCollision);
+			Cloths[c]->SetVisibility(false);
+			Cloths[c]->SetHiddenInGame(true);
+			Cloths[c]->SetCastShadow(false);
+			Cloths[c]->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+			Cloths[c]->SetCollisionObjectType(ECC_Vehicle);
+			Cloths[c]->SetCollisionResponseToAllChannels(ECR_Ignore);
+			Cloths[c]->SetGenerateOverlapEvents(false);
+			Cloths[c]->CanCharacterStepUpOn = ECB_No;
+			if (Meshes[c])
+			{
+				Cloths[c]->SetStaticMesh(Meshes[c]);
+			}
+		}
+	}
 
 	for (UBoxComponent* Volume : { ForeRig.Get(), MainRig.Get() })
 	{
@@ -491,7 +575,28 @@ void AShipPawn::BindMuzzles()
 				MuzzleMouth[s][g].X, MuzzleMouth[s][g].Y, MuzzleMouth[s][g].Z);
 		}
 	}
-	UE_LOG(LogTemp, Display, TEXT("SHIPLOG %s muzzles sockets=%d%s"), *GetName(), MuzzleSockets, *Report);
+	// What the rest of the ship asks of her battery, from the mouths just bound
+	// rather than from the old ports: how high the guns stand (the fall-of-shot
+	// dial), and where each broadside leaves from (the AI's lane test).
+	float SumZ = 0.f;
+	for (int32 s = 0; s < 2; ++s)
+	{
+		FVector Sum = FVector::ZeroVector;
+		for (int32 g = 0; g < UE_ARRAY_COUNT(GGunPortsX); ++g)
+		{
+			Sum += MuzzleMouth[s][g];
+			SumZ += MuzzleMouth[s][g].Z;
+		}
+		BroadsideMouth[s] = Sum / UE_ARRAY_COUNT(GGunPortsX);
+	}
+	GunMouthHeightCm = SumZ / (2 * UE_ARRAY_COUNT(GGunPortsX));
+	UE_LOG(LogTemp, Display, TEXT("SHIPLOG %s muzzles sockets=%d%s height=%.0f"), *GetName(),
+		MuzzleSockets, *Report, GunMouthHeightCm);
+}
+
+FVector AShipPawn::GetBroadsideMouthLocal(bool bStarboard) const
+{
+	return BroadsideMouth[bStarboard ? 1 : 0];
 }
 
 void AShipPawn::BeginPlay()
@@ -502,7 +607,7 @@ void AShipPawn::BeginPlay()
 	Hands = HandsMax;
 
 	// SAID OUT LOUD: whether a ball can find this hull at all. HullShot only
-	// has query shapes if SM_PirateHull carries "complex as simple"; without it
+	// has query shapes if SM_Ship_Brig_Shot carries "complex as simple"; without it
 	// the skin is a mesh with no collision, the box already ignores the ball,
 	// and the failure mode is SILENT - every hit becomes a splash and the log
 	// reads as bad gunnery. A review named it; this line turns it into a number
@@ -513,6 +618,40 @@ void AShipPawn::BeginPlay()
 		const bool bOk = Body && Body->CollisionTraceFlag == CTF_UseComplexAsSimple;
 		UE_LOG(LogTemp, Display, TEXT("SHIPLOG %s shothull=%s"), *GetName(),
 			bOk ? TEXT("ok") : (Skin ? TEXT("NO-COLLISION") : TEXT("NO-MESH")));
+	}
+	// AND THE RIG, the same way. The two cloths are meshes and fail exactly as
+	// the skin does - silently, every ball through the jibs becoming a splash -
+	// and the boxes are numbers the gate derives again from the model
+	// (tools/ci_checks.py check_ships), so the box is said as the COMPONENT has
+	// it, not as the table meant it.
+	{
+		// And BOTH FACES: a sail is an open sheet, and a sheet that answers on
+		// one face lets every ball from the other beam through the cloth it is
+		// drawn hitting. The import left all three meshes single sided.
+		auto ClothState = [](const UStaticMeshComponent* Cloth) -> const TCHAR*
+		{
+			const UStaticMesh* M = Cloth ? Cloth->GetStaticMesh() : nullptr;
+			const UBodySetup* Body = M ? M->GetBodySetup() : nullptr;
+			if (!Body || Body->CollisionTraceFlag != CTF_UseComplexAsSimple)
+			{
+				return M ? TEXT("NO-COLLISION") : TEXT("NO-MESH");
+			}
+			return Body->bDoubleSidedGeometry ? TEXT("ok") : TEXT("ONE-SIDED");
+		};
+		auto BoxText = [](const UBoxComponent* Box) -> FString
+		{
+			if (!Box)
+			{
+				return TEXT("NONE");
+			}
+			const FVector E = Box->GetUnscaledBoxExtent();
+			const FVector C = Box->GetRelativeLocation();
+			return FString::Printf(TEXT("(%.1f..%.1f,%.1f,%.1f..%.1f)"),
+				C.X - E.X, C.X + E.X, E.Y, C.Z - E.Z, C.Z + E.Z);
+		};
+		UE_LOG(LogTemp, Display, TEXT("SHIPLOG %s rig cloth fore=%s main=%s box fore=%s main=%s"),
+			*GetName(), ClothState(ForeCloth), ClothState(MainCloth),
+			*BoxText(ForeRig), *BoxText(MainRig));
 	}
 
 	// Her colours and her gun mouths, before the first tick: the wind turns
@@ -1193,8 +1332,13 @@ bool AShipPawn::FireBroadside(bool bStarboard, AActor* AimAt, bool bHigh)
 		// after the loop - so a gun that declined was reporting on behalf of the
 		// three that went.
 		float LeadThisGun = 0.f;
-		const float PortX = GGunPortsX[g];
-		const FVector LocalMuzzle(PortX, Side * GGunPortY, GGunPortZ);
+		// FROM THIS GUN'S OWN BARREL, since 17.10: the mouth BindMuzzles took
+		// off the brig's sockets, the same point the smoke, the flash and the
+		// report come from. It was (port X, 640 out, 280 up) - the old ship's
+		// gun port, 2 to 2.6 m outboard of the brig's barrels and 0.7 to 1 m
+		// above them - so every range, every lead and every elevation was
+		// worked from a point no gun stood at, and the recoil kicked her there.
+		const FVector LocalMuzzle = MuzzleMouth[bStarboard ? 1 : 0][g];
 		const FVector WorldMuzzle = HullTransform.TransformPosition(LocalMuzzle);
 
 		// Out along the beam, trained towards the target within the traverse
@@ -1392,8 +1536,7 @@ bool AShipPawn::FireBroadside(bool bStarboard, AActor* AimAt, bool bHigh)
 	// many guns had gone. Each gun now takes its own as it fires.)
 	// Enough state to explain a range bias between two ships firing the same
 	// gun: heel, own motion, and how high the first muzzle actually sits.
-	const FVector FirstMuzzle = HullTransform.TransformPosition(
-		FVector(GGunPortsX[0], Side * GGunPortY, GGunPortZ));
+	const FVector FirstMuzzle = HullTransform.TransformPosition(MuzzleMouth[SideIndex][0]);
 	const FVector Vel = VelBeforeRecoil;
 	UE_LOG(LogTemp, Display,
 		TEXT("SHOTLOG broadside %s side=%s guns=%d target=%s range=%.0fm heel=%.1f muzzleZ=%.0f velBeam=%.2f velFwd=%.2f elev=%.2f aim=%s lead=%.1fm inherit=%d bias=%.3f t=%.1f"),
@@ -1469,7 +1612,8 @@ bool AShipPawn::IsRigVolume(const UPrimitiveComponent* Comp) const
 	// In the .cpp, not the header: the header only forward-declares
 	// UBoxComponent, and comparing a UPrimitiveComponent* against it needs the
 	// complete type to find the upcast.
-	return Comp && (Comp == ForeRig.Get() || Comp == MainRig.Get());
+	return Comp && (Comp == ForeRig.Get() || Comp == MainRig.Get()
+		|| Comp == ForeCloth.Get() || Comp == MainCloth.Get());
 }
 
 EShipZone AShipPawn::ClassifyHit(const UPrimitiveComponent* Struck,
@@ -1487,11 +1631,13 @@ EShipZone AShipPawn::ClassifyHit(const UPrimitiveComponent* Struck,
 	// The rig is identified by WHICH COMPONENT the shot struck, never by
 	// where it landed: a low shot that strays above the box top without
 	// touching a rig volume is honest hull damage, not a phantom in the tops.
-	if (Struck && Struck == ForeRig)
+	// A mast's rig is its square sails' box AND its fore-and-aft cloth: the jibs
+	// are set on the foremast's stays, the spanker on the mainmast.
+	if (Struck && (Struck == ForeRig || Struck == ForeCloth))
 	{
 		return EShipZone::ForeRig;
 	}
-	if (Struck && Struck == MainRig)
+	if (Struck && (Struck == MainRig || Struck == MainCloth))
 	{
 		return EShipZone::MainRig;
 	}
@@ -1518,11 +1664,19 @@ EShipZone AShipPawn::ClassifyHit(const UPrimitiveComponent* Struck,
 	// gate, not the timber. A hit that is not in the transom (above) and sits
 	// abreast of a port at deck height IS on the beam: the skin has no other
 	// surface there.
+	//
+	// ABREAST OF THE GUN'S OWN BARREL since 17.10 - the mouth it fires from, on
+	// the side the ball came in (Y > 0 is starboard). The windows were centred
+	// on the old ship's ports, and the brig's first gun stands at -715 against a
+	// window of -700..-500: the one hit that could never take that gun out was
+	// one beside its muzzle. The band's HEIGHT is the owner's (OWNER_VERIFY 38)
+	// and is not touched here.
 	if (HullLocal.Z >= GunDeckLowCm && HullLocal.Z <= GunDeckHighCm)
 	{
+		const int32 HitSide = HullLocal.Y > 0.f ? 1 : 0;
 		for (int32 g = 0; g < UE_ARRAY_COUNT(GGunPortsX); ++g)
 		{
-			if (FMath::Abs(HullLocal.X - GGunPortsX[g]) <= GunPortWindowCm)
+			if (FMath::Abs(HullLocal.X - MuzzleMouth[HitSide][g].X) <= GunPortWindowCm)
 			{
 				OutGun = g;
 				return EShipZone::Guns;
@@ -2186,7 +2340,10 @@ void AShipPawn::EnterFoundering(const TCHAR* Reason)
 	// And her rigging with her, or a shot still finds the masts of a ship
 	// that is already going down and the log reports a rig hit immediately
 	// followed by the damage being ignored.
-	for (UBoxComponent* Volume : { ForeRig.Get(), MainRig.Get() })
+	for (UPrimitiveComponent* Volume : { static_cast<UPrimitiveComponent*>(ForeRig.Get()),
+		static_cast<UPrimitiveComponent*>(MainRig.Get()),
+		static_cast<UPrimitiveComponent*>(ForeCloth.Get()),
+		static_cast<UPrimitiveComponent*>(MainCloth.Get()) })
 	{
 		if (Volume)
 		{
@@ -2682,10 +2839,12 @@ void AShipPawn::UpdateGunLaying()
 
 float AShipPawn::GetGunPortHeightCm() const
 {
-	// One door out of the anonymous namespace, so the fall-of-shot dial and the
-	// guns cannot disagree about how high the guns are. They already disagreed
-	// once about something simpler than this.
-	return GGunPortZ;
+	// One door, so the fall-of-shot dial and the guns cannot disagree about how
+	// high the guns are. They already disagreed once about something simpler
+	// than this. Since 17.10 the door opens on the brig's barrels (the mean
+	// height of the eight mouths the battery fires from, BindMuzzles), not on
+	// the old ship's port height - which is what the guns fire from now.
+	return GunMouthHeightCm;
 }
 
 float AShipPawn::LayForwardDot() const

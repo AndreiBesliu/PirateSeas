@@ -239,16 +239,17 @@ bool AShipAIController::ShotIsBlocked(const AShipPawn* Me, const FVector& FireDi
 	{
 		return false;
 	}
-	// Measured from the MUZZLES, not from the middle of the ship. The guns
-	// stand 640 cm out on the beam (the gun port offset in AShipPawn), which at fifty metres is seven degrees of
-	// bearing on its own: taking the hull centre biased the test towards
-	// clearing a consort on one side and blocking one on the other.
-	const FVector Muzzle = Me->GetActorLocation()
-		+ FVector::CrossProduct(FVector::UpVector,
-			Me->GetActorForwardVector().GetSafeNormal2D()) * 640.f
-		* FMath::Sign(FVector::DotProduct(FireDir,
-			FVector::CrossProduct(FVector::UpVector,
-				Me->GetActorForwardVector().GetSafeNormal2D())));
+	// Measured from the MUZZLES, not from the middle of the ship: four metres
+	// out on the beam is five degrees of bearing at fifty metres on its own,
+	// and taking the hull centre biased the test towards clearing a consort on
+	// one side and blocking one on the other. From the broadside's own barrels
+	// (AShipPawn::GetBroadsideMouthLocal) since 17.10 - this was a 640 typed
+	// here, the old ship's gun port, which the ball no longer leaves from.
+	const bool bStarboardSide = FVector::DotProduct(FireDir,
+		FVector::CrossProduct(FVector::UpVector,
+			Me->GetActorForwardVector().GetSafeNormal2D())) > 0.f;
+	const FVector Muzzle = Me->GetActorTransform().TransformPosition(
+		Me->GetBroadsideMouthLocal(bStarboardSide));
 
 	// ANY hull, on any side, blocks a lane. Round shot does not check colours,
 	// and a captain who fires through a neutral to reach his enemy is doing

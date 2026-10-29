@@ -192,8 +192,14 @@ public:
 	 *  on it, which is not aiming, it is guessing. */
 	float RangeForElevationCm(float ElevationDeg) const;
 
-	/** How high the gun ports sit above the hull origin, centimetres. */
+	/** How high the guns fire from above the hull origin, centimetres: the
+	 *  mean height of the barrel mouths the battery is bound to. */
 	float GetGunPortHeightCm() const;
+
+	/** Where one broadside leaves from, in hull space: the mean of that side's
+	 *  four bound barrel mouths. For anything that must reason from the guns
+	 *  rather than from the middle of the ship (the AI's lane test). */
+	FVector GetBroadsideMouthLocal(bool bStarboard) const;
 
 	/** The water body this ship floats on, so the aim marks can be laid on the
 	 *  same Gerstner surface she rides rather than on a flat plane at zero. The
@@ -603,10 +609,13 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Ship")
 	TObjectPtr<UStaticMeshComponent> HullMesh;
 
-	/** THE HULL AS A CANNONBALL MEETS IT. The closed skin of the hull, bulwark
-	 *  included, lofted from the same sections as the visual hull
-	 *  (Scripts/ship.py build_shot_hull) and used as "complex collision as
-	 *  simple" - the collision IS its triangles. Never drawn, query-only, typed
+	/** THE HULL AS A CANNONBALL MEETS IT. Since 17.10 the owner's brig's own
+	 *  timber - her closed hull skin, her deck, her deck props (port frames,
+	 *  chain wales, stern windows, the quarterdeck front) and her rudder, out of
+	 *  Scripts/owner_ship.py as SM_Ship_Brig_Shot; until then the old ship's
+	 *  skin (Scripts/ship.py build_shot_hull, SM_PirateHull). Used as "complex
+	 *  collision as simple", double sided for queries - the collision IS its
+	 *  triangles. Never drawn, query-only, typed
 	 *  ECC_Vehicle like the rig volumes so the shot's sweep finds it by object
 	 *  type with no channel to configure. (A first version used six convex
 	 *  UCX_ slabs; the importer dropped them silently.)
@@ -657,12 +666,17 @@ protected:
 	 *  Asked of the mesh: every barrel mouth of the owner's model is a socket
 	 *  (Muzzle_Port_001 ...), and each of the four guns the game fires takes
 	 *  the mouth nearest its port along the hull (the gate refuses two guns on
-	 *  one mouth). The ball is
-	 *  still born at the gun port (GGunPortsX / GGunPortY / GGunPortZ), which
-	 *  is gunnery and is not changed by a new hull's paint. */
+	 *  one mouth). Since 17.10 the BALL is born there too, and the recoil,
+	 *  the lead and the elevation are worked from it; the old gun port
+	 *  (GGunPortY / GGunPortZ) is only the fallback for a mesh with no sockets. */
 	FVector MuzzleMouth[2][4];
 	int32 MuzzleSockets = 0;
 	void BindMuzzles();
+	/** The mean of each side's four mouths, and of all eight heights; set by
+	 *  BindMuzzles, read by GetBroadsideMouthLocal / GetGunPortHeightCm. Until
+	 *  then the old port, so nothing reads zero. */
+	FVector BroadsideMouth[2] = { FVector(0.f, -640.f, 280.f), FVector(0.f, 640.f, 280.f) };
+	float GunMouthHeightCm = 280.f;
 
 	/** EXPERIMENT: does a query-only child box weld into the simulating hull
 	 *  and change its inertia? Measured, not assumed. */
@@ -677,6 +691,16 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Ship")
 	TObjectPtr<UBoxComponent> MainRig;
+
+	/** HER FORE-AND-AFT SAILS AS A BALL MEETS THEM (17.10): the foremast's
+	 *  jibs and the mainmast's spanker, their own cloth from the owner's model
+	 *  (Scripts/owner_ship.py), complex-as-simple, never drawn, query-only -
+	 *  HullShot's recipe. They count to the same zones as the boxes above. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Ship")
+	TObjectPtr<UStaticMeshComponent> ForeCloth;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Ship")
+	TObjectPtr<UStaticMeshComponent> MainCloth;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Ship")
 	TObjectPtr<UBuoyancyComponent> Buoyancy;
@@ -1056,22 +1080,22 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Damage")
 	float RudderlessAuthority = 0.15f;
 
-	/** A shot lands in the battery if it comes in this close to a gun port
-	 *  abscissa, this far out on the beam, and within the band GunDeckLowCm to
-	 *  GunDeckHighCm.
+	/** A shot lands in the battery if it comes in within GunPortWindowCm of a
+	 *  gun's barrel mouth along the hull (BindMuzzles; until 17.10 the old
+	 *  ship's port abscissa), on the side it came in, and within the band
+	 *  GunDeckLowCm to GunDeckHighCm.
 	 *
-	 *  THAT BAND NO LONGER CONTAINS THE GUNS, and this comment used to hide it by
-	 *  saying the band was "about the ports modelled at +120". The ports have
-	 *  been at GGunPortZ = 280 since 18.09; [0, 240] is the hull from the
-	 *  waterline to just above the deck. Measured 25.09 with
-	 *  tools/probe_hull_hits.py over the suite's seven distinct fights: 12 of 41
-	 *  hull hits dismounted a gun, and every one of the twelve met the hull BELOW
-	 *  the deck, 0.6 to 1.9 m under the gun it took out.
+	 *  WHAT THE BAND HOLDS changed with the hull, not with the band. On the old
+	 *  ship the ports were at GGunPortZ = 280 and [0, 240] was the hull from the
+	 *  waterline to just above the deck - measured 25.09 with
+	 *  tools/probe_hull_hits.py: 12 of 41 hull hits dismounted a gun, every one
+	 *  of them BELOW the deck. On the owner's brig the barrel mouths stand at 181
+	 *  to 212 and her deck at 131 to 266, so the guns are INSIDE the band now -
+	 *  and so is all of her side from the waterline up to them.
 	 *
 	 *  Left as it is on purpose, pending the owner (OWNER_VERIFY 38): moving the
-	 *  band to where the guns are makes a dismount about twelve times rarer,
-	 *  because the AI lays its shot on the waterline. That is a balance decision,
-	 *  not a repair. */
+	 *  band to where the guns are makes a dismount rarer, because the AI lays its
+	 *  shot on the waterline. That is a balance decision, not a repair. */
 	UPROPERTY(EditAnywhere, Category = "Damage")
 	float GunPortWindowCm = 100.f;
 
@@ -1089,9 +1113,14 @@ protected:
 	 *  at her centreline put every high shot through the 4 m gap BETWEEN the
 	 *  two masts: fore rig spans X 330 to 790 and main -550 to -90, and the
 	 *  aim point sat at 0. Every rig hit in the logs so far was scatter
-	 *  carrying a ball onto a mast that was never aimed at. */
+	 *  carrying a ball onto a mast that was never aimed at.
+	 *
+	 *  The centre of her main rig box, WRITTEN BY THE CONSTRUCTOR from the same
+	 *  table as the box (GRigBoxes, -249.75): the brig's main squares stand
+	 *  there, the old ship's at -320, and the number moves with the box rather
+	 *  than being typed a second time here. */
 	UPROPERTY(EditAnywhere, Category = "Damage")
-	float HighAimAlongCm = -320.f;
+	float HighAimAlongCm = 0.f;
 
 	// ---- sinking -------------------------------------------------------
 	/** From rest draught to deck awash. Long enough to read the list and trim
